@@ -76,12 +76,18 @@ style.innerHTML = `
     ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
     ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
     
-    /* REVISED Mobile Responsive Banner */
+    /* BULLETPROOF GRID FOR MOBILE */
     @media (max-width: 768px) {
-        #topBar { flex-wrap: wrap !important; padding: 8px !important; justify-content: space-between !important; }
-        #leftBox { order: 1 !important; width: 48% !important; max-width: 48% !important; margin: 0 0 8px 0 !important; flex: none !important; }
-        #rightBox { order: 2 !important; width: 48% !important; max-width: 48% !important; margin: 0 0 8px 0 !important; flex: none !important; }
-        #centerBox { order: 3 !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; flex: none !important; box-sizing: border-box !important; }
+        #topBar { 
+            display: grid !important; 
+            grid-template-columns: 1fr 1fr !important; 
+            gap: 8px !important; 
+            padding: 8px !important; 
+            align-items: start !important;
+        }
+        #leftBox { grid-column: 1 / 2 !important; grid-row: 1 / 2 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+        #rightBox { grid-column: 2 / 3 !important; grid-row: 1 / 2 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+        #centerBox { grid-column: 1 / 3 !important; grid-row: 2 / 3 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; box-sizing: border-box !important; }
     }
 `;
 document.head.appendChild(style);
@@ -283,12 +289,14 @@ let wasGroundedLastFrame = true;
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
+// --- REVISED BLINDFOLD FIX ---
 const blindfoldStage = new THREE.Group();
 camera.add(blindfoldStage); 
 
+// Forced to transparent queue so it draws OVER the solid map entirely
 const blindfoldBg = new THREE.Mesh(
     new THREE.PlaneGeometry(100, 100), 
-    new THREE.MeshBasicMaterial({color: 0x111111, depthTest: false, depthWrite: false})
+    new THREE.MeshBasicMaterial({color: 0x111111, depthTest: false, depthWrite: false, transparent: true, opacity: 1})
 );
 blindfoldBg.position.z = -5; 
 blindfoldBg.renderOrder = 999; 
@@ -298,13 +306,21 @@ const blindfoldLight = new THREE.PointLight(0xffffff, 1, 20);
 blindfoldLight.position.set(0, 0, -2);
 blindfoldStage.add(blindfoldLight);
 
+// Added ambient light so cats aren't strictly in shadow
+const blindfoldAmbient = new THREE.AmbientLight(0xffffff, 0.6);
+blindfoldStage.add(blindfoldAmbient);
+
 const loadingCats = [];
 for(let i=0; i<3; i++) {
     let cat = createCatSculpt(0xFFFFFF);
     cat.group.position.set((Math.random() * 10) - 5, -0.5 - (i * 1.0), -4);
     cat.group.traverse((child) => {
         if (child.isMesh || child.isLineSegments) {
-            child.material.depthTest = false; child.material.depthWrite = false; child.renderOrder = 1000;
+            child.material.depthTest = false; 
+            child.material.depthWrite = false; 
+            child.material.transparent = true; // Forces drawing strictly after background
+            child.material.opacity = 1;
+            child.renderOrder = 1000;
         }
     });
     cat.speed = (Math.random() * 0.05) + 0.05; cat.direction = i % 2 === 0 ? 1 : -1;
@@ -899,7 +915,6 @@ function animate() {
     camera.lookAt(lookAtTarget);
 
     // --- CAMERA WALL & BLOCK FADING ---
-    // 1. Recover opacity naturally
     walls.forEach(w => {
         if (w.material.opacity < 1) {
             w.material.opacity += 0.05;
@@ -913,14 +928,10 @@ function animate() {
         }
     });
 
-    // 2. Cast MULTIPLE rays to create a "thick" line of sight that catches adjacent blocks
     let obstacles = [...walls, ...mapObjects];
-    
-    // Get camera's local up and right vectors
     let rightDir = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
     let upDir = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
     
-    // Create 5 target points spanning the width/height of the cat
     let sightTargets = [
         lookAtTarget,
         lookAtTarget.clone().add(rightDir.clone().multiplyScalar(0.7)),
@@ -929,7 +940,6 @@ function animate() {
         lookAtTarget.clone().add(upDir.clone().multiplyScalar(-0.7))
     ];
 
-    // Check all 5 rays
     sightTargets.forEach(t => {
         let camDist = camera.position.distanceTo(t);
         let camDir = new THREE.Vector3().subVectors(t, camera.position).normalize();
