@@ -133,11 +133,19 @@ io.on('connection', (socket) => {
         startRound();
     }
 
+    // --- +15s BONUS FOR TAGGING A HIDER ---
     socket.on('tagPlayer', (targetId) => {
         if (players[targetId] && players[targetId].role === 'hider') {
-            players[targetId].role = 'seeker';
-            players[targetId].color = 0xFF0000;
-            io.emit('currentPlayers', players); 
+            // Verify the tagger is actually a seeker
+            if (players[socket.id] && players[socket.id].role === 'seeker') {
+                players[targetId].role = 'seeker';
+                players[targetId].color = 0xFF0000;
+                
+                // Add the bonus to the seeker!
+                players[socket.id].score += 15;
+                
+                io.emit('currentPlayers', players); 
+            }
         }
     });
 
