@@ -76,18 +76,21 @@ style.innerHTML = `
     ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
     ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
     
-    /* BULLETPROOF GRID FOR MOBILE */
+    /* FIX: Force all containers to respect their padding and borders internally */
+    #leftBox, #centerBox, #rightBox { box-sizing: border-box !important; }
+    
+    /* FIX: minmax(0, 1fr) forces the columns to strictly obey 50% width without overflowing */
     @media (max-width: 768px) {
         #topBar { 
             display: grid !important; 
-            grid-template-columns: 1fr 1fr !important; 
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; 
             gap: 8px !important; 
             padding: 8px !important; 
             align-items: start !important;
         }
         #leftBox { grid-column: 1 / 2 !important; grid-row: 1 / 2 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
         #rightBox { grid-column: 2 / 3 !important; grid-row: 1 / 2 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
-        #centerBox { grid-column: 1 / 3 !important; grid-row: 2 / 3 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; box-sizing: border-box !important; }
+        #centerBox { grid-column: 1 / 3 !important; grid-row: 2 / 3 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
     }
 `;
 document.head.appendChild(style);
@@ -293,7 +296,6 @@ scene.add(myPlayerObject);
 const blindfoldStage = new THREE.Group();
 camera.add(blindfoldStage); 
 
-// Forced to transparent queue so it draws OVER the solid map entirely
 const blindfoldBg = new THREE.Mesh(
     new THREE.PlaneGeometry(100, 100), 
     new THREE.MeshBasicMaterial({color: 0x111111, depthTest: false, depthWrite: false, transparent: true, opacity: 1})
@@ -306,7 +308,6 @@ const blindfoldLight = new THREE.PointLight(0xffffff, 1, 20);
 blindfoldLight.position.set(0, 0, -2);
 blindfoldStage.add(blindfoldLight);
 
-// Added ambient light so cats aren't strictly in shadow
 const blindfoldAmbient = new THREE.AmbientLight(0xffffff, 0.6);
 blindfoldStage.add(blindfoldAmbient);
 
@@ -318,7 +319,7 @@ for(let i=0; i<3; i++) {
         if (child.isMesh || child.isLineSegments) {
             child.material.depthTest = false; 
             child.material.depthWrite = false; 
-            child.material.transparent = true; // Forces drawing strictly after background
+            child.material.transparent = true; 
             child.material.opacity = 1;
             child.renderOrder = 1000;
         }
@@ -380,7 +381,7 @@ leftBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; 
 leftBox.innerHTML = `<div style="color:white; font-size:12px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
 
 const soundBtnRow = document.createElement('div');
-soundBtnRow.style.cssText = "display: flex; gap: 5px;";
+soundBtnRow.style.cssText = "display: flex; gap: 5px; flex-wrap: wrap;";
 
 const muteBtn = document.createElement('button');
 muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊';
@@ -402,7 +403,7 @@ topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
 rightBox.id = 'rightBox';
-rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:flex-start; text-align:right; color:white; max-width:30%; overflow-y:auto; overflow-x:hidden;';
+rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:flex-start; text-align:right; color:white; max-width:30%; overflow-wrap: break-word; overflow-y:auto; overflow-x:hidden;';
 rightBox.innerHTML = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
 topBar.appendChild(rightBox);
 
@@ -626,25 +627,21 @@ function checkCollision(pos) {
     const currentScaleY = myCatData.group.scale.y;
     pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
     
-    // Check map blocks
     for (let i = 0; i < mapObjects.length; i++) {
         const bBox = new THREE.Box3().setFromObject(mapObjects[i]); bBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(bBox)) return true;
     }
     
-    // Check visual boundary walls
     for (let i = 0; i < walls.length; i++) {
         const wBox = new THREE.Box3().setFromObject(walls[i]); wBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(wBox)) return true;
     }
 
-    // Check INVISIBLE sky walls
     for (let i = 0; i < invisibleWalls.length; i++) {
         const wBox = new THREE.Box3().setFromObject(invisibleWalls[i]); wBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(wBox)) return true;
     }
 
-    // Check players
     for (let id in otherPlayers) {
         if (otherPlayers[id].role === 'spectator') continue;
         const oBox = new THREE.Box3().setFromObject(otherPlayers[id].group); oBox.expandByScalar(-0.02);
@@ -914,7 +911,6 @@ function animate() {
     let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
     camera.lookAt(lookAtTarget);
 
-    // --- CAMERA WALL & BLOCK FADING ---
     walls.forEach(w => {
         if (w.material.opacity < 1) {
             w.material.opacity += 0.05;
