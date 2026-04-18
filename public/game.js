@@ -97,7 +97,6 @@ renderer.domElement.style.left = '0';
 renderer.domElement.style.zIndex = '1';
 document.body.appendChild(renderer.domElement);
 
-// --- DYNAMIC RESIZING (For rotating phone to Landscape) ---
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -351,10 +350,8 @@ helpModal.innerHTML = `
         <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; text-align: center; font-size: 13px;">
             <div style="margin-bottom: 8px; color: gold; font-weight: bold; font-size: 14px;">CONTROLS</div>
             <div style="line-height: 2;">
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W</b> Fwd &nbsp;
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">S</b> Back &nbsp;
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A/D</b> Strafe &nbsp;
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">←/→</b> Turn <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">↑ / ↓</b> Move <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Turn <br>
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy
@@ -550,7 +547,8 @@ function checkCollision(pos) {
     return false;
 }
 
-const keys = { w: false, a: false, s: false, d: false, ArrowLeft: false, ArrowRight: false, " ": false };
+// --- UPDATED KEYS ---
+const keys = { w: false, a: false, s: false, d: false, ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false, " ": false };
 
 document.addEventListener('keydown', (e) => { 
     if(keys.hasOwnProperty(e.key)) keys[e.key] = true; 
@@ -665,8 +663,9 @@ function animate() {
             camera.position.set(0, 5, 8);
             camera.lookAt(0, 0, 0);
         }
-        if (keys.ArrowLeft) myPlayerObject.rotation.y += turnSpeed;
-        if (keys.ArrowRight) myPlayerObject.rotation.y -= turnSpeed;
+        // --- SPECTATOR TURNING FIXED ---
+        if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
+        if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
     } else {
         myCatData.group.visible = true;
         
@@ -674,13 +673,13 @@ function animate() {
         camera.rotation.set(0, 0, 0);
 
         if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
-            if (keys.ArrowLeft) myPlayerObject.rotation.y += turnSpeed;
-            if (keys.ArrowRight) myPlayerObject.rotation.y -= turnSpeed;
+            // --- UNIFIED MOVEMENT LOGIC ---
+            if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
+            if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
             const oldX = myPlayerObject.position.x; const oldZ = myPlayerObject.position.z;
-            if (keys.w) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
-            if (keys.s) { myPlayerObject.translateZ(moveSpeed); moved = true; }
-            if (keys.a) { myPlayerObject.translateX(-moveSpeed); moved = true; }
-            if (keys.d) { myPlayerObject.translateX(moveSpeed); moved = true; }
+            if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
+            if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
+            
             if (checkCollision(myPlayerObject.position)) { myPlayerObject.position.x = oldX; myPlayerObject.position.z = oldZ; }
             if (keys[" "] && isGrounded) { velocityY = jumpStrength; isGrounded = false; moved = true; }
         }
@@ -760,8 +759,8 @@ function animate() {
 
         myTailTime += 0.1; myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
         let targetHeadRot = 0;
-        if (keys.ArrowLeft) targetHeadRot = 0.4;  
-        if (keys.ArrowRight) targetHeadRot = -0.4; 
+        if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;  
+        if (keys.ArrowRight || keys.d) targetHeadRot = -0.4; 
         myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
 
         if (moved && isGrounded) { 
@@ -826,7 +825,7 @@ function animate() {
 }
 animate();
 
-// --- MOBILE CONTROLS OVERLAY ---
+// --- UPDATED MOBILE CONTROLS OVERLAY ---
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     style.innerHTML += `
         canvas { touch-action: none; }
@@ -834,12 +833,12 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     `;
 
     const mobileUI = document.createElement('div');
-    mobileUI.style.cssText = 'position:absolute; bottom:20px; left:0; width:100%; height:180px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
+    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:210px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
     
     function createBtn(text, x, y, key) {
         const btn = document.createElement('button');
         btn.innerHTML = text;
-        btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:60px; height:60px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:16px; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
+        btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:70px; height:70px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:16px; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
         
         btn.addEventListener('touchstart', (e) => { 
             e.preventDefault(); 
@@ -863,19 +862,19 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     }
     
     const dpad = document.createElement('div');
-    dpad.style.cssText = 'position:relative; width:180px; height:180px;';
+    dpad.style.cssText = 'position:relative; width:210px; height:210px;';
     
-    dpad.appendChild(createBtn('W', 60, 0, 'w'));               
-    dpad.appendChild(createBtn('S', 60, 120, 's'));             
-    dpad.appendChild(createBtn('◀', 0, 60, 'ArrowLeft'));       
-    dpad.appendChild(createBtn('▶', 120, 60, 'ArrowRight'));      
+    dpad.appendChild(createBtn('W', 70, 0, 'w'));               
+    dpad.appendChild(createBtn('S', 70, 140, 's'));             
+    dpad.appendChild(createBtn('◀', 0, 70, 'ArrowLeft'));       
+    dpad.appendChild(createBtn('▶', 140, 70, 'ArrowRight'));      
     
     const actions = document.createElement('div');
-    actions.style.cssText = 'position:relative; width:180px; height:180px;';
+    actions.style.cssText = 'position:relative; width:210px; height:210px;';
     
-    actions.appendChild(createBtn('JUMP', 60, 120, ' '));       
-    actions.appendChild(createBtn('MEOW', 0, 60, 'f'));         
-    actions.appendChild(createBtn('DECOY', 120, 60, 'e'));      
+    actions.appendChild(createBtn('JUMP', 70, 140, ' '));       
+    actions.appendChild(createBtn('MEOW', 0, 70, 'f'));         
+    actions.appendChild(createBtn('DECOY', 140, 70, 'e'));      
 
     mobileUI.appendChild(dpad);
     mobileUI.appendChild(actions);
