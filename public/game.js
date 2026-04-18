@@ -422,10 +422,22 @@ helpModal.innerHTML = `
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr; gap: 10px; color: #eee; font-size: 12px; line-height: 1.4;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 8px; color: #eee; font-size: 12px; line-height: 1.4;">
             <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color.</p>
             <p style="margin: 0;"><b>SEEKERS:</b> Touch Hiders to tag them. Listen for Meows!</p>
-            <p style="margin: 0; color: #aaffaa;"><b>BONUS TIME:</b> Hiders get +15s for Meowing or tricking Seekers with a Decoy! Seekers get +15s for tagging a Hider!</p>
+            <p style="margin: 0; color: #ff6666; font-weight: bold;">When a Hider gets tagged, they become a Seeker!</p>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; gap: 5px;">
+            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; flex: 1; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
+                <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Meowing
+            </div>
+            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; flex: 1; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
+                <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Decoy Hit
+            </div>
+            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; flex: 1; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
+                <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Tagging
+            </div>
         </div>
 
         <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 14px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
