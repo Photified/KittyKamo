@@ -75,6 +75,13 @@ style.innerHTML = `
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
     ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+    
+    /* Mobile Responsive Banner */
+    @media (max-width: 768px) {
+        #topBar { flex-wrap: wrap !important; padding: 5px !important; }
+        #centerBox { order: -1 !important; max-width: 100% !important; flex: 0 0 100% !important; margin: 0 0 5px 0 !important; }
+        #leftBox, #rightBox { max-width: 48% !important; flex: 1 !important; }
+    }
 `;
 document.head.appendChild(style);
 
@@ -313,10 +320,12 @@ document.body.appendChild(startScreen);
 
 // --- BULLETPROOF MOBILE BANNER ---
 const topBar = document.createElement('div');
+topBar.id = 'topBar';
 topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:10px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:stretch; z-index:100; pointer-events:none;';
 document.body.appendChild(topBar);
 
 const leftBox = document.createElement('div');
+leftBox.id = 'leftBox';
 leftBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:4px; max-width:30%; overflow:hidden;';
 leftBox.innerHTML = `<div style="color:white; font-size:12px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
 
@@ -337,10 +346,12 @@ leftBox.appendChild(soundBtnRow);
 topBar.appendChild(leftBox);
 
 const centerBox = document.createElement('div');
+centerBox.id = 'centerBox';
 centerBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; flex:1; max-width:35%; margin:0 5px; overflow:hidden;';
 topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
+rightBox.id = 'rightBox';
 rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:flex-start; text-align:right; color:white; max-width:30%; overflow-y:auto; overflow-x:hidden;';
 rightBox.innerHTML = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
 topBar.appendChild(rightBox);
@@ -688,11 +699,21 @@ function animate() {
 
             Object.keys(otherPlayers).forEach(id => {
                 if (otherPlayers[id].role === 'hider') {
-                    let dist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
-                    if (dist < closestDist) { closestDist = dist; closestHider = otherPlayers[id]; }
+                    // Cylinder Hitbox Logic: Separate Horizontal and Vertical distance
+                    let dx = myPlayerObject.position.x - otherPlayers[id].group.position.x;
+                    let dz = myPlayerObject.position.z - otherPlayers[id].group.position.z;
+                    let dy = Math.abs(myPlayerObject.position.y - otherPlayers[id].group.position.y);
+                    
+                    let horizDist = Math.sqrt(dx * dx + dz * dz);
+                    let true3DDist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
+
+                    // Keep track of true closest for radar sounds
+                    if (true3DDist < closestDist) { closestDist = true3DDist; closestHider = otherPlayers[id]; }
 
                     let theirScale = (Math.abs(otherPlayers[id].group.position.x) > 22 || Math.abs(otherPlayers[id].group.position.z) > 22) ? 10 : 1;
-                    if (dist < Math.max(myScaleFactor, theirScale) * 1.5) {
+                    
+                    // TAG CONDITION: Check Horizontal distance + a generous Vertical tolerance (3.0 handles jumps)
+                    if (horizDist < Math.max(myScaleFactor, theirScale) * 1.5 && dy < 3.0) {
                         otherPlayers[id].role = 'seeker'; 
                         socket.emit('tagPlayer', id);
                         playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
@@ -700,9 +721,14 @@ function animate() {
                 }
             });
 
+            // Do the same cylinder hitbox logic for decoys
             Object.keys(activeDecoys).forEach(dId => {
-                let dist = myPlayerObject.position.distanceTo(activeDecoys[dId].group.position);
-                if (dist < Math.max(myScaleFactor, 1) * 1.5) {
+                let dx = myPlayerObject.position.x - activeDecoys[dId].group.position.x;
+                let dz = myPlayerObject.position.z - activeDecoys[dId].group.position.z;
+                let dy = Math.abs(myPlayerObject.position.y - activeDecoys[dId].group.position.y);
+                let horizDist = Math.sqrt(dx * dx + dz * dz);
+
+                if (horizDist < Math.max(myScaleFactor, 1) * 1.5 && dy < 3.0) {
                     socket.emit('tagDecoy', dId);
                     explodeParticles(activeDecoys[dId].group.position, false); 
                     scene.remove(activeDecoys[dId].group); delete activeDecoys[dId]; 
