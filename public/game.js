@@ -399,18 +399,17 @@ helpModal.innerHTML = `
         <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; text-align: center; font-size: 12px;">
             <div style="margin-bottom: 8px; color: gold; font-weight: bold; font-size: 14px;">CONTROLS</div>
             <div style="line-height: 2;">
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> Move <br>
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Turn <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W A S D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← → ↑ ↓</b> Move <br>
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy
             </div>
-            <div style="margin-top: 5px; font-style: italic; color: #aaa;">(No strafing! Tanks controls only.)</div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr; gap: 10px; color: #eee; font-size: 12px; line-height: 1.4;">
             <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color.</p>
             <p style="margin: 0;"><b>SEEKERS:</b> Touch Hiders to tag them. Listen for Meows!</p>
+            <p style="margin: 0; color: #aaffaa;"><b>BONUS TIME:</b> Meowing adds +15s to your survival time! If a Seeker destroys your Decoy, you also get +15s!</p>
         </div>
 
         <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 14px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
