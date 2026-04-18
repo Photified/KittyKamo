@@ -222,7 +222,6 @@ const sharedEdgesGeo = new THREE.EdgesGeometry(sharedBoxGeo);
 const sharedEdgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
 
 function createBlock(x, y, z, color) {
-    // UPDATED: Added transparent: true so map blocks can fade when blocking the camera
     const mesh = new THREE.Mesh(sharedBoxGeo, new THREE.MeshLambertMaterial({ color: color, transparent: true }));
     if (color !== 0x654321) {
         const edges = new THREE.LineSegments(sharedEdgesGeo, sharedEdgeMat);
@@ -901,7 +900,7 @@ function animate() {
     camera.lookAt(lookAtTarget);
 
     // --- CAMERA WALL & BLOCK FADING ---
-    // 1. Recover opacity for all walls and map objects naturally over time
+    // 1. Recover opacity naturally
     walls.forEach(w => {
         if (w.material.opacity < 1) {
             w.material.opacity += 0.05;
@@ -915,22 +914,36 @@ function animate() {
         }
     });
 
-    // 2. Cast a ray from the Camera directly toward the focus Target
-    let camDist = camera.position.distanceTo(lookAtTarget);
-    let camDir = new THREE.Vector3().subVectors(lookAtTarget, camera.position).normalize();
-    camRaycaster.set(camera.position, camDir);
-    
-    // 3. If the ray hits any boundary wall or map block before reaching the Target, make them transparent
+    // 2. Cast MULTIPLE rays to create a "thick" line of sight that catches adjacent blocks
     let obstacles = [...walls, ...mapObjects];
-    let hits = camRaycaster.intersectObjects(obstacles);
     
-    // Fade ALL objects that block the view (hit distance < camDist - 0.5 to avoid fading the floor or the cover you are touching)
-    hits.forEach(hit => {
-        if (hit.distance < camDist - 0.5) {
-            let blockingObj = hit.object;
-            blockingObj.material.opacity -= 0.15;
-            if (blockingObj.material.opacity < 0.2) blockingObj.material.opacity = 0.2;
-        }
+    // Get camera's local up and right vectors
+    let rightDir = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    let upDir = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    
+    // Create 5 target points spanning the width/height of the cat
+    let sightTargets = [
+        lookAtTarget,
+        lookAtTarget.clone().add(rightDir.clone().multiplyScalar(0.7)),
+        lookAtTarget.clone().add(rightDir.clone().multiplyScalar(-0.7)),
+        lookAtTarget.clone().add(upDir.clone().multiplyScalar(0.7)),
+        lookAtTarget.clone().add(upDir.clone().multiplyScalar(-0.7))
+    ];
+
+    // Check all 5 rays
+    sightTargets.forEach(t => {
+        let camDist = camera.position.distanceTo(t);
+        let camDir = new THREE.Vector3().subVectors(t, camera.position).normalize();
+        camRaycaster.set(camera.position, camDir);
+        
+        let hits = camRaycaster.intersectObjects(obstacles);
+        hits.forEach(hit => {
+            if (hit.distance < camDist - 0.5) {
+                let blockingObj = hit.object;
+                blockingObj.material.opacity -= 0.15;
+                if (blockingObj.material.opacity < 0.2) blockingObj.material.opacity = 0.2;
+            }
+        });
     });
 
     const now = performance.now();
