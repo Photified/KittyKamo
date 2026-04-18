@@ -212,7 +212,7 @@ function explodeParticles(pos, isRed) {
     }
 }
 
-// --- OPTIMIZATION: SHARED GEOMETRIES ---
+// --- SHARED GEOMETRIES ---
 const sharedBoxGeo = new THREE.BoxGeometry(1, 1, 1);
 const sharedEdgesGeo = new THREE.EdgesGeometry(sharedBoxGeo);
 const sharedEdgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
@@ -242,7 +242,7 @@ function createWall(w, h, d, x, y, z) {
     walls.push(mesh);
 }
 
-// --- NEW INVISIBLE SKY WALLS ---
+// --- INVISIBLE SKY WALLS ---
 const invisibleWalls = [];
 const invisibleMat = new THREE.MeshBasicMaterial({ visible: false });
 function createInvisibleWall(w, h, d, x, y, z) {
@@ -307,8 +307,10 @@ for(let i=0; i<3; i++) {
 }
 blindfoldStage.visible = false; 
 
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshLambertMaterial({ color: 0x113311, side: THREE.DoubleSide }));
-ground.rotation.x = Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; 
+// --- DYNAMIC GROUND ---
+// Create a basic 1x1 plane here, but it will be scaled to fit exactly within the walls on map init
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0x113311, side: THREE.DoubleSide }));
+ground.rotation.x = -Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; 
 scene.add(ground);
 
 const clouds = [];
@@ -478,29 +480,34 @@ socket.on('initMap', (mapBlocks) => {
         scene.remove(activeDecoys[dId].group); delete activeDecoys[dId];
     });
 
-    // --- DYNAMIC WALL ALIGNMENT ---
+    // --- DYNAMIC WALL & FLOOR ALIGNMENT ---
     if (mapBlocks.length > 0) {
         const minX = Math.min(...mapBlocks.map(b => b.x));
         const maxX = Math.max(...mapBlocks.map(b => b.x));
         const minZ = Math.min(...mapBlocks.map(b => b.z));
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
 
-        // Visual Top and Bottom walls
         const widthX = (maxX - minX) + 5; 
+        const depthZ = (maxZ - minZ) + 5;
+        
+        // Scale and center the floor perfectly under the boundary walls!
+        ground.scale.set(widthX, depthZ, 1);
+        ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
+
+        // Visual Top and Bottom walls
         createWall(widthX, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5);
         createWall(widthX, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5);
         
         // Visual Left and Right walls
-        const depthZ = (maxZ - minZ) + 1;
-        createWall(2, 10, depthZ, minX - 1.5, 0, (minZ + maxZ) / 2);
-        createWall(2, 10, depthZ, maxX + 1.5, 0, (minZ + maxZ) / 2);
+        const wallDepthZ = (maxZ - minZ) + 1;
+        createWall(2, 10, wallDepthZ, minX - 1.5, 0, (minZ + maxZ) / 2);
+        createWall(2, 10, wallDepthZ, maxX + 1.5, 0, (minZ + maxZ) / 2);
         
-        // --- INVISIBLE BARRIERS ---
-        // Span 40 units high, starting directly above the visual walls
+        // INVISIBLE BARRIERS
         createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, minZ - 1.5);
         createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, maxZ + 1.5);
-        createInvisibleWall(2, 40, depthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
-        createInvisibleWall(2, 40, depthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
     }
 });
 
