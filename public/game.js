@@ -85,7 +85,7 @@ style.innerHTML = `
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; 
             gap: 8px !important; 
             padding: 8px !important; 
-            align-items: stretch !important; /* Forces Left and Right boxes to exactly match height */
+            align-items: stretch !important; 
         }
         #leftBox { grid-column: 1 / 2 !important; grid-row: 1 / 2 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
         #rightBox { grid-column: 2 / 3 !important; grid-row: 1 / 2 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
@@ -131,7 +131,6 @@ sunLight.shadow.mapSize.width = isMobile ? 1024 : 2048;
 sunLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
 scene.add(sunLight);
 
-// --- GLOBAL RAYCASTER FOR CAMERA FADING ---
 const camRaycaster = new THREE.Raycaster();
 
 function createCrown() {
@@ -358,14 +357,48 @@ scene.add(stars);
 const myCatData = createCatSculpt(); 
 myPlayerObject.add(myCatData.group);
 
+// --- NEW: CUSTOM NAME ENTRY SCREEN ---
 const startScreen = document.createElement('div');
-startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size: 24px; z-index:999; cursor:pointer;';
-startScreen.innerHTML = "CLICK ANYWHERE TO START";
-startScreen.onclick = () => {
+startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:"Segoe UI", sans-serif; z-index:999;';
+
+const logo = document.createElement('h1');
+logo.innerHTML = 'KITTY KAMO';
+logo.style.cssText = 'font-size: 48px; color: gold; text-shadow: 3px 3px 0 #000; margin: 0 0 20px 0; font-weight: 900; letter-spacing: 2px; text-align: center;';
+startScreen.appendChild(logo);
+
+const nameInput = document.createElement('input');
+nameInput.type = 'text';
+nameInput.placeholder = 'Enter Name...';
+nameInput.maxLength = 12;
+nameInput.style.cssText = 'padding: 12px; font-size: 20px; font-weight: bold; text-align: center; border-radius: 8px; border: 3px solid #555; background: #222; color: white; margin-bottom: 20px; width: 250px; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: border-color 0.2s;';
+nameInput.onfocus = () => nameInput.style.borderColor = 'gold';
+nameInput.onblur = () => nameInput.style.borderColor = '#555';
+startScreen.appendChild(nameInput);
+
+const startBtn = document.createElement('button');
+startBtn.innerHTML = "PLAY";
+startBtn.style.cssText = 'padding: 12px 50px; font-size: 24px; font-weight:900; background: gold; color: #111; border: none; border-radius: 8px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s;';
+startBtn.onmouseover = () => startBtn.style.transform = 'scale(1.05)';
+startBtn.onmouseout = () => startBtn.style.transform = 'scale(1)';
+
+startBtn.onclick = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (listener.context.state === 'suspended') listener.context.resume();
+    
+    let chosenName = nameInput.value.trim();
+    if (chosenName !== "") {
+        socket.emit('setName', chosenName);
+    }
+    
     startScreen.style.display = 'none';
 };
+startScreen.appendChild(startBtn);
+
+// Allow hitting "Enter" to submit your name
+nameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') startBtn.onclick();
+});
+
 document.body.appendChild(startScreen);
 
 // --- BULLETPROOF MOBILE BANNER ---
@@ -488,37 +521,30 @@ socket.on('gameStateUpdate', (data) => {
         playSound('tick'); lastTickTime = serverTime;
     }
 
-    // --- REVISED LEADERBOARD LOGIC ---
     if (data.leaderboard && data.leaderboard.length > 0) {
         let lbText = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
         
-        // 1. Always show 1st Place
         let p1 = data.leaderboard[0];
         let c1 = (p1.id === serverWinnerId) ? '👑 ' : '';
         lbText += `<div style="font-size:9px; line-height:1.4;">1. ${c1}${p1.name} : <b style="color:gold;">${p1.score}s</b></div>`;
 
-        // 2. Logic for the second row
         if (data.leaderboard.length > 1) {
             let myRank = data.leaderboard.findIndex(p => p.id === socket.id);
             
             if (myRank === 0) {
-                // If I am in 1st place, naturally show the 2nd place player below me
                 let p2 = data.leaderboard[1];
                 let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
                 lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
             } else if (myRank > 0) {
-                // Show my exact rank below the 1st place winner
                 let myP = data.leaderboard[myRank];
                 let myC = (myP.id === serverWinnerId) ? '👑 ' : '';
                 lbText += `<div style="font-size:9px; line-height:1.4;">${myRank + 1}. ${myC}${myP.name} : <b style="color:gold;">${myP.score}s</b></div>`;
             } else {
-                // Fallback for spectators not on the board: just show 2nd place
                 let p2 = data.leaderboard[1];
                 let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
                 lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
             }
         } else {
-            // Adds a small spacer line if there's only 1 player to keep height consistent
             lbText += `<div style="font-size:9px; line-height:1.4; color:#777;">...</div>`;
         }
         
@@ -527,12 +553,10 @@ socket.on('gameStateUpdate', (data) => {
 });
 
 socket.on('initMap', (mapBlocks) => {
-    // Clear out old map
     mapObjects.forEach(mesh => scene.remove(mesh)); mapObjects.length = 0;
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
     invisibleWalls.forEach(mesh => scene.remove(mesh)); invisibleWalls.length = 0;
     
-    // Build new map
     mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
     myDecoyUsed = false; 
     
@@ -540,7 +564,6 @@ socket.on('initMap', (mapBlocks) => {
         scene.remove(activeDecoys[dId].group); delete activeDecoys[dId];
     });
 
-    // --- DYNAMIC WALL & FLOOR ALIGNMENT ---
     if (mapBlocks.length > 0) {
         const minX = Math.min(...mapBlocks.map(b => b.x));
         const maxX = Math.max(...mapBlocks.map(b => b.x));
@@ -550,20 +573,16 @@ socket.on('initMap', (mapBlocks) => {
         const widthX = (maxX - minX) + 5; 
         const depthZ = (maxZ - minZ) + 5;
         
-        // Scale and center the floor perfectly under the boundary walls!
         ground.scale.set(widthX, depthZ, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
 
-        // Visual Top and Bottom walls
         createWall(widthX, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5);
         createWall(widthX, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5);
         
-        // Visual Left and Right walls
         const wallDepthZ = (maxZ - minZ) + 1;
         createWall(2, 10, wallDepthZ, minX - 1.5, 0, (minZ + maxZ) / 2);
         createWall(2, 10, wallDepthZ, maxX + 1.5, 0, (minZ + maxZ) / 2);
         
-        // INVISIBLE BARRIERS
         createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, minZ - 1.5);
         createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, maxZ + 1.5);
         createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
@@ -666,25 +685,21 @@ function checkCollision(pos) {
     const currentScaleY = myCatData.group.scale.y;
     pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
     
-    // Check map blocks
     for (let i = 0; i < mapObjects.length; i++) {
         const bBox = new THREE.Box3().setFromObject(mapObjects[i]); bBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(bBox)) return true;
     }
     
-    // Check visual boundary walls
     for (let i = 0; i < walls.length; i++) {
         const wBox = new THREE.Box3().setFromObject(walls[i]); wBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(wBox)) return true;
     }
 
-    // Check INVISIBLE sky walls
     for (let i = 0; i < invisibleWalls.length; i++) {
         const wBox = new THREE.Box3().setFromObject(invisibleWalls[i]); wBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(wBox)) return true;
     }
 
-    // Check players
     for (let id in otherPlayers) {
         if (otherPlayers[id].role === 'spectator') continue;
         const oBox = new THREE.Box3().setFromObject(otherPlayers[id].group); oBox.expandByScalar(-0.02);
@@ -696,6 +711,9 @@ function checkCollision(pos) {
 const keys = { w: false, a: false, s: false, d: false, ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false, " ": false };
 
 document.addEventListener('keydown', (e) => { 
+    // --- FIX: Prevents moving your cat in the background while typing your name! ---
+    if (document.activeElement.tagName === 'INPUT') return;
+
     if(keys.hasOwnProperty(e.key)) keys[e.key] = true; 
     
     if(e.key.toLowerCase() === 'f') {
