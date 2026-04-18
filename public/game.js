@@ -96,7 +96,6 @@ camera.add(listener);
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
-// OPTIMIZATION: Keep mobile devices from trying to render at 4k resolution
 renderer.setPixelRatio(isMobile ? 1 : window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -119,7 +118,6 @@ sunLight.position.set(40, 40, 20);
 sunLight.castShadow = true;
 sunLight.shadow.camera.left = -40; sunLight.shadow.camera.right = 40;
 sunLight.shadow.camera.top = 40; sunLight.shadow.camera.bottom = -40;
-// OPTIMIZATION: Reduce shadow map resolution slightly on mobile
 sunLight.shadow.mapSize.width = isMobile ? 1024 : 2048; 
 sunLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
 scene.add(sunLight);
@@ -215,8 +213,6 @@ function explodeParticles(pos, isRed) {
 }
 
 // --- OPTIMIZATION: SHARED GEOMETRIES ---
-// Instantiating 500 unique EdgesGeometries at startup freezes mobile devices. 
-// We create it ONCE and share it among all map blocks!
 const sharedBoxGeo = new THREE.BoxGeometry(1, 1, 1);
 const sharedEdgesGeo = new THREE.EdgesGeometry(sharedBoxGeo);
 const sharedEdgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
@@ -240,11 +236,21 @@ const wallMat = new THREE.MeshLambertMaterial({ color: 0x113311 });
 function createWall(w, h, d, x, y, z) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mesh = new THREE.Mesh(geo, wallMat);
-    // Removed wireframe edges from walls to save massive performance
     mesh.castShadow = true; mesh.receiveShadow = true;
     mesh.position.set(x, y, z);
     scene.add(mesh);
     walls.push(mesh);
+}
+
+// --- NEW INVISIBLE SKY WALLS ---
+const invisibleWalls = [];
+const invisibleMat = new THREE.MeshBasicMaterial({ visible: false });
+function createInvisibleWall(w, h, d, x, y, z) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mesh = new THREE.Mesh(geo, invisibleMat);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    invisibleWalls.push(mesh);
 }
 
 const mapObjects = [];
@@ -462,6 +468,7 @@ socket.on('initMap', (mapBlocks) => {
     // Clear out old map
     mapObjects.forEach(mesh => scene.remove(mesh)); mapObjects.length = 0;
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
+    invisibleWalls.forEach(mesh => scene.remove(mesh)); invisibleWalls.length = 0;
     
     // Build new map
     mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
@@ -472,22 +479,28 @@ socket.on('initMap', (mapBlocks) => {
     });
 
     // --- DYNAMIC WALL ALIGNMENT ---
-    // Finds the exact edges of the server-provided map and snaps the walls directly onto them
     if (mapBlocks.length > 0) {
         const minX = Math.min(...mapBlocks.map(b => b.x));
         const maxX = Math.max(...mapBlocks.map(b => b.x));
         const minZ = Math.min(...mapBlocks.map(b => b.z));
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
 
-        // Top and Bottom walls (Z-Axis)
+        // Visual Top and Bottom walls
         const widthX = (maxX - minX) + 5; 
         createWall(widthX, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5);
         createWall(widthX, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5);
         
-        // Left and Right walls (X-Axis)
+        // Visual Left and Right walls
         const depthZ = (maxZ - minZ) + 1;
         createWall(2, 10, depthZ, minX - 1.5, 0, (minZ + maxZ) / 2);
         createWall(2, 10, depthZ, maxX + 1.5, 0, (minZ + maxZ) / 2);
+        
+        // --- INVISIBLE BARRIERS ---
+        // Span 40 units high, starting directly above the visual walls
+        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, minZ - 1.5);
+        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, maxZ + 1.5);
+        createInvisibleWall(2, 40, depthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 40, depthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
     }
 });
 
@@ -592,9 +605,15 @@ function checkCollision(pos) {
         if (pBox.intersectsBox(bBox)) return true;
     }
     
-    // Check boundary walls
+    // Check visual boundary walls
     for (let i = 0; i < walls.length; i++) {
         const wBox = new THREE.Box3().setFromObject(walls[i]); wBox.expandByScalar(-0.02);
+        if (pBox.intersectsBox(wBox)) return true;
+    }
+
+    // Check INVISIBLE sky walls
+    for (let i = 0; i < invisibleWalls.length; i++) {
+        const wBox = new THREE.Box3().setFromObject(invisibleWalls[i]); wBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(wBox)) return true;
     }
 
@@ -774,6 +793,7 @@ function animate() {
                 if (dist < minDist) { minDist = dist; closestBlock = mapObjects[i]; }
             }
             
+            // Only checks VISUAL walls for camo color!
             for (let i = 0; i < walls.length; i++) {
                 const wBox = new THREE.Box3().setFromObject(walls[i]);
                 let dist = wBox.distanceToPoint(myPlayerObject.position);
