@@ -88,7 +88,6 @@ document.head.appendChild(style);
 const scene = new THREE.Scene();
 scene.background = colorDay.clone();
 
-// --- THE CAMERA IS NO LONGER ATTACHED TO THE PLAYER! ---
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 scene.add(camera);
 
@@ -657,7 +656,6 @@ function animate() {
         myCatData.group.visible = true;
 
         if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
-            // Turning rotates the player immediately (the camera will follow smoothly below)
             if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
             if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
             
@@ -697,23 +695,26 @@ function animate() {
             let closestDist = 999;
             let closestHider = null;
 
+            // --- THE NEW ROBUST TAGGING SYSTEM ---
+            // Create a temporary Box3 Hitbox that is expanded to catch jumps/grazes
+            const currentScaleY = myCatData.group.scale.y;
+            const seekerBox = new THREE.Box3();
+            seekerBox.setFromCenterAndSize(
+                new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
+                new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
+            );
+            seekerBox.expandByScalar(0.8); // 0.8 units of "reach" in all directions, completely solving Y-axis issues
+
             Object.keys(otherPlayers).forEach(id => {
                 if (otherPlayers[id].role === 'hider') {
-                    // Cylinder Hitbox Logic: Separate Horizontal and Vertical distance
-                    let dx = myPlayerObject.position.x - otherPlayers[id].group.position.x;
-                    let dz = myPlayerObject.position.z - otherPlayers[id].group.position.z;
-                    let dy = Math.abs(myPlayerObject.position.y - otherPlayers[id].group.position.y);
-                    
-                    let horizDist = Math.sqrt(dx * dx + dz * dz);
+                    // Keep tracking pure distance for the radar ping
                     let true3DDist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
-
-                    // Keep track of true closest for radar sounds
                     if (true3DDist < closestDist) { closestDist = true3DDist; closestHider = otherPlayers[id]; }
 
-                    let theirScale = (Math.abs(otherPlayers[id].group.position.x) > 22 || Math.abs(otherPlayers[id].group.position.z) > 22) ? 10 : 1;
+                    // Check if our expanded tag box intersects their actual bounding box
+                    const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                     
-                    // TAG CONDITION: Check Horizontal distance + a generous Vertical tolerance (3.0 handles jumps)
-                    if (horizDist < Math.max(myScaleFactor, theirScale) * 1.5 && dy < 3.0) {
+                    if (seekerBox.intersectsBox(hiderBox)) {
                         otherPlayers[id].role = 'seeker'; 
                         socket.emit('tagPlayer', id);
                         playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
@@ -721,14 +722,10 @@ function animate() {
                 }
             });
 
-            // Do the same cylinder hitbox logic for decoys
+            // Do the exact same for decoys
             Object.keys(activeDecoys).forEach(dId => {
-                let dx = myPlayerObject.position.x - activeDecoys[dId].group.position.x;
-                let dz = myPlayerObject.position.z - activeDecoys[dId].group.position.z;
-                let dy = Math.abs(myPlayerObject.position.y - activeDecoys[dId].group.position.y);
-                let horizDist = Math.sqrt(dx * dx + dz * dz);
-
-                if (horizDist < Math.max(myScaleFactor, 1) * 1.5 && dy < 3.0) {
+                const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
+                if (seekerBox.intersectsBox(decoyBox)) {
                     socket.emit('tagDecoy', dId);
                     explodeParticles(activeDecoys[dId].group.position, false); 
                     scene.remove(activeDecoys[dId].group); delete activeDecoys[dId]; 
@@ -754,9 +751,14 @@ function animate() {
         let cColor = (targetColor === 0xFFFFFF || targetColor === 0xFF0000) ? 0xFFD700 : targetColor;
         myCatData.crownMat.color.setHex(cColor);
 
-        // Hide your own name so it doesn't float over your UI ever again
         if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
+        // --- LOCAL PLAYER HEAD TURNING ---
+        let targetHeadRot = 0;
+        if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
+        else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
+        myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
+        
         myTailTime += 0.1; myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
 
         if (moved && isGrounded) { 
@@ -809,33 +811,27 @@ function animate() {
 
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
 
-    // --- THE SMOOTH CAMERA FIX ---
-    // Instead of being bolted to the cat, the camera now gracefully trails behind it
     let focusObject = myPlayerObject;
     if (serverGameState === 'GAME_OVER' && serverWinnerId) {
         focusObject = (serverWinnerId === socket.id) ? myPlayerObject : (otherPlayers[serverWinnerId] ? otherPlayers[serverWinnerId].group : myPlayerObject);
-        focusObject.rotation.y += 0.02; // Spin the winning cat
+        focusObject.rotation.y += 0.02; 
     } else if (myRole === 'spectator') {
         let seekerId = Object.keys(otherPlayers).find(id => otherPlayers[id].role === 'seeker');
         if (seekerId && otherPlayers[seekerId]) focusObject = otherPlayers[seekerId].group;
     }
 
-    focusObject.updateMatrixWorld(); // Ensure math is perfect before moving camera
+    focusObject.updateMatrixWorld(); 
     
-    // Calculate where the camera SHOULD be
     let idealOffset = new THREE.Vector3(0, 1.5, 3);
     if (isMobile && window.innerHeight > window.innerWidth) {
-        idealOffset.set(0, 2.5, 4); // Slightly higher for mobile portrait
+        idealOffset.set(0, 2.5, 4); 
     }
 
-    // Move camera smoothly towards that target
     let cameraTargetPos = idealOffset.applyMatrix4(focusObject.matrixWorld);
     camera.position.lerp(cameraTargetPos, 0.15);
     
-    // Make camera look at the cat
     let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
     camera.lookAt(lookAtTarget);
-
 
     const now = performance.now();
     if (now - lastRenderTime >= fpsInterval) {
