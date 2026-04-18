@@ -196,17 +196,29 @@ function createCatSculpt(startColor = 0xFFFFFF) {
     return { group: catGroup, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat };
 }
 
+// --- FIX: Dynamic Name Sprite Generation ---
 function setNameLabel(catData, name) {
-    if (catData.nameSprite) catData.group.remove(catData.nameSprite);
+    if (catData.currentName === name) return; // Don't redraw if name hasn't changed
+    
+    if (catData.nameSprite) {
+        // Memory cleanup of old sprite
+        catData.group.remove(catData.nameSprite);
+        if (catData.nameSprite.material.map) catData.nameSprite.material.map.dispose();
+        catData.nameSprite.material.dispose();
+    }
+    
     const canvas = document.createElement('canvas');
     canvas.width = 256; canvas.height = 64;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; ctx.fillRect(0, 0, 256, 64);
     ctx.font = 'bold 32px "Segoe UI", Arial, sans-serif'; ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name, 128, 32);
+    
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas) }));
     sprite.position.y = 1.4; sprite.scale.set(1.5, 0.375, 1);
-    catData.group.add(sprite); catData.nameSprite = sprite; 
+    catData.group.add(sprite); 
+    catData.nameSprite = sprite; 
+    catData.currentName = name; // Store it for future checks
 }
 
 const particles = [];
@@ -394,7 +406,6 @@ startBtn.onclick = () => {
 };
 startScreen.appendChild(startBtn);
 
-// Allow hitting "Enter" to submit your name
 nameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') startBtn.onclick();
 });
@@ -619,6 +630,9 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].crownMat.color.setHex(oColor);
 
                 otherPlayers[id].crown.visible = (id === serverWinnerId);
+                
+                // --- FIX: Add name update trigger for existing players! ---
+                setNameLabel(otherPlayers[id], players[id].name);
             } else { addOtherPlayer(id, players[id]); }
         }
     });
@@ -711,7 +725,6 @@ function checkCollision(pos) {
 const keys = { w: false, a: false, s: false, d: false, ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false, " ": false };
 
 document.addEventListener('keydown', (e) => { 
-    // --- FIX: Prevents moving your cat in the background while typing your name! ---
     if (document.activeElement.tagName === 'INPUT') return;
 
     if(keys.hasOwnProperty(e.key)) keys[e.key] = true; 
