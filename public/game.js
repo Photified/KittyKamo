@@ -222,7 +222,8 @@ const sharedEdgesGeo = new THREE.EdgesGeometry(sharedBoxGeo);
 const sharedEdgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
 
 function createBlock(x, y, z, color) {
-    const mesh = new THREE.Mesh(sharedBoxGeo, new THREE.MeshLambertMaterial({ color: color }));
+    // UPDATED: Added transparent: true so map blocks can fade when blocking the camera
+    const mesh = new THREE.Mesh(sharedBoxGeo, new THREE.MeshLambertMaterial({ color: color, transparent: true }));
     if (color !== 0x654321) {
         const edges = new THREE.LineSegments(sharedEdgesGeo, sharedEdgeMat);
         mesh.add(edges);
@@ -239,7 +240,6 @@ const walls = [];
 const wallMat = new THREE.MeshLambertMaterial({ color: 0x113311 });
 function createWall(w, h, d, x, y, z) {
     const geo = new THREE.BoxGeometry(w, h, d);
-    // Clone material so each wall can fade transparently independently
     const mat = wallMat.clone();
     mat.transparent = true; 
     const mesh = new THREE.Mesh(geo, mat);
@@ -900,12 +900,18 @@ function animate() {
     let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
     camera.lookAt(lookAtTarget);
 
-    // --- CAMERA WALL FADING ---
-    // 1. Recover opacity for all walls naturally over time
+    // --- CAMERA WALL & BLOCK FADING ---
+    // 1. Recover opacity for all walls and map objects naturally over time
     walls.forEach(w => {
         if (w.material.opacity < 1) {
             w.material.opacity += 0.05;
             if (w.material.opacity > 1) w.material.opacity = 1;
+        }
+    });
+    mapObjects.forEach(m => {
+        if (m.material.opacity < 1) {
+            m.material.opacity += 0.05;
+            if (m.material.opacity > 1) m.material.opacity = 1;
         }
     });
 
@@ -914,13 +920,18 @@ function animate() {
     let camDir = new THREE.Vector3().subVectors(lookAtTarget, camera.position).normalize();
     camRaycaster.set(camera.position, camDir);
     
-    // 3. If the ray hits a boundary wall before reaching the Target, make that wall transparent
-    let hits = camRaycaster.intersectObjects(walls);
-    if (hits.length > 0 && hits[0].distance < camDist) {
-        let blockingWall = hits[0].object;
-        blockingWall.material.opacity -= 0.15;
-        if (blockingWall.material.opacity < 0.2) blockingWall.material.opacity = 0.2;
-    }
+    // 3. If the ray hits any boundary wall or map block before reaching the Target, make them transparent
+    let obstacles = [...walls, ...mapObjects];
+    let hits = camRaycaster.intersectObjects(obstacles);
+    
+    // Fade ALL objects that block the view (hit distance < camDist - 0.5 to avoid fading the floor or the cover you are touching)
+    hits.forEach(hit => {
+        if (hit.distance < camDist - 0.5) {
+            let blockingObj = hit.object;
+            blockingObj.material.opacity -= 0.15;
+            if (blockingObj.material.opacity < 0.2) blockingObj.material.opacity = 0.2;
+        }
+    });
 
     const now = performance.now();
     if (now - lastRenderTime >= fpsInterval) {
