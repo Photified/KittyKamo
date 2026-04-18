@@ -402,7 +402,6 @@ topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
 rightBox.id = 'rightBox';
-// Fixed justify-content to center to perfectly align with the left box!
 rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; text-align:right; color:white; max-width:30%; overflow-wrap: break-word; overflow-y:auto; overflow-x:hidden;';
 rightBox.innerHTML = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
 topBar.appendChild(rightBox);
@@ -426,7 +425,7 @@ helpModal.innerHTML = `
         <div style="display: grid; grid-template-columns: 1fr; gap: 10px; color: #eee; font-size: 12px; line-height: 1.4;">
             <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color.</p>
             <p style="margin: 0;"><b>SEEKERS:</b> Touch Hiders to tag them. Listen for Meows!</p>
-            <p style="margin: 0; color: #aaffaa;"><b>BONUS TIME:</b> Meowing adds +15s to your survival time! If a Seeker destroys your Decoy, you also get +15s!</p>
+            <p style="margin: 0; color: #aaffaa;"><b>BONUS TIME:</b> Hiders get +15s for Meowing or tricking Seekers with a Decoy! Seekers get +15s for tagging a Hider!</p>
         </div>
 
         <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 14px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
