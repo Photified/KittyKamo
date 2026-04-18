@@ -66,25 +66,24 @@ function playCatMeow(catData) {
     catData.pAudio.play();
 }
 
-// --- REVERTED TO ORIGINAL CSS ---
+// --- STRIPPED AND BULLETPROOF CSS ---
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
-    .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 10px 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); height: 120px; box-sizing: border-box; display: flex; }
-    .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+    .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content:center; }
     .menu-btn:hover { background: #555; transform: scale(1.05); }
-    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; border: 2px solid #333; }
-    ::-webkit-scrollbar-thumb:hover { background: #999; }
+    ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
 `;
 document.head.appendChild(style);
 
 const scene = new THREE.Scene();
 scene.background = colorDay.clone();
 
+// --- THE CAMERA IS NO LONGER ATTACHED TO THE PLAYER! ---
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 1.5, 3); 
+scene.add(camera);
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -243,7 +242,6 @@ let wasGroundedLastFrame = true;
 
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
-myPlayerObject.add(camera);
 
 const blindfoldStage = new THREE.Group();
 camera.add(blindfoldStage); 
@@ -304,7 +302,7 @@ const myCatData = createCatSculpt();
 myPlayerObject.add(myCatData.group);
 
 const startScreen = document.createElement('div');
-startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:50px; z-index:999; cursor:pointer;';
+startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size: 24px; z-index:999; cursor:pointer;';
 startScreen.innerHTML = "CLICK ANYWHERE TO START";
 startScreen.onclick = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -313,75 +311,75 @@ startScreen.onclick = () => {
 };
 document.body.appendChild(startScreen);
 
-// --- REVERTED BANNER UI ---
+// --- BULLETPROOF MOBILE BANNER ---
 const topBar = document.createElement('div');
-topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:15px 30px; box-sizing:border-box; background:rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; z-index:100;';
+topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:10px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:stretch; z-index:100; pointer-events:none;';
 document.body.appendChild(topBar);
 
 const leftBox = document.createElement('div');
-leftBox.className = 'ui-box';
-leftBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; min-width:200px;';
-leftBox.innerHTML = `<div style="color:white; font-size:20px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
+leftBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:4px; max-width:30%; overflow:hidden;';
+leftBox.innerHTML = `<div style="color:white; font-size:12px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
+
+const soundBtnRow = document.createElement('div');
+soundBtnRow.style.cssText = "display: flex; gap: 5px;";
 
 const muteBtn = document.createElement('button');
-muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊 Sound';
-muteBtn.onclick = (e) => { isMuted = !isMuted; muteBtn.innerHTML = isMuted ? '🔇 Muted' : '🔊 Sound'; };
-leftBox.appendChild(muteBtn);
+muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊';
+muteBtn.onclick = (e) => { isMuted = !isMuted; muteBtn.innerHTML = isMuted ? '🔇' : '🔊'; };
+soundBtnRow.appendChild(muteBtn);
 
 const helpBtn = document.createElement('button');
-helpBtn.className = 'menu-btn'; helpBtn.innerHTML = '❓ Help';
+helpBtn.className = 'menu-btn'; helpBtn.innerHTML = '❓';
 helpBtn.onclick = () => { helpModal.style.display = helpModal.style.display === 'none' ? 'flex' : 'none'; };
-leftBox.appendChild(helpBtn); topBar.appendChild(leftBox);
+soundBtnRow.appendChild(helpBtn);
+
+leftBox.appendChild(soundBtnRow);
+topBar.appendChild(leftBox);
 
 const centerBox = document.createElement('div');
-centerBox.className = 'ui-box';
-centerBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:center; min-width:250px;';
+centerBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; flex:1; max-width:35%; margin:0 5px; overflow:hidden;';
 topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
-rightBox.className = 'ui-box';
-rightBox.style.cssText = 'flex-direction:column; justify-content:flex-start; text-align:right; color:white; min-width:200px; overflow-y:auto; padding-right:15px;';
-rightBox.innerHTML = `<div style="font-weight:900; font-size:16px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div><span style="color:#aaa; font-size:14px; text-align:center;">Waiting for players...</span>`;
+rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:flex-start; text-align:right; color:white; max-width:30%; overflow-y:auto; overflow-x:hidden;';
+rightBox.innerHTML = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
 topBar.appendChild(rightBox);
 
 const helpModal = document.createElement('div');
-helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:30px; color:white; z-index:150; display:none; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column;';
+helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:20px; color:white; z-index:150; display:none; width:90%; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column;';
 helpModal.innerHTML = `
-    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-        <h2 style="margin: 0; font-size: 32px; font-weight:900; text-align: center; color: gold;">HOW TO PLAY</h2>
+    <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+        <h2 style="margin: 0; font-size: 20px; font-weight:900; text-align: center; color: gold;">HOW TO PLAY</h2>
         
-        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; text-align: center; font-size: 14px;">
-            <div style="margin-bottom: 10px; color: gold; font-weight: bold; font-size: 16px;">CONTROLS</div>
-            <div style="line-height: 2.4;">
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">W / S</b> Move Forward & Back <br>
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">A / D</b> Turn Left & Right <br>
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;&nbsp;
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">F</b> Meow (+15 Pts) &nbsp;&nbsp;
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy (1/Round)
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; text-align: center; font-size: 12px;">
+            <div style="margin-bottom: 8px; color: gold; font-weight: bold; font-size: 14px;">CONTROLS</div>
+            <div style="line-height: 2;">
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> Move <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Turn <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy
             </div>
+            <div style="margin-top: 5px; font-style: italic; color: #aaa;">(No strafing! Tanks controls only.)</div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; color: #eee; font-size: 16px; line-height: 1.5;">
-            <p style="margin: 0;"><b>HIDERS (Green):</b> Stand perfectly still next to a block to copy its color.</p>
-            <p style="margin: 0;"><b>SEEKERS (Red):</b> Touch Hiders to tag them. Listen closely—you will hear a <i>Meow</i> when close!</p>
-        </div>
-        
-        <div style="color: #66ff66; font-size: 15px; text-align: center; padding: 12px; border: 2px solid #66ff66; border-radius: 8px; background: rgba(0, 255, 0, 0.1);">
-            <p style="margin: 0;">🪄 <b>THE TRICKSTER:</b> Press 'E' to drop a Decoy Cat (once per round). When the Seeker tags it, it explodes!</p>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 10px; color: #eee; font-size: 12px; line-height: 1.4;">
+            <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color.</p>
+            <p style="margin: 0;"><b>SEEKERS:</b> Touch Hiders to tag them. Listen for Meows!</p>
         </div>
 
-        <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 18px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
+        <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 14px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
     </div>
 `;
 document.body.appendChild(helpModal);
 
 const blindfold = document.createElement('div');
-blindfold.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; color:#ff4444; display:none; align-items:flex-start; justify-content:center; padding-top:18vh; font-weight:900; font-size:50px; z-index:200; text-align:center; pointer-events:none; box-sizing:border-box;';
-blindfold.innerHTML = `<div style="z-index:2; position:relative; text-shadow:4px 4px 0 #000;">YOU ARE THE SEEKER!<br><span style="font-size:30px; color:white;">GIVING HIDERS TIME TO HIDE...</span></div>`;
+blindfold.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; color:#ff4444; display:none; align-items:flex-start; justify-content:center; padding-top:25vh; font-weight:900; z-index:200; text-align:center; pointer-events:none; box-sizing:border-box;';
+blindfold.innerHTML = `<div style="z-index:2; position:relative; text-shadow:2px 2px 0 #000; font-size: 24px;">YOU ARE THE SEEKER!<br><span style="font-size:16px; color:white;">GIVING HIDERS TIME TO HIDE...</span></div>`;
 document.body.appendChild(blindfold);
 
 const oobDiv = document.createElement('div');
-oobDiv.style.cssText = 'position:absolute; top:40%; left:50%; transform:translateX(-50%); color:#ff4444; font-weight:900; font-size:50px; text-shadow:3px 3px 0 #000; display:none; z-index:150; text-align:center;';
+oobDiv.style.cssText = 'position:absolute; top:40%; left:50%; transform:translateX(-50%); color:#ff4444; font-weight:900; font-size:24px; text-shadow:2px 2px 0 #000; display:none; z-index:150; text-align:center; width: 100%;';
 document.body.appendChild(oobDiv);
 
 function updateUI() {
@@ -389,19 +387,19 @@ function updateUI() {
     let roleColor = myRole === 'seeker' ? '#ff6666' : (myRole === 'spectator' ? '#AAAAAA' : '#66ff66');
     
     if (serverGameState === 'WAITING') {
-        centerBox.innerHTML = `<div style="font-size:14px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:22px; color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
+        centerBox.innerHTML = `<div style="font-size:10px; color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:12px; color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (serverGameState === 'GAME_OVER') {
         centerBox.innerHTML = `
-            <div style="font-size:32px; font-weight:900; color:gold; margin-bottom:4px; text-shadow: 2px 2px 0 #000;">${serverWinReason}</div>
-            <div style="font-size:16px; color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
+            <div style="font-size:16px; font-weight:900; color:gold; margin-bottom:2px; text-shadow: 1px 1px 0 #000;">${serverWinReason}</div>
+            <div style="font-size:10px; color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
         `;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (myRole === 'spectator') {
-        centerBox.innerHTML = `<div style="font-size:14px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:28px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:4px;">${roleText}</div><div style="font-size:16px; color:#aaa; font-weight:bold;">WAITING FOR NEXT ROUND...</div>`;
+        centerBox.innerHTML = `<div style="font-size:10px; color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:16px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:2px;">${roleText}</div><div style="font-size:10px; color:#aaa; font-weight:bold;">WAITING...</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else {
-        centerBox.innerHTML = `<div style="font-size:14px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:28px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:4px;">${roleText}</div><div style="font-size:20px; font-weight:bold; color:white;">${serverGameState} - ${serverTime}s</div>`;
+        centerBox.innerHTML = `<div style="font-size:10px; color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:16px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:2px;">${roleText}</div><div style="font-size:12px; font-weight:bold; color:white;">${serverGameState} - ${serverTime}s</div>`;
         if (myRole === 'seeker' && serverGameState === 'HIDING') {
             blindfold.style.display = 'flex'; blindfoldStage.visible = true;    
         } else {
@@ -423,10 +421,10 @@ socket.on('gameStateUpdate', (data) => {
     }
 
     if (data.leaderboard && data.leaderboard.length > 0) {
-        let lbText = '<div style="font-weight:900; font-size:16px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div>';
+        let lbText = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
         data.leaderboard.forEach((player, index) => {
             let crownIcon = (player.id === serverWinnerId) ? '👑 ' : '';
-            lbText += `<div style="font-size:14px; line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
+            lbText += `<div style="font-size:9px; line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
         });
         rightBox.innerHTML = lbText;
     }
@@ -583,7 +581,7 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
 
-const moveSpeed = 0.15; const turnSpeed = 0.04; let velocityY = 0; let isGrounded = true; const gravity = -0.015; const jumpStrength = 0.3;
+const moveSpeed = 0.15; const turnSpeed = 0.06; let velocityY = 0; let isGrounded = true; const gravity = -0.015; const jumpStrength = 0.3;
 
 function animate() {
     requestAnimationFrame(animate);
@@ -592,7 +590,6 @@ function animate() {
     myPlayerObject.rotation.z = 0;
 
     let cycleProgress = 0;
-    
     if (serverGameState === 'SEEKING') {
         cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
     } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
@@ -641,48 +638,15 @@ function animate() {
         });
     }
 
-    if (serverGameState === 'GAME_OVER') {
-        myCatData.group.visible = (serverWinnerId === socket.id);
-        
-        if (serverWinnerId) {
-            if (serverWinnerId === socket.id) {
-                camera.position.set(0, 3, 8);
-                camera.lookAt(0, 0, 0);
-                myPlayerObject.rotation.y += 0.02; 
-            } else if (otherPlayers[serverWinnerId]) {
-                myPlayerObject.position.copy(otherPlayers[serverWinnerId].group.position);
-                camera.position.set(0, 3, 8);
-                camera.lookAt(0, 0, 0);
-                myPlayerObject.rotation.y += 0.02;
-            }
-        }
-    } else if (myRole === 'spectator') {
+    if (myRole === 'spectator' || serverGameState === 'GAME_OVER') {
         myCatData.group.visible = false;
-        
-        let seekerId = Object.keys(otherPlayers).find(id => otherPlayers[id].role === 'seeker');
-        if (seekerId && otherPlayers[seekerId]) {
-            myPlayerObject.position.copy(otherPlayers[seekerId].group.position);
-            camera.position.set(0, 5, 8);
-            camera.lookAt(0, 0, 0);
-        }
-        
         if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
         if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
     } else {
         myCatData.group.visible = true;
-        
-        if (isMobile && window.innerHeight > window.innerWidth) {
-            camera.position.set(0, 2.5, 4);
-            // --- FIX FOR CAMERA BUG ---
-            // This firmly locks the camera facing forward and angled down,
-            // preventing the wild spin when you turn the cat!
-            camera.rotation.set(-0.2, 0, 0); 
-        } else {
-            camera.position.set(0, 1.5, 3);
-            camera.rotation.set(0, 0, 0);
-        }
 
         if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
+            // Turning rotates the player immediately (the camera will follow smoothly below)
             if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
             if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
             
@@ -707,8 +671,6 @@ function animate() {
         
         if (myOob) {
             myCatData.group.scale.set(10, 10, 10); 
-            camera.position.set(0, 15, 30); 
-            camera.lookAt(0, 0, 0);
             if (oobTimer === 0) oobTimer = Date.now(); 
             let timeLeft = 10 - Math.floor((Date.now() - oobTimer) / 1000);
             if (timeLeft <= 0) {
@@ -766,14 +728,10 @@ function animate() {
         let cColor = (targetColor === 0xFFFFFF || targetColor === 0xFF0000) ? 0xFFD700 : targetColor;
         myCatData.crownMat.color.setHex(cColor);
 
-        // Hide local nametag so it never breaks the UI illusion!
+        // Hide your own name so it doesn't float over your UI ever again
         if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
         myTailTime += 0.1; myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
-        let targetHeadRot = 0;
-        if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;  
-        if (keys.ArrowRight || keys.d) targetHeadRot = -0.4; 
-        myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
 
         if (moved && isGrounded) { 
             myWalkTime += 0.2; 
@@ -825,6 +783,34 @@ function animate() {
 
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
 
+    // --- THE SMOOTH CAMERA FIX ---
+    // Instead of being bolted to the cat, the camera now gracefully trails behind it
+    let focusObject = myPlayerObject;
+    if (serverGameState === 'GAME_OVER' && serverWinnerId) {
+        focusObject = (serverWinnerId === socket.id) ? myPlayerObject : (otherPlayers[serverWinnerId] ? otherPlayers[serverWinnerId].group : myPlayerObject);
+        focusObject.rotation.y += 0.02; // Spin the winning cat
+    } else if (myRole === 'spectator') {
+        let seekerId = Object.keys(otherPlayers).find(id => otherPlayers[id].role === 'seeker');
+        if (seekerId && otherPlayers[seekerId]) focusObject = otherPlayers[seekerId].group;
+    }
+
+    focusObject.updateMatrixWorld(); // Ensure math is perfect before moving camera
+    
+    // Calculate where the camera SHOULD be
+    let idealOffset = new THREE.Vector3(0, 1.5, 3);
+    if (isMobile && window.innerHeight > window.innerWidth) {
+        idealOffset.set(0, 2.5, 4); // Slightly higher for mobile portrait
+    }
+
+    // Move camera smoothly towards that target
+    let cameraTargetPos = idealOffset.applyMatrix4(focusObject.matrixWorld);
+    camera.position.lerp(cameraTargetPos, 0.15);
+    
+    // Make camera look at the cat
+    let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
+    camera.lookAt(lookAtTarget);
+
+
     const now = performance.now();
     if (now - lastRenderTime >= fpsInterval) {
         lastRenderTime = now;
@@ -839,11 +825,13 @@ animate();
 
 if (isMobile) {
     const mobileUI = document.createElement('div');
-    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:120px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
+    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:110px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
     
-    function createBtn(text, x, y, key, fontSize) {
+    function createBtn(text, x, y, key) {
         const btn = document.createElement('button');
         btn.innerHTML = text;
+        let fontSize = text.length > 2 ? '10px' : '18px'; 
+        
         btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:50px; height:50px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:${fontSize}; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
         
         btn.addEventListener('touchstart', (e) => { 
@@ -868,19 +856,19 @@ if (isMobile) {
     }
     
     const dpad = document.createElement('div');
-    dpad.style.cssText = 'position:relative; width:50px; height:120px;';
-    dpad.appendChild(createBtn('▲', 0, 0, 'w', '18px'));               
-    dpad.appendChild(createBtn('▼', 0, 70, 's', '18px'));             
+    dpad.style.cssText = 'position:relative; width:50px; height:110px;';
+    dpad.appendChild(createBtn('▲', 0, 0, 'w'));               
+    dpad.appendChild(createBtn('▼', 0, 60, 's'));             
     
     const actions = document.createElement('div');
-    actions.style.cssText = 'position:relative; width:170px; height:120px;';
+    actions.style.cssText = 'position:relative; width:170px; height:110px;';
     
-    actions.appendChild(createBtn('◀', 30, 0, 'a', '18px'));       
-    actions.appendChild(createBtn('▶', 90, 0, 'd', '18px'));      
+    actions.appendChild(createBtn('◀', 30, 0, 'a'));       
+    actions.appendChild(createBtn('▶', 90, 0, 'd'));      
     
-    actions.appendChild(createBtn('MEOW', 0, 70, 'f', '11px'));         
-    actions.appendChild(createBtn('JUMP', 60, 70, ' ', '11px'));       
-    actions.appendChild(createBtn('DECOY', 120, 70, 'e', '11px'));      
+    actions.appendChild(createBtn('MEOW', 0, 60, 'f'));         
+    actions.appendChild(createBtn('JUMP', 60, 60, ' '));       
+    actions.appendChild(createBtn('DECOY', 120, 60, 'e'));      
 
     mobileUI.appendChild(dpad);
     mobileUI.appendChild(actions);
