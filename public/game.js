@@ -76,11 +76,12 @@ style.innerHTML = `
     ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
     ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
     
-    /* Mobile Responsive Banner */
+    /* REVISED Mobile Responsive Banner */
     @media (max-width: 768px) {
-        #topBar { flex-wrap: wrap !important; padding: 5px !important; }
-        #centerBox { order: -1 !important; max-width: 100% !important; flex: 0 0 100% !important; margin: 0 0 5px 0 !important; }
-        #leftBox, #rightBox { max-width: 48% !important; flex: 1 !important; }
+        #topBar { flex-wrap: wrap !important; padding: 5px !important; gap: 5px; }
+        #leftBox { order: 1 !important; max-width: calc(50% - 2.5px) !important; flex: 1 1 auto !important; margin: 0 !important; }
+        #rightBox { order: 2 !important; max-width: calc(50% - 2.5px) !important; flex: 1 1 auto !important; margin: 0 !important; }
+        #centerBox { order: 3 !important; max-width: 100% !important; flex: 0 0 100% !important; margin: 0 !important; }
     }
 `;
 document.head.appendChild(style);
@@ -121,6 +122,9 @@ sunLight.shadow.camera.top = 40; sunLight.shadow.camera.bottom = -40;
 sunLight.shadow.mapSize.width = isMobile ? 1024 : 2048; 
 sunLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
 scene.add(sunLight);
+
+// --- GLOBAL RAYCASTER FOR CAMERA FADING ---
+const camRaycaster = new THREE.Raycaster();
 
 function createCrown() {
     const crownMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 }); 
@@ -235,7 +239,10 @@ const walls = [];
 const wallMat = new THREE.MeshLambertMaterial({ color: 0x113311 });
 function createWall(w, h, d, x, y, z) {
     const geo = new THREE.BoxGeometry(w, h, d);
-    const mesh = new THREE.Mesh(geo, wallMat);
+    // Clone material so each wall can fade transparently independently
+    const mat = wallMat.clone();
+    mat.transparent = true; 
+    const mesh = new THREE.Mesh(geo, mat);
     mesh.castShadow = true; mesh.receiveShadow = true;
     mesh.position.set(x, y, z);
     scene.add(mesh);
@@ -308,7 +315,6 @@ for(let i=0; i<3; i++) {
 blindfoldStage.visible = false; 
 
 // --- DYNAMIC GROUND ---
-// Create a basic 1x1 plane here, but it will be scaled to fit exactly within the walls on map init
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0x113311, side: THREE.DoubleSide }));
 ground.rotation.x = -Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; 
 scene.add(ground);
@@ -800,7 +806,6 @@ function animate() {
                 if (dist < minDist) { minDist = dist; closestBlock = mapObjects[i]; }
             }
             
-            // Only checks VISUAL walls for camo color!
             for (let i = 0; i < walls.length; i++) {
                 const wBox = new THREE.Box3().setFromObject(walls[i]);
                 let dist = wBox.distanceToPoint(myPlayerObject.position);
@@ -894,6 +899,28 @@ function animate() {
     
     let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
     camera.lookAt(lookAtTarget);
+
+    // --- CAMERA WALL FADING ---
+    // 1. Recover opacity for all walls naturally over time
+    walls.forEach(w => {
+        if (w.material.opacity < 1) {
+            w.material.opacity += 0.05;
+            if (w.material.opacity > 1) w.material.opacity = 1;
+        }
+    });
+
+    // 2. Cast a ray from the Camera directly toward the focus Target
+    let camDist = camera.position.distanceTo(lookAtTarget);
+    let camDir = new THREE.Vector3().subVectors(lookAtTarget, camera.position).normalize();
+    camRaycaster.set(camera.position, camDir);
+    
+    // 3. If the ray hits a boundary wall before reaching the Target, make that wall transparent
+    let hits = camRaycaster.intersectObjects(walls);
+    if (hits.length > 0 && hits[0].distance < camDist) {
+        let blockingWall = hits[0].object;
+        blockingWall.material.opacity -= 0.15;
+        if (blockingWall.material.opacity < 0.2) blockingWall.material.opacity = 0.2;
+    }
 
     const now = performance.now();
     if (now - lastRenderTime >= fpsInterval) {
