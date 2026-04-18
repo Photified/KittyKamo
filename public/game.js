@@ -1,4 +1,11 @@
 // game.js
+
+// --- MOBILE VIEWPORT FIX ---
+const meta = document.createElement('meta');
+meta.name = 'viewport';
+meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+document.head.appendChild(meta);
+
 const socket = io();
 
 const targetFPS = 30;
@@ -60,7 +67,7 @@ function playCatMeow(catData) {
 
 const style = document.createElement('style');
 style.innerHTML = `
-    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
     .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 10px 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); height: 120px; box-sizing: border-box; display: flex; }
     .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
     .menu-btn:hover { background: #555; transform: scale(1.05); }
@@ -86,8 +93,16 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.top = '0';
+renderer.domElement.style.left = '0';
 renderer.domElement.style.zIndex = '1';
 document.body.appendChild(renderer.domElement);
+
+// --- DYNAMIC RESIZING (For rotating phone to Landscape) ---
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
 scene.add(ambientLight);
@@ -298,13 +313,13 @@ startScreen.onclick = () => {
 document.body.appendChild(startScreen);
 
 const topBar = document.createElement('div');
-topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:15px 30px; box-sizing:border-box; background:rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; z-index:100;';
+topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:15px; box-sizing:border-box; background:rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; z-index:100;';
 document.body.appendChild(topBar);
 
 const leftBox = document.createElement('div');
 leftBox.className = 'ui-box';
-leftBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; min-width:200px;';
-leftBox.innerHTML = `<div style="color:white; font-size:20px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">CHAMELEON CATS</div>`;
+leftBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; min-width:180px; padding: 10px; height: 100px;';
+leftBox.innerHTML = `<div style="color:white; font-size:18px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
 
 const muteBtn = document.createElement('button');
 muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊 Sound';
@@ -318,55 +333,55 @@ leftBox.appendChild(helpBtn); topBar.appendChild(leftBox);
 
 const centerBox = document.createElement('div');
 centerBox.className = 'ui-box';
-centerBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:center; min-width:250px;';
+centerBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:center; min-width:200px; padding: 10px; height: 100px;';
 topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
 rightBox.className = 'ui-box';
-rightBox.style.cssText = 'flex-direction:column; justify-content:flex-start; text-align:right; color:white; min-width:200px; overflow-y:auto; padding-right:15px;';
-rightBox.innerHTML = `<div style="font-weight:900; font-size:16px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div><span style="color:#aaa; font-size:14px; text-align:center;">Waiting for players...</span>`;
+rightBox.style.cssText = 'flex-direction:column; justify-content:flex-start; text-align:right; color:white; min-width:160px; overflow-y:auto; padding: 10px; height: 100px;';
+rightBox.innerHTML = `<div style="font-weight:900; font-size:14px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div><span style="color:#aaa; font-size:12px; text-align:center;">Waiting for players...</span>`;
 topBar.appendChild(rightBox);
 
 const helpModal = document.createElement('div');
-helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:30px; color:white; z-index:150; display:none; max-width:640px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column;';
+helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:20px; color:white; z-index:150; display:none; width:90%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column; max-height: 80vh; overflow-y: auto;';
 helpModal.innerHTML = `
-    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-        <h2 style="margin: 0; font-size: 32px; font-weight:900; text-align: center; color: gold;">HOW TO PLAY</h2>
+    <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+        <h2 style="margin: 0; font-size: 24px; font-weight:900; text-align: center; color: gold;">HOW TO PLAY</h2>
         
-        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; text-align: center; font-size: 14px;">
-            <div style="margin-bottom: 10px; color: gold; font-weight: bold; font-size: 16px;">CONTROLS</div>
-            <div style="line-height: 2.4;">
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">W</b> Forward &nbsp;&nbsp;
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">S</b> Backward &nbsp;&nbsp;
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">A / D</b> Strafe &nbsp;&nbsp;
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">← / →</b> Turn <br>
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;&nbsp;
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777;">F</b> Meow (+15 Pts) &nbsp;&nbsp;
-                <b style="background: #333; padding: 4px 8px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy (1/Round)
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; text-align: center; font-size: 13px;">
+            <div style="margin-bottom: 8px; color: gold; font-weight: bold; font-size: 14px;">CONTROLS</div>
+            <div style="line-height: 2;">
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W</b> Fwd &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">S</b> Back &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A/D</b> Strafe &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">←/→</b> Turn <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; color: #eee; font-size: 16px; line-height: 1.5;">
-            <p style="margin: 0;"><b>HIDERS (Green):</b> Stand perfectly still next to a block to copy its color.</p>
-            <p style="margin: 0;"><b>SEEKERS (Red):</b> Touch Hiders to tag them. Listen closely—you will hear a <i>Meow</i> when close!</p>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 10px; color: #eee; font-size: 14px; line-height: 1.4;">
+            <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color.</p>
+            <p style="margin: 0;"><b>SEEKERS:</b> Touch Hiders to tag them. Listen for Meows!</p>
         </div>
         
-        <div style="color: #66ff66; font-size: 15px; text-align: center; padding: 12px; border: 2px solid #66ff66; border-radius: 8px; background: rgba(0, 255, 0, 0.1);">
-            <p style="margin: 0;">🪄 <b>THE TRICKSTER:</b> Press 'E' to drop a Decoy Cat (once per round). When the Seeker tags it, it explodes!</p>
+        <div style="color: #66ff66; font-size: 13px; text-align: center; padding: 10px; border: 2px solid #66ff66; border-radius: 8px; background: rgba(0, 255, 0, 0.1);">
+            <p style="margin: 0;">🪄 <b>THE TRICKSTER:</b> Press 'E' to drop a Decoy Cat (once per round). It explodes when tagged!</p>
         </div>
 
-        <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 18px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
+        <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 16px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
     </div>
 `;
 document.body.appendChild(helpModal);
 
 const blindfold = document.createElement('div');
-blindfold.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; color:#ff4444; display:none; align-items:flex-start; justify-content:center; padding-top:18vh; font-weight:900; font-size:50px; z-index:200; text-align:center; pointer-events:none; box-sizing:border-box;';
-blindfold.innerHTML = `<div style="z-index:2; position:relative; text-shadow:4px 4px 0 #000;">YOU ARE THE SEEKER!<br><span style="font-size:30px; color:white;">GIVING HIDERS TIME TO HIDE...</span></div>`;
+blindfold.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; color:#ff4444; display:none; align-items:flex-start; justify-content:center; padding-top:25vh; font-weight:900; font-size:36px; z-index:200; text-align:center; pointer-events:none; box-sizing:border-box;';
+blindfold.innerHTML = `<div style="z-index:2; position:relative; text-shadow:2px 2px 0 #000;">YOU ARE THE SEEKER!<br><span style="font-size:20px; color:white;">GIVING HIDERS TIME TO HIDE...</span></div>`;
 document.body.appendChild(blindfold);
 
 const oobDiv = document.createElement('div');
-oobDiv.style.cssText = 'position:absolute; top:40%; left:50%; transform:translateX(-50%); color:#ff4444; font-weight:900; font-size:50px; text-shadow:3px 3px 0 #000; display:none; z-index:150; text-align:center;';
+oobDiv.style.cssText = 'position:absolute; top:40%; left:50%; transform:translateX(-50%); color:#ff4444; font-weight:900; font-size:36px; text-shadow:2px 2px 0 #000; display:none; z-index:150; text-align:center; width: 100%;';
 document.body.appendChild(oobDiv);
 
 function updateUI() {
@@ -374,19 +389,19 @@ function updateUI() {
     let roleColor = myRole === 'seeker' ? '#ff6666' : (myRole === 'spectator' ? '#AAAAAA' : '#66ff66');
     
     if (serverGameState === 'WAITING') {
-        centerBox.innerHTML = `<div style="font-size:14px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:22px; color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
+        centerBox.innerHTML = `<div style="font-size:12px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:18px; color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (serverGameState === 'GAME_OVER') {
         centerBox.innerHTML = `
-            <div style="font-size:32px; font-weight:900; color:gold; margin-bottom:4px; text-shadow: 2px 2px 0 #000;">${serverWinReason}</div>
-            <div style="font-size:16px; color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
+            <div style="font-size:24px; font-weight:900; color:gold; margin-bottom:4px; text-shadow: 2px 2px 0 #000;">${serverWinReason}</div>
+            <div style="font-size:14px; color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
         `;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (myRole === 'spectator') {
-        centerBox.innerHTML = `<div style="font-size:14px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:28px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:4px;">${roleText}</div><div style="font-size:16px; color:#aaa; font-weight:bold;">WAITING FOR NEXT ROUND...</div>`;
+        centerBox.innerHTML = `<div style="font-size:12px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:24px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:4px;">${roleText}</div><div style="font-size:14px; color:#aaa; font-weight:bold;">WAITING FOR NEXT ROUND...</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else {
-        centerBox.innerHTML = `<div style="font-size:14px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:28px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:4px;">${roleText}</div><div style="font-size:20px; font-weight:bold; color:white;">${serverGameState} - ${serverTime}s</div>`;
+        centerBox.innerHTML = `<div style="font-size:12px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:24px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:4px;">${roleText}</div><div style="font-size:18px; font-weight:bold; color:white;">${serverGameState} - ${serverTime}s</div>`;
         if (myRole === 'seeker' && serverGameState === 'HIDING') {
             blindfold.style.display = 'flex'; blindfoldStage.visible = true;    
         } else {
@@ -408,10 +423,10 @@ socket.on('gameStateUpdate', (data) => {
     }
 
     if (data.leaderboard && data.leaderboard.length > 0) {
-        let lbText = '<div style="font-weight:900; font-size:16px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div>';
+        let lbText = '<div style="font-weight:900; font-size:14px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div>';
         data.leaderboard.forEach((player, index) => {
             let crownIcon = (player.id === serverWinnerId) ? '👑 ' : '';
-            lbText += `<div style="font-size:14px; line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
+            lbText += `<div style="font-size:12px; line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
         });
         rightBox.innerHTML = lbText;
     }
