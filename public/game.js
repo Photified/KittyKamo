@@ -58,6 +58,31 @@ function playSound(type) {
     }
 }
 
+// --- CSS MEDIA QUERIES FOR BANNER FIX ---
+const style = document.createElement('style');
+style.innerHTML = `
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
+    
+    .top-bar { position:absolute; top:0; left:0; width:100%; padding:10px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:stretch; z-index:100; gap:5px; pointer-events:none; }
+    .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 8px 12px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; pointer-events: auto; }
+    
+    .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 10px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content:center; }
+    .menu-btn:hover { background: #555; transform: scale(1.05); }
+    
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+
+    @media (max-width: 650px) {
+        .top-bar { flex-wrap: wrap; justify-content: center; padding: 5px; gap: 5px; }
+        .ui-box { padding: 6px; min-width: auto; }
+        .center-box { order: -1; flex-basis: 100%; align-items: center !important; }
+        .left-box { flex: 1; align-items: flex-start !important; }
+        .right-box { flex: 1; align-items: flex-end !important; text-align: right !important; }
+    }
+`;
+document.head.appendChild(style);
+
 function playCatMeow(catData) {
     if (isMuted || meowBuffers.length === 0) return;
     if (catData.pAudio.isPlaying) catData.pAudio.stop();
@@ -65,18 +90,6 @@ function playCatMeow(catData) {
     catData.pAudio.setBuffer(randomBuffer);
     catData.pAudio.play();
 }
-
-const style = document.createElement('style');
-style.innerHTML = `
-    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
-    .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 8px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; }
-    .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 10px; font-size: clamp(10px, 2vw, 14px); font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content:center; }
-    .menu-btn:hover { background: #555; transform: scale(1.05); }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
-`;
-document.head.appendChild(style);
 
 const scene = new THREE.Scene();
 scene.background = colorDay.clone();
@@ -311,15 +324,14 @@ startScreen.onclick = () => {
 };
 document.body.appendChild(startScreen);
 
-// --- NEW: CLAMPED RESPONSIVE UI BANNERS ---
+// --- REWORKED BANNER HTML ---
 const topBar = document.createElement('div');
-topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:10px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:stretch; z-index:100; gap:5px;';
+topBar.className = 'top-bar';
 document.body.appendChild(topBar);
 
 const leftBox = document.createElement('div');
-leftBox.className = 'ui-box';
-leftBox.style.cssText = 'flex: 1; flex-direction:column; justify-content:center; align-items:flex-start; gap:4px; min-height: 60px; overflow:hidden;';
-leftBox.innerHTML = `<div style="color:white; font-size:clamp(12px, 3vw, 18px); font-weight:900; letter-spacing:1px;">KITTY KAMO</div>`;
+leftBox.className = 'ui-box left-box';
+leftBox.innerHTML = `<div style="color:white; font-size:16px; font-weight:900; letter-spacing:1px; margin-bottom:4px;">KITTY KAMO</div>`;
 
 const soundBtnRow = document.createElement('div');
 soundBtnRow.style.cssText = "display: flex; gap: 5px;";
@@ -338,14 +350,12 @@ leftBox.appendChild(soundBtnRow);
 topBar.appendChild(leftBox);
 
 const centerBox = document.createElement('div');
-centerBox.className = 'ui-box';
-centerBox.style.cssText = 'flex: 1.2; flex-direction:column; justify-content:center; align-items:center; text-align:center; min-height: 60px; overflow:hidden;';
+centerBox.className = 'ui-box center-box';
 topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
-rightBox.className = 'ui-box';
-rightBox.style.cssText = 'flex: 1; flex-direction:column; justify-content:flex-start; text-align:right; color:white; overflow-y:auto; overflow-x:hidden; min-height: 60px;';
-rightBox.innerHTML = `<div style="font-weight:900; font-size:clamp(10px, 2.5vw, 14px); margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div><span style="color:#aaa; font-size:clamp(8px, 2vw, 12px);">Waiting...</span>`;
+rightBox.className = 'ui-box right-box';
+rightBox.innerHTML = `<div style="font-weight:900; font-size:12px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div><span style="color:#aaa; font-size:10px;">Waiting...</span>`;
 topBar.appendChild(rightBox);
 
 const helpModal = document.createElement('div');
@@ -357,14 +367,13 @@ helpModal.innerHTML = `
         <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; text-align: center; font-size: 13px;">
             <div style="margin-bottom: 8px; color: gold; font-weight: bold; font-size: 14px;">CONTROLS</div>
             <div style="line-height: 2;">
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> Move &nbsp;
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> Strafe &nbsp;
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Look <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> Move <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Look <br>
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy
             </div>
-            <div style="margin-top: 5px; font-style: italic; color: #aaa;">(Mobile: Swipe screen to look around)</div>
+            <div style="margin-top: 5px; font-style: italic; color: #aaa;">(No strafing! Tanks controls only.)</div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr; gap: 10px; color: #eee; font-size: clamp(12px, 3.5vw, 14px); line-height: 1.4;">
@@ -391,19 +400,19 @@ function updateUI() {
     let roleColor = myRole === 'seeker' ? '#ff6666' : (myRole === 'spectator' ? '#AAAAAA' : '#66ff66');
     
     if (serverGameState === 'WAITING') {
-        centerBox.innerHTML = `<div style="font-size:clamp(10px, 2.5vw, 12px); color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:clamp(14px, 3vw, 18px); color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
+        centerBox.innerHTML = `<div style="font-size:11px; color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:16px; color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (serverGameState === 'GAME_OVER') {
         centerBox.innerHTML = `
-            <div style="font-size:clamp(18px, 4vw, 24px); font-weight:900; color:gold; margin-bottom:2px; text-shadow: 2px 2px 0 #000;">${serverWinReason}</div>
-            <div style="font-size:clamp(12px, 2.5vw, 14px); color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
+            <div style="font-size:22px; font-weight:900; color:gold; margin-bottom:2px; text-shadow: 2px 2px 0 #000;">${serverWinReason}</div>
+            <div style="font-size:12px; color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
         `;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (myRole === 'spectator') {
-        centerBox.innerHTML = `<div style="font-size:clamp(10px, 2.5vw, 12px); color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:clamp(18px, 4vw, 24px); font-weight:900; color:${roleColor}; line-height:1; margin-bottom:2px;">${roleText}</div><div style="font-size:clamp(12px, 2.5vw, 14px); color:#aaa; font-weight:bold;">WAITING FOR NEXT ROUND...</div>`;
+        centerBox.innerHTML = `<div style="font-size:11px; color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:22px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:2px;">${roleText}</div><div style="font-size:12px; color:#aaa; font-weight:bold;">WAITING FOR NEXT ROUND...</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else {
-        centerBox.innerHTML = `<div style="font-size:clamp(10px, 2.5vw, 12px); color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:clamp(18px, 4vw, 24px); font-weight:900; color:${roleColor}; line-height:1; margin-bottom:2px;">${roleText}</div><div style="font-size:clamp(14px, 3vw, 18px); font-weight:bold; color:white;">${serverGameState} - ${serverTime}s</div>`;
+        centerBox.innerHTML = `<div style="font-size:11px; color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:22px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:2px;">${roleText}</div><div style="font-size:16px; font-weight:bold; color:white;">${serverGameState} - ${serverTime}s</div>`;
         if (myRole === 'seeker' && serverGameState === 'HIDING') {
             blindfold.style.display = 'flex'; blindfoldStage.visible = true;    
         } else {
@@ -425,10 +434,10 @@ socket.on('gameStateUpdate', (data) => {
     }
 
     if (data.leaderboard && data.leaderboard.length > 0) {
-        let lbText = '<div style="font-weight:900; font-size:clamp(10px, 2.5vw, 14px); margin-bottom:4px; color:#ddd; text-align:center;">SURVIVAL TIME</div>';
+        let lbText = '<div style="font-weight:900; font-size:12px; margin-bottom:4px; color:#ddd; text-align:center;">SURVIVAL TIME</div>';
         data.leaderboard.forEach((player, index) => {
             let crownIcon = (player.id === serverWinnerId) ? '👑 ' : '';
-            lbText += `<div style="font-size:clamp(10px, 2vw, 12px); line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
+            lbText += `<div style="font-size:11px; line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
         });
         rightBox.innerHTML = lbText;
     }
@@ -552,7 +561,6 @@ function checkCollision(pos) {
     return false;
 }
 
-// --- KEYS & MOVEMENT SYSTEM ---
 const keys = { w: false, a: false, s: false, d: false, ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false, " ": false };
 
 document.addEventListener('keydown', (e) => { 
@@ -595,6 +603,7 @@ function animate() {
     myPlayerObject.rotation.z = 0;
 
     let cycleProgress = 0;
+    
     if (serverGameState === 'SEEKING') {
         cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
     } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
@@ -668,8 +677,8 @@ function animate() {
             camera.lookAt(0, 0, 0);
         }
         
-        if (keys.ArrowLeft) myPlayerObject.rotation.y += turnSpeed;
-        if (keys.ArrowRight) myPlayerObject.rotation.y -= turnSpeed;
+        if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
+        if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
     } else {
         myCatData.group.visible = true;
         
@@ -682,17 +691,15 @@ function animate() {
         }
 
         if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
-            // PC: Arrows look around. Mobile: Swipe looks around (handled below)
-            if (keys.ArrowLeft) myPlayerObject.rotation.y += turnSpeed;
-            if (keys.ArrowRight) myPlayerObject.rotation.y -= turnSpeed;
+            // --- NO STRAFING, TURNING ONLY ---
+            if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
+            if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
             
             const oldX = myPlayerObject.position.x; const oldZ = myPlayerObject.position.z;
             
-            // WSAD handles actual movement/strafing for both PC and Mobile!
-            if (keys.w) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
-            if (keys.s) { myPlayerObject.translateZ(moveSpeed); moved = true; }
-            if (keys.a) { myPlayerObject.translateX(-moveSpeed); moved = true; }
-            if (keys.d) { myPlayerObject.translateX(moveSpeed); moved = true; }
+            // --- W AND S ONLY MOVE FORWARD AND BACKWARD ---
+            if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
+            if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
             
             if (checkCollision(myPlayerObject.position)) { myPlayerObject.position.x = oldX; myPlayerObject.position.z = oldZ; }
             if (keys[" "] && isGrounded) { velocityY = jumpStrength; isGrounded = false; moved = true; }
@@ -774,9 +781,9 @@ function animate() {
         myTailTime += 0.1; myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
         let targetHeadRot = 0;
         
-        // Cat Head Turns slightly when strafing (visual feedback)
-        if (keys.a) targetHeadRot = 0.4;  
-        if (keys.d) targetHeadRot = -0.4; 
+        // Visual Head Tilt purely based on Turn keys
+        if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;  
+        if (keys.ArrowRight || keys.d) targetHeadRot = -0.4; 
         myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
 
         if (moved && isGrounded) { 
@@ -841,44 +848,14 @@ function animate() {
 }
 animate();
 
-// --- NEW OVERHAULED MOBILE CONTROLS & CAMERA SWIPE ---
+// --- PERFECTED MOBILE CONTROLS ---
 if (isMobile) {
-    style.innerHTML += `
-        canvas { touch-action: none; }
-        body { overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
-    `;
-
-    // 1. SWIPE TO LOOK
-    let isDragging = false;
-    let previousTouchX = 0;
-
-    document.addEventListener('touchstart', (e) => {
-        // Don't pan the camera if they are pressing a button!
-        if(e.target.tagName !== 'BUTTON') {
-            isDragging = true;
-            previousTouchX = e.touches[0].clientX;
-        }
-    }, {passive: false});
-
-    document.addEventListener('touchmove', (e) => {
-        if(isDragging && myRole !== 'spectator') {
-            let deltaX = e.touches[0].clientX - previousTouchX;
-            // Smooth camera rotation!
-            myPlayerObject.rotation.y -= deltaX * 0.01; 
-            previousTouchX = e.touches[0].clientX;
-        }
-    }, {passive: false});
-
-    document.addEventListener('touchend', () => { isDragging = false; });
-
-    // 2. BUTTON OVERLAYS
     const mobileUI = document.createElement('div');
-    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:160px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
+    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:120px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
     
     function createBtn(text, x, y, key) {
         const btn = document.createElement('button');
         btn.innerHTML = text;
-        // Same size for all: 50x50. Font scales down if it's a word.
         let fontSize = text.length > 2 ? '10px' : '18px'; 
         
         btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:50px; height:50px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:${fontSize}; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
@@ -904,22 +881,24 @@ if (isMobile) {
         return btn;
     }
     
-    // LEFT THUMB: D-PAD (All mapping to WSAD)
+    // LEFT THUMB: Forward & Back
     const dpad = document.createElement('div');
-    dpad.style.cssText = 'position:relative; width:160px; height:160px;';
+    dpad.style.cssText = 'position:relative; width:50px; height:120px;';
+    dpad.appendChild(createBtn('▲', 0, 0, 'w'));               
+    dpad.appendChild(createBtn('▼', 0, 70, 's'));             
     
-    dpad.appendChild(createBtn('▲', 55, 0, 'w'));               
-    dpad.appendChild(createBtn('▼', 55, 110, 's'));             
-    dpad.appendChild(createBtn('◀', 0, 55, 'a'));       
-    dpad.appendChild(createBtn('▶', 110, 55, 'd'));      
-    
-    // RIGHT THUMB: ACTIONS
+    // RIGHT THUMB: Turning & Actions
     const actions = document.createElement('div');
-    actions.style.cssText = 'position:relative; width:160px; height:160px;';
+    actions.style.cssText = 'position:relative; width:170px; height:120px;';
     
-    actions.appendChild(createBtn('MEOW', 0, 55, 'f'));         
-    actions.appendChild(createBtn('JUMP', 55, 110, ' '));       
-    actions.appendChild(createBtn('DECOY', 110, 55, 'e'));      
+    // Turn Left/Right on top row
+    actions.appendChild(createBtn('◀', 30, 0, 'ArrowLeft'));       
+    actions.appendChild(createBtn('▶', 90, 0, 'ArrowRight'));      
+    
+    // Bottom row actions
+    actions.appendChild(createBtn('MEOW', 0, 70, 'f'));         
+    actions.appendChild(createBtn('JUMP', 60, 70, ' '));       
+    actions.appendChild(createBtn('DECOY', 120, 70, 'e'));      
 
     mobileUI.appendChild(dpad);
     mobileUI.appendChild(actions);
