@@ -5,7 +5,6 @@ const targetFPS = 30;
 const fpsInterval = 1000 / targetFPS; 
 let lastRenderTime = 0;
 
-// --- DAY/NIGHT COLORS ---
 const colorDay = new THREE.Color(0x87CEEB);   
 const colorSunset = new THREE.Color(0xFF7E47); 
 const colorNight = new THREE.Color(0x020211); 
@@ -272,17 +271,15 @@ for (let i = 0; i < 20; i++) {
     cloud.castShadow = true; scene.add(cloud); clouds.push(cloud);
 }
 
-// --- NEW: STARFIELD SYSTEM ---
 const starGeo = new THREE.BufferGeometry();
 const starCount = 400;
 const starPos = new Float32Array(starCount * 3);
 for(let i=0; i < starCount * 3; i+=3) {
-    starPos[i] = (Math.random() - 0.5) * 200; // x
-    starPos[i+1] = (Math.random() * 100) + 10; // y (keep them high in the sky)
-    starPos[i+2] = (Math.random() - 0.5) * 200; // z
+    starPos[i] = (Math.random() - 0.5) * 200; 
+    starPos[i+1] = (Math.random() * 100) + 10; 
+    starPos[i+2] = (Math.random() - 0.5) * 200; 
 }
 starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-// Opacity starts at 0 (invisible during the day)
 const starMat = new THREE.PointsMaterial({color: 0xFFFFFF, transparent: true, opacity: 0, size: 0.7});
 const stars = new THREE.Points(starGeo, starMat);
 scene.add(stars);
@@ -307,7 +304,7 @@ document.body.appendChild(topBar);
 const leftBox = document.createElement('div');
 leftBox.className = 'ui-box';
 leftBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; min-width:200px;';
-leftBox.innerHTML = `<div style="color:white; font-size:20px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
+leftBox.innerHTML = `<div style="color:white; font-size:20px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">CHAMELEON CATS</div>`;
 
 const muteBtn = document.createElement('button');
 muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊 Sound';
@@ -596,14 +593,13 @@ function animate() {
     if (cycleProgress < 0.7) {
         let p = cycleProgress / 0.7;
         scene.background.lerpColors(colorDay, colorSunset, p);
-        starMat.opacity = 0; // Stars hidden during the day
+        starMat.opacity = 0; 
     } else {
         let p = (cycleProgress - 0.7) / 0.3;
         scene.background.lerpColors(colorSunset, colorNight, p);
-        starMat.opacity = p; // Stars fade in during the night!
+        starMat.opacity = p; 
     }
 
-    // Give the starfield a subtle rotation to make it feel alive
     stars.rotation.y += 0.0003; 
 
     let dimFactor = 1 - (0.15 * cycleProgress); 
@@ -814,3 +810,59 @@ function animate() {
     }
 }
 animate();
+
+// --- MOBILE CONTROLS OVERLAY ---
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    style.innerHTML += `
+        canvas { touch-action: none; }
+        body { overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+    `;
+
+    const mobileUI = document.createElement('div');
+    mobileUI.style.cssText = 'position:absolute; bottom:20px; left:0; width:100%; height:180px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
+    
+    function createBtn(text, x, y, key) {
+        const btn = document.createElement('button');
+        btn.innerHTML = text;
+        btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:60px; height:60px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:16px; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
+        
+        btn.addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            keys[key] = true;
+            btn.style.background = 'rgba(255, 215, 0, 0.6)'; 
+            btn.style.transform = 'scale(0.9)'; 
+
+            if(key === 'f' || key === 'e') {
+                document.dispatchEvent(new KeyboardEvent('keydown', {'key': key}));
+            }
+        }, {passive: false});
+        
+        btn.addEventListener('touchend', (e) => { 
+            e.preventDefault(); 
+            keys[key] = false; 
+            btn.style.background = 'rgba(0,0,0,0.4)'; 
+            btn.style.transform = 'scale(1)';
+        }, {passive: false});
+        
+        return btn;
+    }
+    
+    const dpad = document.createElement('div');
+    dpad.style.cssText = 'position:relative; width:180px; height:180px;';
+    
+    dpad.appendChild(createBtn('W', 60, 0, 'w'));               
+    dpad.appendChild(createBtn('S', 60, 120, 's'));             
+    dpad.appendChild(createBtn('◀', 0, 60, 'ArrowLeft'));       
+    dpad.appendChild(createBtn('▶', 120, 60, 'ArrowRight'));      
+    
+    const actions = document.createElement('div');
+    actions.style.cssText = 'position:relative; width:180px; height:180px;';
+    
+    actions.appendChild(createBtn('JUMP', 60, 120, ' '));       
+    actions.appendChild(createBtn('MEOW', 0, 60, 'f'));         
+    actions.appendChild(createBtn('DECOY', 120, 60, 'e'));      
+
+    mobileUI.appendChild(dpad);
+    mobileUI.appendChild(actions);
+    document.body.appendChild(mobileUI);
+}
