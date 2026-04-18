@@ -78,10 +78,10 @@ style.innerHTML = `
     
     /* REVISED Mobile Responsive Banner */
     @media (max-width: 768px) {
-        #topBar { flex-wrap: wrap !important; padding: 5px !important; gap: 5px; }
-        #leftBox { order: 1 !important; max-width: calc(50% - 2.5px) !important; flex: 1 1 auto !important; margin: 0 !important; }
-        #rightBox { order: 2 !important; max-width: calc(50% - 2.5px) !important; flex: 1 1 auto !important; margin: 0 !important; }
-        #centerBox { order: 3 !important; max-width: 100% !important; flex: 0 0 100% !important; margin: 0 !important; }
+        #topBar { flex-wrap: wrap !important; padding: 8px !important; justify-content: space-between !important; }
+        #leftBox { order: 1 !important; width: 48% !important; max-width: 48% !important; margin: 0 0 8px 0 !important; flex: none !important; }
+        #rightBox { order: 2 !important; width: 48% !important; max-width: 48% !important; margin: 0 0 8px 0 !important; flex: none !important; }
+        #centerBox { order: 3 !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; flex: none !important; box-sizing: border-box !important; }
     }
 `;
 document.head.appendChild(style);
@@ -236,7 +236,7 @@ function createBlock(x, y, z, color) {
 
 // --- BOUNDARY WALLS ---
 const walls = [];
-const wallMat = new THREE.MeshLambertMaterial({ color: 0x113311 });
+const wallMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
 function createWall(w, h, d, x, y, z) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mat = wallMat.clone();
@@ -314,7 +314,7 @@ for(let i=0; i<3; i++) {
 blindfoldStage.visible = false; 
 
 // --- DYNAMIC GROUND ---
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0x113311, side: THREE.DoubleSide }));
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0x4CAF50, side: THREE.DoubleSide }));
 ground.rotation.x = -Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; 
 scene.add(ground);
 
