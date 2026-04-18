@@ -133,7 +133,18 @@ io.on('connection', (socket) => {
         startRound();
     }
 
-    // --- +15s BONUS FOR TAGGING A HIDER ---
+    // --- NEW: ACCEPT CUSTOM NAMES ---
+    socket.on('setName', (customName) => {
+        if (players[socket.id] && typeof customName === 'string') {
+            // Trim and sanitize to prevent HTML injection/oversized names
+            let cleanName = customName.trim().substring(0, 12).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            if (cleanName.length > 0) {
+                players[socket.id].name = cleanName;
+                io.emit('currentPlayers', players); // Update everyone's screens with the new name!
+            }
+        }
+    });
+
     socket.on('tagPlayer', (targetId) => {
         if (players[targetId] && players[targetId].role === 'hider') {
             // Verify the tagger is actually a seeker
@@ -141,7 +152,6 @@ io.on('connection', (socket) => {
                 players[targetId].role = 'seeker';
                 players[targetId].color = 0xFF0000;
                 
-                // Add the bonus to the seeker!
                 players[socket.id].score += 15;
                 
                 io.emit('currentPlayers', players); 
@@ -160,7 +170,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // --- +15s BONUS FOR MEOWING ---
     socket.on('taunt', () => {
         if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING') {
             players[socket.id].score += 15; 
@@ -168,13 +177,11 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- +15s BONUS FOR DECOY HIT ---
     socket.on('dropDecoy', (data) => {
         if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING' && !players[socket.id].decoyUsed) {
             players[socket.id].decoyUsed = true; 
             const decoyId = 'decoy_' + (nextDecoyId++);
             
-            // Map the decoy ID to the player who dropped it
             activeDecoys[decoyId] = socket.id; 
             
             io.emit('spawnDecoy', { id: decoyId, x: data.x, y: data.y, z: data.z, rY: data.rY, color: data.color });
@@ -185,13 +192,12 @@ io.on('connection', (socket) => {
         if (players[socket.id] && players[socket.id].role === 'seeker') {
             const ownerId = activeDecoys[decoyId];
             
-            // If the owner exists and is still a hider, reward them!
             if (ownerId && players[ownerId] && players[ownerId].role === 'hider') {
                 players[ownerId].score += 15;
             }
             
             io.emit('decoyPopped', decoyId);
-            delete activeDecoys[decoyId]; // Cleanup
+            delete activeDecoys[decoyId]; 
         }
     });
 
@@ -205,7 +211,6 @@ io.on('connection', (socket) => {
         delete players[socket.id];
         io.emit('playerDisconnected', socket.id);
         
-        // Remove any decoys they owned so seekers can't tag abandoned decoys
         for (let dId in activeDecoys) {
             if (activeDecoys[dId] === socket.id) {
                 delete activeDecoys[dId];
