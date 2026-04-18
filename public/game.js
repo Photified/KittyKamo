@@ -66,12 +66,16 @@ function playCatMeow(catData) {
     catData.pAudio.play();
 }
 
-// --- STRIPPED AND BULLETPROOF CSS ---
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
-    .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content:center; }
+    
+    .top-bar { position:absolute; top:0; left:0; width:100%; padding:10px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:stretch; z-index:100; gap:5px; pointer-events:none; }
+    .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 8px 12px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; pointer-events: auto; }
+    
+    .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 10px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content:center; }
     .menu-btn:hover { background: #555; transform: scale(1.05); }
+    
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
     ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
@@ -81,9 +85,8 @@ document.head.appendChild(style);
 const scene = new THREE.Scene();
 scene.background = colorDay.clone();
 
-// --- THE CAMERA IS NO LONGER ATTACHED TO THE PLAYER! ---
+// Camera is created here and will be attached directly to the player object later
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-scene.add(camera);
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -240,8 +243,10 @@ let lastTauntTime = 0;
 let myDecoyUsed = false; 
 let wasGroundedLastFrame = true; 
 
+// --- CAMERA IS NOW BOLTED DIRECTLY TO THE PLAYER AGAIN ---
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
+myPlayerObject.add(camera);
 
 const blindfoldStage = new THREE.Group();
 camera.add(blindfoldStage); 
@@ -311,13 +316,13 @@ startScreen.onclick = () => {
 };
 document.body.appendChild(startScreen);
 
-// --- BULLETPROOF MOBILE BANNER ---
 const topBar = document.createElement('div');
-topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:10px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:stretch; z-index:100; pointer-events:none;';
+topBar.className = 'top-bar';
 document.body.appendChild(topBar);
 
 const leftBox = document.createElement('div');
-leftBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:4px; max-width:30%; overflow:hidden;';
+leftBox.className = 'ui-box';
+leftBox.style.cssText += 'max-width:30%;';
 leftBox.innerHTML = `<div style="color:white; font-size:12px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
 
 const soundBtnRow = document.createElement('div');
@@ -337,11 +342,13 @@ leftBox.appendChild(soundBtnRow);
 topBar.appendChild(leftBox);
 
 const centerBox = document.createElement('div');
-centerBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; flex:1; max-width:35%; margin:0 5px; overflow:hidden;';
+centerBox.className = 'ui-box';
+centerBox.style.cssText += 'flex:1; align-items:center; text-align:center; max-width:35%; margin:0 5px;';
 topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
-rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:flex-start; text-align:right; color:white; max-width:30%; overflow-y:auto; overflow-x:hidden;';
+rightBox.className = 'ui-box';
+rightBox.style.cssText += 'align-items:flex-end; text-align:right; color:white; max-width:30%; overflow-y:auto; overflow-x:hidden;';
 rightBox.innerHTML = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
 topBar.appendChild(rightBox);
 
@@ -638,15 +645,32 @@ function animate() {
         });
     }
 
+    // --- REVERTED CAMERA POSITIONING ---
+    if (isMobile && window.innerHeight > window.innerWidth) {
+        camera.position.set(0, 2.5, 4);
+        camera.rotation.set(-0.2, 0, 0); 
+    } else {
+        camera.position.set(0, 1.5, 3);
+        camera.rotation.set(0, 0, 0);
+    }
+
     if (myRole === 'spectator' || serverGameState === 'GAME_OVER') {
         myCatData.group.visible = false;
         if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
         if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
+        
+        // Let spectator orbit around winner
+        if (serverGameState === 'GAME_OVER' && serverWinnerId) {
+            let focusTarget = (serverWinnerId === socket.id) ? myPlayerObject : (otherPlayers[serverWinnerId] ? otherPlayers[serverWinnerId].group : myPlayerObject);
+            myPlayerObject.position.copy(focusTarget.position);
+        } else if (myRole === 'spectator') {
+            let seekerId = Object.keys(otherPlayers).find(id => otherPlayers[id].role === 'seeker');
+            if (seekerId && otherPlayers[seekerId]) myPlayerObject.position.copy(otherPlayers[seekerId].group.position);
+        }
     } else {
         myCatData.group.visible = true;
 
         if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
-            // Turning rotates the player immediately (the camera will follow smoothly below)
             if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
             if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
             
@@ -728,10 +752,14 @@ function animate() {
         let cColor = (targetColor === 0xFFFFFF || targetColor === 0xFF0000) ? 0xFFD700 : targetColor;
         myCatData.crownMat.color.setHex(cColor);
 
-        // Hide your own name so it doesn't float over your UI ever again
         if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
         myTailTime += 0.1; myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
+        
+        let targetHeadRot = 0;
+        if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;  
+        if (keys.ArrowRight || keys.d) targetHeadRot = -0.4; 
+        myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
 
         if (moved && isGrounded) { 
             myWalkTime += 0.2; 
@@ -782,34 +810,6 @@ function animate() {
     });
 
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
-
-    // --- THE SMOOTH CAMERA FIX ---
-    // Instead of being bolted to the cat, the camera now gracefully trails behind it
-    let focusObject = myPlayerObject;
-    if (serverGameState === 'GAME_OVER' && serverWinnerId) {
-        focusObject = (serverWinnerId === socket.id) ? myPlayerObject : (otherPlayers[serverWinnerId] ? otherPlayers[serverWinnerId].group : myPlayerObject);
-        focusObject.rotation.y += 0.02; // Spin the winning cat
-    } else if (myRole === 'spectator') {
-        let seekerId = Object.keys(otherPlayers).find(id => otherPlayers[id].role === 'seeker');
-        if (seekerId && otherPlayers[seekerId]) focusObject = otherPlayers[seekerId].group;
-    }
-
-    focusObject.updateMatrixWorld(); // Ensure math is perfect before moving camera
-    
-    // Calculate where the camera SHOULD be
-    let idealOffset = new THREE.Vector3(0, 1.5, 3);
-    if (isMobile && window.innerHeight > window.innerWidth) {
-        idealOffset.set(0, 2.5, 4); // Slightly higher for mobile portrait
-    }
-
-    // Move camera smoothly towards that target
-    let cameraTargetPos = idealOffset.applyMatrix4(focusObject.matrixWorld);
-    camera.position.lerp(cameraTargetPos, 0.15);
-    
-    // Make camera look at the cat
-    let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
-    camera.lookAt(lookAtTarget);
-
 
     const now = performance.now();
     if (now - lastRenderTime >= fpsInterval) {
