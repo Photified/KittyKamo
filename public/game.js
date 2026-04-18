@@ -11,7 +11,6 @@ const targetFPS = 30;
 const fpsInterval = 1000 / targetFPS; 
 let lastRenderTime = 0;
 
-// Global mobile check so we can use it for camera framing!
 const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
 const colorDay = new THREE.Color(0x87CEEB);   
@@ -70,13 +69,12 @@ function playCatMeow(catData) {
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
-    .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 10px 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; }
-    .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+    .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 8px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; }
+    .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 10px; font-size: clamp(10px, 2vw, 14px); font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content:center; }
     .menu-btn:hover { background: #555; transform: scale(1.05); }
-    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; border: 2px solid #333; }
-    ::-webkit-scrollbar-thumb:hover { background: #999; }
+    ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
 `;
 document.head.appendChild(style);
 
@@ -304,7 +302,7 @@ const myCatData = createCatSculpt();
 myPlayerObject.add(myCatData.group);
 
 const startScreen = document.createElement('div');
-startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:50px; z-index:999; cursor:pointer;';
+startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:clamp(20px, 5vw, 50px); z-index:999; cursor:pointer;';
 startScreen.innerHTML = "CLICK ANYWHERE TO START";
 startScreen.onclick = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -313,61 +311,65 @@ startScreen.onclick = () => {
 };
 document.body.appendChild(startScreen);
 
+// --- NEW: CLAMPED RESPONSIVE UI BANNERS ---
 const topBar = document.createElement('div');
-topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:15px; box-sizing:border-box; background:rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:flex-start; z-index:100;';
+topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:10px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:stretch; z-index:100; gap:5px;';
 document.body.appendChild(topBar);
 
-// --- UI PADDING / HEIGHT FIX ---
 const leftBox = document.createElement('div');
 leftBox.className = 'ui-box';
-leftBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:flex-start; gap:8px; min-width:160px; padding: 12px; height: auto; min-height: 90px;';
-leftBox.innerHTML = `<div style="color:white; font-size:18px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
+leftBox.style.cssText = 'flex: 1; flex-direction:column; justify-content:center; align-items:flex-start; gap:4px; min-height: 60px; overflow:hidden;';
+leftBox.innerHTML = `<div style="color:white; font-size:clamp(12px, 3vw, 18px); font-weight:900; letter-spacing:1px;">KITTY KAMO</div>`;
+
+const soundBtnRow = document.createElement('div');
+soundBtnRow.style.cssText = "display: flex; gap: 5px;";
 
 const muteBtn = document.createElement('button');
-muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊 Sound';
-muteBtn.onclick = (e) => { isMuted = !isMuted; muteBtn.innerHTML = isMuted ? '🔇 Muted' : '🔊 Sound'; };
-leftBox.appendChild(muteBtn);
+muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊';
+muteBtn.onclick = (e) => { isMuted = !isMuted; muteBtn.innerHTML = isMuted ? '🔇' : '🔊'; };
+soundBtnRow.appendChild(muteBtn);
 
 const helpBtn = document.createElement('button');
 helpBtn.className = 'menu-btn'; helpBtn.innerHTML = '❓ Help';
 helpBtn.onclick = () => { helpModal.style.display = helpModal.style.display === 'none' ? 'flex' : 'none'; };
-leftBox.appendChild(helpBtn); topBar.appendChild(leftBox);
+soundBtnRow.appendChild(helpBtn);
+
+leftBox.appendChild(soundBtnRow);
+topBar.appendChild(leftBox);
 
 const centerBox = document.createElement('div');
 centerBox.className = 'ui-box';
-centerBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:center; min-width:200px; padding: 12px; height: auto; min-height: 90px;';
+centerBox.style.cssText = 'flex: 1.2; flex-direction:column; justify-content:center; align-items:center; text-align:center; min-height: 60px; overflow:hidden;';
 topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
 rightBox.className = 'ui-box';
-rightBox.style.cssText = 'flex-direction:column; justify-content:flex-start; text-align:right; color:white; min-width:160px; overflow-y:auto; padding: 12px; height: auto; min-height: 90px;';
-rightBox.innerHTML = `<div style="font-weight:900; font-size:14px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div><span style="color:#aaa; font-size:12px; text-align:center;">Waiting for players...</span>`;
+rightBox.style.cssText = 'flex: 1; flex-direction:column; justify-content:flex-start; text-align:right; color:white; overflow-y:auto; overflow-x:hidden; min-height: 60px;';
+rightBox.innerHTML = `<div style="font-weight:900; font-size:clamp(10px, 2.5vw, 14px); margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div><span style="color:#aaa; font-size:clamp(8px, 2vw, 12px);">Waiting...</span>`;
 topBar.appendChild(rightBox);
 
 const helpModal = document.createElement('div');
-helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:20px; color:white; z-index:150; display:none; width:90%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column; max-height: 80vh; overflow-y: auto;';
+helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:20px; color:white; z-index:150; display:none; width:90%; max-width:500px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column; max-height: 80vh; overflow-y: auto;';
 helpModal.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
-        <h2 style="margin: 0; font-size: 24px; font-weight:900; text-align: center; color: gold;">HOW TO PLAY</h2>
+        <h2 style="margin: 0; font-size: clamp(20px, 5vw, 24px); font-weight:900; text-align: center; color: gold;">HOW TO PLAY</h2>
         
         <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; text-align: center; font-size: 13px;">
             <div style="margin-bottom: 8px; color: gold; font-weight: bold; font-size: 14px;">CONTROLS</div>
             <div style="line-height: 2;">
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">↑ / ↓</b> Move Fwd/Back <br>
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Turn Camera <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> Move &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> Strafe &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Look <br>
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy
             </div>
+            <div style="margin-top: 5px; font-style: italic; color: #aaa;">(Mobile: Swipe screen to look around)</div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr; gap: 10px; color: #eee; font-size: 14px; line-height: 1.4;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 10px; color: #eee; font-size: clamp(12px, 3.5vw, 14px); line-height: 1.4;">
             <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color.</p>
             <p style="margin: 0;"><b>SEEKERS:</b> Touch Hiders to tag them. Listen for Meows!</p>
-        </div>
-        
-        <div style="color: #66ff66; font-size: 13px; text-align: center; padding: 10px; border: 2px solid #66ff66; border-radius: 8px; background: rgba(0, 255, 0, 0.1);">
-            <p style="margin: 0;">🪄 <b>THE TRICKSTER:</b> Press 'E' to drop a Decoy Cat (once per round). It explodes when tagged!</p>
         </div>
 
         <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 16px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
@@ -376,12 +378,12 @@ helpModal.innerHTML = `
 document.body.appendChild(helpModal);
 
 const blindfold = document.createElement('div');
-blindfold.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; color:#ff4444; display:none; align-items:flex-start; justify-content:center; padding-top:25vh; font-weight:900; font-size:36px; z-index:200; text-align:center; pointer-events:none; box-sizing:border-box;';
-blindfold.innerHTML = `<div style="z-index:2; position:relative; text-shadow:2px 2px 0 #000;">YOU ARE THE SEEKER!<br><span style="font-size:20px; color:white;">GIVING HIDERS TIME TO HIDE...</span></div>`;
+blindfold.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; color:#ff4444; display:none; align-items:flex-start; justify-content:center; padding-top:25vh; font-weight:900; font-size:clamp(24px, 6vw, 36px); z-index:200; text-align:center; pointer-events:none; box-sizing:border-box;';
+blindfold.innerHTML = `<div style="z-index:2; position:relative; text-shadow:2px 2px 0 #000;">YOU ARE THE SEEKER!<br><span style="font-size:clamp(14px, 4vw, 20px); color:white;">GIVING HIDERS TIME TO HIDE...</span></div>`;
 document.body.appendChild(blindfold);
 
 const oobDiv = document.createElement('div');
-oobDiv.style.cssText = 'position:absolute; top:40%; left:50%; transform:translateX(-50%); color:#ff4444; font-weight:900; font-size:36px; text-shadow:2px 2px 0 #000; display:none; z-index:150; text-align:center; width: 100%;';
+oobDiv.style.cssText = 'position:absolute; top:40%; left:50%; transform:translateX(-50%); color:#ff4444; font-weight:900; font-size:clamp(24px, 6vw, 36px); text-shadow:2px 2px 0 #000; display:none; z-index:150; text-align:center; width: 100%;';
 document.body.appendChild(oobDiv);
 
 function updateUI() {
@@ -389,19 +391,19 @@ function updateUI() {
     let roleColor = myRole === 'seeker' ? '#ff6666' : (myRole === 'spectator' ? '#AAAAAA' : '#66ff66');
     
     if (serverGameState === 'WAITING') {
-        centerBox.innerHTML = `<div style="font-size:12px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:18px; color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
+        centerBox.innerHTML = `<div style="font-size:clamp(10px, 2.5vw, 12px); color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:clamp(14px, 3vw, 18px); color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (serverGameState === 'GAME_OVER') {
         centerBox.innerHTML = `
-            <div style="font-size:24px; font-weight:900; color:gold; margin-bottom:4px; text-shadow: 2px 2px 0 #000;">${serverWinReason}</div>
-            <div style="font-size:14px; color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
+            <div style="font-size:clamp(18px, 4vw, 24px); font-weight:900; color:gold; margin-bottom:2px; text-shadow: 2px 2px 0 #000;">${serverWinReason}</div>
+            <div style="font-size:clamp(12px, 2.5vw, 14px); color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
         `;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (myRole === 'spectator') {
-        centerBox.innerHTML = `<div style="font-size:12px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:24px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:4px;">${roleText}</div><div style="font-size:14px; color:#aaa; font-weight:bold;">WAITING FOR NEXT ROUND...</div>`;
+        centerBox.innerHTML = `<div style="font-size:clamp(10px, 2.5vw, 12px); color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:clamp(18px, 4vw, 24px); font-weight:900; color:${roleColor}; line-height:1; margin-bottom:2px;">${roleText}</div><div style="font-size:clamp(12px, 2.5vw, 14px); color:#aaa; font-weight:bold;">WAITING FOR NEXT ROUND...</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else {
-        centerBox.innerHTML = `<div style="font-size:12px; color:#ddd; margin-bottom:4px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:24px; font-weight:900; color:${roleColor}; line-height:1; margin-bottom:4px;">${roleText}</div><div style="font-size:18px; font-weight:bold; color:white;">${serverGameState} - ${serverTime}s</div>`;
+        centerBox.innerHTML = `<div style="font-size:clamp(10px, 2.5vw, 12px); color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:clamp(18px, 4vw, 24px); font-weight:900; color:${roleColor}; line-height:1; margin-bottom:2px;">${roleText}</div><div style="font-size:clamp(14px, 3vw, 18px); font-weight:bold; color:white;">${serverGameState} - ${serverTime}s</div>`;
         if (myRole === 'seeker' && serverGameState === 'HIDING') {
             blindfold.style.display = 'flex'; blindfoldStage.visible = true;    
         } else {
@@ -423,10 +425,10 @@ socket.on('gameStateUpdate', (data) => {
     }
 
     if (data.leaderboard && data.leaderboard.length > 0) {
-        let lbText = '<div style="font-weight:900; font-size:14px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div>';
+        let lbText = '<div style="font-weight:900; font-size:clamp(10px, 2.5vw, 14px); margin-bottom:4px; color:#ddd; text-align:center;">SURVIVAL TIME</div>';
         data.leaderboard.forEach((player, index) => {
             let crownIcon = (player.id === serverWinnerId) ? '👑 ' : '';
-            lbText += `<div style="font-size:12px; line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
+            lbText += `<div style="font-size:clamp(10px, 2vw, 12px); line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
         });
         rightBox.innerHTML = lbText;
     }
@@ -550,6 +552,7 @@ function checkCollision(pos) {
     return false;
 }
 
+// --- KEYS & MOVEMENT SYSTEM ---
 const keys = { w: false, a: false, s: false, d: false, ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false, " ": false };
 
 document.addEventListener('keydown', (e) => { 
@@ -592,7 +595,6 @@ function animate() {
     myPlayerObject.rotation.z = 0;
 
     let cycleProgress = 0;
-    
     if (serverGameState === 'SEEKING') {
         cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
     } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
@@ -666,28 +668,31 @@ function animate() {
             camera.lookAt(0, 0, 0);
         }
         
-        if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
-        if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
+        if (keys.ArrowLeft) myPlayerObject.rotation.y += turnSpeed;
+        if (keys.ArrowRight) myPlayerObject.rotation.y -= turnSpeed;
     } else {
         myCatData.group.visible = true;
         
-        // --- MOBILE TILT CAMERA ---
         if (isMobile && window.innerHeight > window.innerWidth) {
             camera.position.set(0, 2.5, 4);
-            camera.lookAt(0, -0.5, -2); // Looks down to push cat up the screen
+            camera.lookAt(0, -0.5, -2); 
         } else {
             camera.position.set(0, 1.5, 3);
             camera.rotation.set(0, 0, 0);
         }
 
         if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
-            // --- NO STRAFE UNIFIED MOVEMENT ---
-            if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
-            if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
+            // PC: Arrows look around. Mobile: Swipe looks around (handled below)
+            if (keys.ArrowLeft) myPlayerObject.rotation.y += turnSpeed;
+            if (keys.ArrowRight) myPlayerObject.rotation.y -= turnSpeed;
+            
             const oldX = myPlayerObject.position.x; const oldZ = myPlayerObject.position.z;
             
-            if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
-            if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
+            // WSAD handles actual movement/strafing for both PC and Mobile!
+            if (keys.w) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
+            if (keys.s) { myPlayerObject.translateZ(moveSpeed); moved = true; }
+            if (keys.a) { myPlayerObject.translateX(-moveSpeed); moved = true; }
+            if (keys.d) { myPlayerObject.translateX(moveSpeed); moved = true; }
             
             if (checkCollision(myPlayerObject.position)) { myPlayerObject.position.x = oldX; myPlayerObject.position.z = oldZ; }
             if (keys[" "] && isGrounded) { velocityY = jumpStrength; isGrounded = false; moved = true; }
@@ -768,8 +773,10 @@ function animate() {
 
         myTailTime += 0.1; myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
         let targetHeadRot = 0;
-        if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;  
-        if (keys.ArrowRight || keys.d) targetHeadRot = -0.4; 
+        
+        // Cat Head Turns slightly when strafing (visual feedback)
+        if (keys.a) targetHeadRot = 0.4;  
+        if (keys.d) targetHeadRot = -0.4; 
         myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
 
         if (moved && isGrounded) { 
@@ -834,25 +841,47 @@ function animate() {
 }
 animate();
 
-// --- NEW OVERHAULED MOBILE CONTROLS ---
+// --- NEW OVERHAULED MOBILE CONTROLS & CAMERA SWIPE ---
 if (isMobile) {
     style.innerHTML += `
         canvas { touch-action: none; }
         body { overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
     `;
 
+    // 1. SWIPE TO LOOK
+    let isDragging = false;
+    let previousTouchX = 0;
+
+    document.addEventListener('touchstart', (e) => {
+        // Don't pan the camera if they are pressing a button!
+        if(e.target.tagName !== 'BUTTON') {
+            isDragging = true;
+            previousTouchX = e.touches[0].clientX;
+        }
+    }, {passive: false});
+
+    document.addEventListener('touchmove', (e) => {
+        if(isDragging && myRole !== 'spectator') {
+            let deltaX = e.touches[0].clientX - previousTouchX;
+            // Smooth camera rotation!
+            myPlayerObject.rotation.y -= deltaX * 0.01; 
+            previousTouchX = e.touches[0].clientX;
+        }
+    }, {passive: false});
+
+    document.addEventListener('touchend', () => { isDragging = false; });
+
+    // 2. BUTTON OVERLAYS
     const mobileUI = document.createElement('div');
-    // Shifted UP to bottom: 30px so it clears the OS home bar
-    mobileUI.style.cssText = 'position:absolute; bottom:30px; left:0; width:100%; height:180px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
+    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:160px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
     
     function createBtn(text, x, y, key) {
         const btn = document.createElement('button');
         btn.innerHTML = text;
-        // Dynamically shrink font size if text is long
-        let fontSize = text.length > 2 ? '12px' : '20px';
+        // Same size for all: 50x50. Font scales down if it's a word.
+        let fontSize = text.length > 2 ? '10px' : '18px'; 
         
-        // Bigger 75x75 buttons!
-        btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:75px; height:75px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:${fontSize}; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
+        btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:50px; height:50px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:${fontSize}; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
         
         btn.addEventListener('touchstart', (e) => { 
             e.preventDefault(); 
@@ -875,25 +904,22 @@ if (isMobile) {
         return btn;
     }
     
-    // LEFT THUMB: THROTTLE ONLY (Forward/Back)
+    // LEFT THUMB: D-PAD (All mapping to WSAD)
     const dpad = document.createElement('div');
-    dpad.style.cssText = 'position:relative; width:100px; height:180px;';
+    dpad.style.cssText = 'position:relative; width:160px; height:160px;';
     
-    dpad.appendChild(createBtn('W', 15, 0, 'w'));               
-    dpad.appendChild(createBtn('S', 15, 95, 's'));             
+    dpad.appendChild(createBtn('▲', 55, 0, 'w'));               
+    dpad.appendChild(createBtn('▼', 55, 110, 's'));             
+    dpad.appendChild(createBtn('◀', 0, 55, 'a'));       
+    dpad.appendChild(createBtn('▶', 110, 55, 'd'));      
     
-    // RIGHT THUMB: STEERING & ACTIONS
+    // RIGHT THUMB: ACTIONS
     const actions = document.createElement('div');
-    actions.style.cssText = 'position:relative; width:260px; height:180px;';
+    actions.style.cssText = 'position:relative; width:160px; height:160px;';
     
-    // Top Row: Steering
-    actions.appendChild(createBtn('◀', 40, 0, 'ArrowLeft'));       
-    actions.appendChild(createBtn('▶', 135, 0, 'ArrowRight'));      
-    
-    // Bottom Row: Utility
-    actions.appendChild(createBtn('MEOW', -10, 95, 'f'));         
-    actions.appendChild(createBtn('JUMP', 85, 95, ' '));       
-    actions.appendChild(createBtn('DECOY', 180, 95, 'e'));      
+    actions.appendChild(createBtn('MEOW', 0, 55, 'f'));         
+    actions.appendChild(createBtn('JUMP', 55, 110, ' '));       
+    actions.appendChild(createBtn('DECOY', 110, 55, 'e'));      
 
     mobileUI.appendChild(dpad);
     mobileUI.appendChild(actions);
