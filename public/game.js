@@ -223,6 +223,24 @@ function createBlock(x, y, z, color) {
     mapObjects.push(mesh);
 }
 
+// --- NEW BOUNDARY WALLS ---
+const walls = [];
+const wallMat = new THREE.MeshLambertMaterial({ color: 0x113311 });
+function createWall(w, h, d, x, y, z) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mesh = new THREE.Mesh(geo, wallMat);
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    walls.push(mesh);
+}
+// Generate map perimeter (height 10 going from y=-5 to y=5)
+createWall(48, 10, 1, 0, 0, -23.5);
+createWall(48, 10, 1, 0, 0, 23.5);
+createWall(1, 10, 46, -23.5, 0, 0);
+createWall(1, 10, 46, 23.5, 0, 0);
+
 const mapObjects = [];
 let myRole = 'hider';
 let myName = 'Connecting...';
@@ -232,8 +250,6 @@ let serverTime = 0;
 let serverWinnerId = null;
 let serverWinReason = "";
 let lastTickTime = -1; 
-let oobTimer = 0; 
-let hasLostCamo = false; 
 
 const otherPlayers = {};
 const activeDecoys = {}; 
@@ -388,10 +404,6 @@ blindfold.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:
 blindfold.innerHTML = `<div style="z-index:2; position:relative; text-shadow:2px 2px 0 #000; font-size: 24px;">YOU ARE THE SEEKER!<br><span style="font-size:16px; color:white;">GIVING HIDERS TIME TO HIDE...</span></div>`;
 document.body.appendChild(blindfold);
 
-const oobDiv = document.createElement('div');
-oobDiv.style.cssText = 'position:absolute; top:40%; left:50%; transform:translateX(-50%); color:#ff4444; font-weight:900; font-size:24px; text-shadow:2px 2px 0 #000; display:none; z-index:150; text-align:center; width: 100%;';
-document.body.appendChild(oobDiv);
-
 function updateUI() {
     let roleText = myRole.toUpperCase();
     let roleColor = myRole === 'seeker' ? '#ff6666' : (myRole === 'spectator' ? '#AAAAAA' : '#66ff66');
@@ -443,7 +455,6 @@ socket.on('gameStateUpdate', (data) => {
 socket.on('initMap', (mapBlocks) => {
     mapObjects.forEach(mesh => scene.remove(mesh)); mapObjects.length = 0;
     mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
-    hasLostCamo = false; 
     myDecoyUsed = false; 
     
     Object.keys(activeDecoys).forEach(dId => {
@@ -546,10 +557,19 @@ function checkCollision(pos) {
     const currentScaleY = myCatData.group.scale.y;
     pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
     
+    // Check map blocks
     for (let i = 0; i < mapObjects.length; i++) {
         const bBox = new THREE.Box3().setFromObject(mapObjects[i]); bBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(bBox)) return true;
     }
+    
+    // Check boundary walls
+    for (let i = 0; i < walls.length; i++) {
+        const wBox = new THREE.Box3().setFromObject(walls[i]); wBox.expandByScalar(-0.02);
+        if (pBox.intersectsBox(wBox)) return true;
+    }
+
+    // Check players
     for (let id in otherPlayers) {
         if (otherPlayers[id].role === 'spectator') continue;
         const oBox = new THREE.Box3().setFromObject(otherPlayers[id].group); oBox.expandByScalar(-0.02);
@@ -675,43 +695,23 @@ function animate() {
         } else { isGrounded = false; }
         if (myPlayerObject.position.y <= -5) { myPlayerObject.position.y = -5; velocityY = 0; isGrounded = true; }
 
-        let myOob = Math.abs(myPlayerObject.position.x) > 22 || Math.abs(myPlayerObject.position.z) > 22 || myPlayerObject.position.y < -4;
-        let myScaleFactor = myOob ? 10 : 1; 
-        
-        if (myOob) {
-            myCatData.group.scale.set(10, 10, 10); 
-            if (oobTimer === 0) oobTimer = Date.now(); 
-            let timeLeft = 10 - Math.floor((Date.now() - oobTimer) / 1000);
-            if (timeLeft <= 0) {
-                myPlayerObject.position.set((Math.random() * 20) - 10, 20, (Math.random() * 20) - 10);
-                oobTimer = 0; oobDiv.style.display = 'none'; hasLostCamo = true; 
-            } else { oobDiv.style.display = 'block'; oobDiv.innerHTML = `OUT OF BOUNDS!<br>TELEPORTING IN ${timeLeft}s`; }
-        } else {
-            myCatData.group.scale.set(1, 1, 1); 
-            oobTimer = 0; oobDiv.style.display = 'none';
-        }
-
         if (myRole === 'seeker' && serverGameState === 'SEEKING') {
             let closestDist = 999;
             let closestHider = null;
 
-            // --- THE NEW ROBUST TAGGING SYSTEM ---
-            // Create a temporary Box3 Hitbox that is expanded to catch jumps/grazes
             const currentScaleY = myCatData.group.scale.y;
             const seekerBox = new THREE.Box3();
             seekerBox.setFromCenterAndSize(
                 new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
                 new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
             );
-            seekerBox.expandByScalar(0.8); // 0.8 units of "reach" in all directions, completely solving Y-axis issues
+            seekerBox.expandByScalar(0.8);
 
             Object.keys(otherPlayers).forEach(id => {
                 if (otherPlayers[id].role === 'hider') {
-                    // Keep tracking pure distance for the radar ping
                     let true3DDist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
                     if (true3DDist < closestDist) { closestDist = true3DDist; closestHider = otherPlayers[id]; }
 
-                    // Check if our expanded tag box intersects their actual bounding box
                     const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                     
                     if (seekerBox.intersectsBox(hiderBox)) {
@@ -722,7 +722,6 @@ function animate() {
                 }
             });
 
-            // Do the exact same for decoys
             Object.keys(activeDecoys).forEach(dId => {
                 const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
                 if (seekerBox.intersectsBox(decoyBox)) {
@@ -738,12 +737,22 @@ function animate() {
             }
         }
 
-        if (myRole === 'hider' && !moved && isGrounded && !myOob && !hasLostCamo) { 
+        // --- UPDATED CAMO DETECTION ---
+        // Allows you to camouflage perfectly against the boundary walls!
+        if (myRole === 'hider' && !moved && isGrounded) { 
             let minDist = 2.0; let closestBlock = null;
+            
             for (let i = 0; i < mapObjects.length; i++) {
                 let dist = myPlayerObject.position.distanceTo(mapObjects[i].position);
                 if (dist < minDist) { minDist = dist; closestBlock = mapObjects[i]; }
             }
+            
+            for (let i = 0; i < walls.length; i++) {
+                const wBox = new THREE.Box3().setFromObject(walls[i]);
+                let dist = wBox.distanceToPoint(myPlayerObject.position);
+                if (dist < minDist) { minDist = dist; closestBlock = walls[i]; }
+            }
+            
             if (closestBlock) { targetColor = closestBlock.material.color.getHex(); }
         }
         
@@ -753,7 +762,6 @@ function animate() {
 
         if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
-        // --- LOCAL PLAYER HEAD TURNING ---
         let targetHeadRot = 0;
         if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
         else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
@@ -769,7 +777,7 @@ function animate() {
         myCatData.legs[0].rotation.x = Math.sin(myWalkTime) * 0.5; myCatData.legs[1].rotation.x = -Math.sin(myWalkTime) * 0.5; 
         myCatData.legs[2].rotation.x = -Math.sin(myWalkTime) * 0.5; myCatData.legs[3].rotation.x = Math.sin(myWalkTime) * 0.5; 
 
-        let finalScaleY = myScaleFactor; let finalScaleXZ = myScaleFactor;
+        let finalScaleY = 1; let finalScaleXZ = 1;
         if (!isGrounded) {
             if (velocityY > 0) { let stretch = 1 + (velocityY * 0.8); finalScaleY *= stretch; finalScaleXZ *= (1 / stretch); }
         } else {
@@ -790,8 +798,8 @@ function animate() {
         } else { 
             p.group.visible = true; 
         }
-        let pOOB = Math.abs(p.group.position.x) > 22 || Math.abs(p.group.position.z) > 22 || p.group.position.y < -4;
-        p.group.scale.set(pOOB ? 10 : 1, pOOB ? 10 : 1, pOOB ? 10 : 1);
+        
+        p.group.scale.set(1, 1, 1);
         
         p.tailTime = (p.tailTime || 0) + 0.1; p.tail.rotation.y = Math.sin(p.tailTime) * 0.3;
         let rYDelta = p.group.rotation.y - (p.lastRY === undefined ? p.group.rotation.y : p.lastRY);
