@@ -76,17 +76,16 @@ style.innerHTML = `
     ::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
     ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
     
-    /* FIX: Force all containers to respect their padding and borders internally */
     #leftBox, #centerBox, #rightBox { box-sizing: border-box !important; }
     
-    /* FIX: minmax(0, 1fr) forces the columns to strictly obey 50% width without overflowing */
+    /* STRETCH GRID FOR MOBILE ALIGNMENT */
     @media (max-width: 768px) {
         #topBar { 
             display: grid !important; 
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; 
             gap: 8px !important; 
             padding: 8px !important; 
-            align-items: start !important;
+            align-items: stretch !important; /* Forces Left and Right boxes to exactly match height */
         }
         #leftBox { grid-column: 1 / 2 !important; grid-row: 1 / 2 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
         #rightBox { grid-column: 2 / 3 !important; grid-row: 1 / 2 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
@@ -403,7 +402,8 @@ topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
 rightBox.id = 'rightBox';
-rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:flex-start; text-align:right; color:white; max-width:30%; overflow-wrap: break-word; overflow-y:auto; overflow-x:hidden;';
+// Fixed justify-content to center to perfectly align with the left box!
+rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; text-align:right; color:white; max-width:30%; overflow-wrap: break-word; overflow-y:auto; overflow-x:hidden;';
 rightBox.innerHTML = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
 topBar.appendChild(rightBox);
 
@@ -477,12 +477,40 @@ socket.on('gameStateUpdate', (data) => {
         playSound('tick'); lastTickTime = serverTime;
     }
 
+    // --- REVISED LEADERBOARD LOGIC ---
     if (data.leaderboard && data.leaderboard.length > 0) {
         let lbText = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
-        data.leaderboard.forEach((player, index) => {
-            let crownIcon = (player.id === serverWinnerId) ? '👑 ' : '';
-            lbText += `<div style="font-size:9px; line-height:1.4;">${index + 1}. ${crownIcon}${player.name} : <b style="color:gold;">${player.score}s</b></div>`;
-        });
+        
+        // 1. Always show 1st Place
+        let p1 = data.leaderboard[0];
+        let c1 = (p1.id === serverWinnerId) ? '👑 ' : '';
+        lbText += `<div style="font-size:9px; line-height:1.4;">1. ${c1}${p1.name} : <b style="color:gold;">${p1.score}s</b></div>`;
+
+        // 2. Logic for the second row
+        if (data.leaderboard.length > 1) {
+            let myRank = data.leaderboard.findIndex(p => p.id === socket.id);
+            
+            if (myRank === 0) {
+                // If I am in 1st place, naturally show the 2nd place player below me
+                let p2 = data.leaderboard[1];
+                let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
+                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
+            } else if (myRank > 0) {
+                // Show my exact rank below the 1st place winner
+                let myP = data.leaderboard[myRank];
+                let myC = (myP.id === serverWinnerId) ? '👑 ' : '';
+                lbText += `<div style="font-size:9px; line-height:1.4;">${myRank + 1}. ${myC}${myP.name} : <b style="color:gold;">${myP.score}s</b></div>`;
+            } else {
+                // Fallback for spectators not on the board: just show 2nd place
+                let p2 = data.leaderboard[1];
+                let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
+                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
+            }
+        } else {
+            // Adds a small spacer line if there's only 1 player to keep height consistent
+            lbText += `<div style="font-size:9px; line-height:1.4; color:#777;">...</div>`;
+        }
+        
         rightBox.innerHTML = lbText;
     }
 });
@@ -627,21 +655,25 @@ function checkCollision(pos) {
     const currentScaleY = myCatData.group.scale.y;
     pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
     
+    // Check map blocks
     for (let i = 0; i < mapObjects.length; i++) {
         const bBox = new THREE.Box3().setFromObject(mapObjects[i]); bBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(bBox)) return true;
     }
     
+    // Check visual boundary walls
     for (let i = 0; i < walls.length; i++) {
         const wBox = new THREE.Box3().setFromObject(walls[i]); wBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(wBox)) return true;
     }
 
+    // Check INVISIBLE sky walls
     for (let i = 0; i < invisibleWalls.length; i++) {
         const wBox = new THREE.Box3().setFromObject(invisibleWalls[i]); wBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(wBox)) return true;
     }
 
+    // Check players
     for (let id in otherPlayers) {
         if (otherPlayers[id].role === 'spectator') continue;
         const oBox = new THREE.Box3().setFromObject(otherPlayers[id].group); oBox.expandByScalar(-0.02);
