@@ -1,6 +1,5 @@
 // game.js
 
-// --- MOBILE VIEWPORT FIX ---
 const meta = document.createElement('meta');
 meta.name = 'viewport';
 meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
@@ -11,6 +10,9 @@ const socket = io();
 const targetFPS = 30;
 const fpsInterval = 1000 / targetFPS; 
 let lastRenderTime = 0;
+
+// Global mobile check so we can use it for camera framing!
+const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
 const colorDay = new THREE.Color(0x87CEEB);   
 const colorSunset = new THREE.Color(0xFF7E47); 
@@ -68,7 +70,7 @@ function playCatMeow(catData) {
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
-    .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 10px 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); height: 120px; box-sizing: border-box; display: flex; }
+    .ui-box { background: rgba(20, 20, 20, 0.85); border: 2px solid #444; border-radius: 8px; padding: 10px 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; }
     .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
     .menu-btn:hover { background: #555; transform: scale(1.05); }
     ::-webkit-scrollbar { width: 8px; }
@@ -312,12 +314,13 @@ startScreen.onclick = () => {
 document.body.appendChild(startScreen);
 
 const topBar = document.createElement('div');
-topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:15px; box-sizing:border-box; background:rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; z-index:100;';
+topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:15px; box-sizing:border-box; background:rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:flex-start; z-index:100;';
 document.body.appendChild(topBar);
 
+// --- UI PADDING / HEIGHT FIX ---
 const leftBox = document.createElement('div');
 leftBox.className = 'ui-box';
-leftBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; min-width:180px; padding: 10px; height: 100px;';
+leftBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:flex-start; gap:8px; min-width:160px; padding: 12px; height: auto; min-height: 90px;';
 leftBox.innerHTML = `<div style="color:white; font-size:18px; font-weight:900; letter-spacing:1px; margin-bottom:2px;">KITTY KAMO</div>`;
 
 const muteBtn = document.createElement('button');
@@ -332,12 +335,12 @@ leftBox.appendChild(helpBtn); topBar.appendChild(leftBox);
 
 const centerBox = document.createElement('div');
 centerBox.className = 'ui-box';
-centerBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:center; min-width:200px; padding: 10px; height: 100px;';
+centerBox.style.cssText = 'flex-direction:column; justify-content:center; align-items:center; min-width:200px; padding: 12px; height: auto; min-height: 90px;';
 topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
 rightBox.className = 'ui-box';
-rightBox.style.cssText = 'flex-direction:column; justify-content:flex-start; text-align:right; color:white; min-width:160px; overflow-y:auto; padding: 10px; height: 100px;';
+rightBox.style.cssText = 'flex-direction:column; justify-content:flex-start; text-align:right; color:white; min-width:160px; overflow-y:auto; padding: 12px; height: auto; min-height: 90px;';
 rightBox.innerHTML = `<div style="font-weight:900; font-size:14px; margin-bottom:6px; color:#ddd; text-align:center;">SURVIVAL TIME</div><span style="color:#aaa; font-size:12px; text-align:center;">Waiting for players...</span>`;
 topBar.appendChild(rightBox);
 
@@ -350,8 +353,8 @@ helpModal.innerHTML = `
         <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; text-align: center; font-size: 13px;">
             <div style="margin-bottom: 8px; color: gold; font-weight: bold; font-size: 14px;">CONTROLS</div>
             <div style="line-height: 2;">
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">↑ / ↓</b> Move <br>
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Turn <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W / S</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">↑ / ↓</b> Move Fwd/Back <br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">A / D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← / →</b> Turn Camera <br>
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy
@@ -547,7 +550,6 @@ function checkCollision(pos) {
     return false;
 }
 
-// --- UPDATED KEYS ---
 const keys = { w: false, a: false, s: false, d: false, ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false, " ": false };
 
 document.addEventListener('keydown', (e) => { 
@@ -663,20 +665,27 @@ function animate() {
             camera.position.set(0, 5, 8);
             camera.lookAt(0, 0, 0);
         }
-        // --- SPECTATOR TURNING FIXED ---
+        
         if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
         if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
     } else {
         myCatData.group.visible = true;
         
-        camera.position.set(0, 1.5, 3);
-        camera.rotation.set(0, 0, 0);
+        // --- MOBILE TILT CAMERA ---
+        if (isMobile && window.innerHeight > window.innerWidth) {
+            camera.position.set(0, 2.5, 4);
+            camera.lookAt(0, -0.5, -2); // Looks down to push cat up the screen
+        } else {
+            camera.position.set(0, 1.5, 3);
+            camera.rotation.set(0, 0, 0);
+        }
 
         if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
-            // --- UNIFIED MOVEMENT LOGIC ---
+            // --- NO STRAFE UNIFIED MOVEMENT ---
             if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
             if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
             const oldX = myPlayerObject.position.x; const oldZ = myPlayerObject.position.z;
+            
             if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
             if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
             
@@ -825,20 +834,25 @@ function animate() {
 }
 animate();
 
-// --- UPDATED MOBILE CONTROLS OVERLAY ---
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+// --- NEW OVERHAULED MOBILE CONTROLS ---
+if (isMobile) {
     style.innerHTML += `
         canvas { touch-action: none; }
         body { overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
     `;
 
     const mobileUI = document.createElement('div');
-    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:210px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
+    // Shifted UP to bottom: 30px so it clears the OS home bar
+    mobileUI.style.cssText = 'position:absolute; bottom:30px; left:0; width:100%; height:180px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
     
     function createBtn(text, x, y, key) {
         const btn = document.createElement('button');
         btn.innerHTML = text;
-        btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:70px; height:70px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:16px; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
+        // Dynamically shrink font size if text is long
+        let fontSize = text.length > 2 ? '12px' : '20px';
+        
+        // Bigger 75x75 buttons!
+        btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:75px; height:75px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:${fontSize}; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
         
         btn.addEventListener('touchstart', (e) => { 
             e.preventDefault(); 
@@ -861,20 +875,25 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         return btn;
     }
     
+    // LEFT THUMB: THROTTLE ONLY (Forward/Back)
     const dpad = document.createElement('div');
-    dpad.style.cssText = 'position:relative; width:210px; height:210px;';
+    dpad.style.cssText = 'position:relative; width:100px; height:180px;';
     
-    dpad.appendChild(createBtn('W', 70, 0, 'w'));               
-    dpad.appendChild(createBtn('S', 70, 140, 's'));             
-    dpad.appendChild(createBtn('◀', 0, 70, 'ArrowLeft'));       
-    dpad.appendChild(createBtn('▶', 140, 70, 'ArrowRight'));      
+    dpad.appendChild(createBtn('W', 15, 0, 'w'));               
+    dpad.appendChild(createBtn('S', 15, 95, 's'));             
     
+    // RIGHT THUMB: STEERING & ACTIONS
     const actions = document.createElement('div');
-    actions.style.cssText = 'position:relative; width:210px; height:210px;';
+    actions.style.cssText = 'position:relative; width:260px; height:180px;';
     
-    actions.appendChild(createBtn('JUMP', 70, 140, ' '));       
-    actions.appendChild(createBtn('MEOW', 0, 70, 'f'));         
-    actions.appendChild(createBtn('DECOY', 140, 70, 'e'));      
+    // Top Row: Steering
+    actions.appendChild(createBtn('◀', 40, 0, 'ArrowLeft'));       
+    actions.appendChild(createBtn('▶', 135, 0, 'ArrowRight'));      
+    
+    // Bottom Row: Utility
+    actions.appendChild(createBtn('MEOW', -10, 95, 'f'));         
+    actions.appendChild(createBtn('JUMP', 85, 95, ' '));       
+    actions.appendChild(createBtn('DECOY', 180, 95, 'e'));      
 
     mobileUI.appendChild(dpad);
     mobileUI.appendChild(actions);
