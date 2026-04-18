@@ -1,0 +1,13 @@
+{
+  "name": "chameleon-cats",
+  "version": "1.0.0",
+  "description": "Voxel hide and seek",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  }
+}
