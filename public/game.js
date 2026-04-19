@@ -168,6 +168,7 @@ function getFaceTexture(type) {
     return tex;
 }
 
+
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
@@ -452,7 +453,7 @@ let amIStunned = false;
 
 let isCustomizing = true; 
 let customizationZone = null;
-let ignoreServerPositionUntil = 0; // Fixes the customization zone "flash" bounce back
+let ignoreServerPositionUntil = 0; 
 
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
@@ -841,7 +842,7 @@ startBtn.onclick = () => {
     startScreen.style.display = 'none';
     isCustomizing = false;
     
-    ignoreServerPositionUntil = Date.now() + 2000; // Ignore server position echo for 2s so you don't bounce back!
+    ignoreServerPositionUntil = Date.now() + 2000; 
 
     if (customizationZone && myPlayerObject.position.distanceTo(customizationZone) < 4) {
         myPlayerObject.position.set(0, -4, -12); 
@@ -1213,7 +1214,6 @@ socket.on('currentPlayers', (players) => {
 
             setNameLabel(myCatData, myName); 
 
-            // IGNORING SERVER POSITION UPDATE IF JUST EXITED MENU
             if (Date.now() > ignoreServerPositionUntil) {
                 if (serverGameState === 'WAITING' || serverGameState === 'LOBBY' || myRole !== 'spectator') {
                     myPlayerObject.position.set(players[id].x, players[id].y, players[id].z);
@@ -1338,8 +1338,8 @@ function addOtherPlayer(id, playerInfo) {
 function checkCollision(pos) {
     const pBox = new THREE.Box3();
     const currentScaleY = myCatData.body.scale.y; 
-    // Slimming the player bounding box to 0.4 width for smoother sliding!
-    pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.4, 1.2 * currentScaleY, 0.4));
+    // Adjusted width to 0.5 to prevent clipping while maintaining slideability
+    pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.5, 1.2 * currentScaleY, 0.5));
     
     for (let i = 0; i < mapObjects.length; i++) {
         const bBox = new THREE.Box3().setFromObject(mapObjects[i]); bBox.expandByScalar(-0.02);
@@ -1438,7 +1438,7 @@ const turnSpeed = 0.13;
 let velocityY = 0; 
 let isGrounded = true; 
 const gravity = -0.016; 
-const jumpStrength = 0.35; // EXACTLY half of previous max height!
+const jumpStrength = 0.35; 
 
 function resetCatPose(cat) {
     cat.head.position.set(0, 0.7, -0.4); cat.head.rotation.set(0, cat.head.rotation.y, 0);
@@ -1722,20 +1722,16 @@ function animate() {
                 if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
                 if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
                 
-                // WALL SLIDING COLLISION LOGIC!
                 if (moved) {
                     let proposedX = myPlayerObject.position.x;
                     let proposedZ = myPlayerObject.position.z;
                     
                     if (checkCollision(myPlayerObject.position)) { 
-                        // It hit! Let's revert X and see if Z works
                         myPlayerObject.position.x = oldX; 
                         if (checkCollision(myPlayerObject.position)) {
-                            // Z also failed, let's restore X and try reverting Z
                             myPlayerObject.position.x = proposedX;
                             myPlayerObject.position.z = oldZ;
                             if (checkCollision(myPlayerObject.position)) {
-                                // Both failed independently. Revert both.
                                 myPlayerObject.position.x = oldX;
                             }
                         }
