@@ -111,6 +111,63 @@ function playCatMeow(catData) {
     catData.pAudio.play();
 }
 
+// --- Dynamic Canvas Face Generator ---
+const faceTextures = {};
+function getFaceTexture(type) {
+    if (faceTextures[type]) return faceTextures[type];
+    const canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 128, 128);
+
+    ctx.strokeStyle = '#000';
+    ctx.fillStyle = '#000';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+    ctx.shadowBlur = 6;
+
+    if (type === 'happy') {
+        ctx.beginPath(); ctx.moveTo(24, 50); ctx.lineTo(40, 35); ctx.lineTo(56, 50); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(72, 50); ctx.lineTo(88, 35); ctx.lineTo(104, 50); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(40, 80); ctx.lineTo(64, 100); ctx.lineTo(88, 80); ctx.stroke();
+    } else if (type === 'mad') {
+        ctx.beginPath(); ctx.moveTo(24, 30); ctx.lineTo(56, 45); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(104, 30); ctx.lineTo(72, 45); ctx.stroke();
+        ctx.fillRect(32, 50, 16, 16); ctx.fillRect(80, 50, 16, 16);
+        ctx.beginPath(); ctx.moveTo(40, 100); ctx.lineTo(64, 85); ctx.lineTo(88, 100); ctx.stroke();
+    } else if (type === 'surprised') {
+        ctx.strokeRect(32, 40, 16, 24); ctx.strokeRect(80, 40, 16, 24);
+        ctx.strokeRect(56, 80, 16, 24);
+    } else if (type === 'meh') {
+        ctx.beginPath(); ctx.moveTo(24, 50); ctx.lineTo(56, 50); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(72, 50); ctx.lineTo(104, 50); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(48, 90); ctx.lineTo(80, 90); ctx.stroke();
+    } else if (type === 'crying') {
+        ctx.beginPath(); ctx.moveTo(24, 45); ctx.lineTo(56, 45); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(40, 45); ctx.lineTo(40, 65); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(72, 45); ctx.lineTo(104, 45); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(88, 45); ctx.lineTo(88, 65); ctx.stroke();
+        ctx.shadowColor = 'transparent';
+        ctx.fillStyle = '#00BFFF';
+        ctx.fillRect(34, 75, 12, 30); ctx.fillRect(82, 75, 12, 30);
+        ctx.fillStyle = '#000';
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath(); ctx.arc(64, 105, 12, Math.PI, 0); ctx.stroke();
+    } else { // normal
+        ctx.fillRect(32, 45, 16, 16); ctx.fillRect(80, 45, 16, 16);
+        ctx.beginPath(); ctx.moveTo(56, 85); ctx.lineTo(64, 95); ctx.lineTo(72, 85); ctx.stroke();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.NearestFilter; 
+    faceTextures[type] = tex;
+    return tex;
+}
+
+
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
@@ -225,7 +282,7 @@ function createCrown() {
     return crownGroup;
 }
 
-function createCatSculpt(startColor = 0xFFFFFF) {
+function createCatSculpt(startColor = 0xFFFFFF, startFace = 'normal') {
     const uniqueMat = new THREE.MeshLambertMaterial({ color: startColor });
     const containerGroup = new THREE.Group();
     const catBody = new THREE.Group(); 
@@ -254,6 +311,13 @@ function createCatSculpt(startColor = 0xFFFFFF) {
         addPart(0.1, 0.3, 0.1, 0.15, 0.15, -0.3), addPart(0.1, 0.3, 0.1, -0.15, 0.15, -0.3)
     ];
 
+    // Added Face Sprite dynamically attached to front of head
+    const faceMat = new THREE.SpriteMaterial({ map: getFaceTexture(startFace), transparent: true });
+    const faceSprite = new THREE.Sprite(faceMat);
+    faceSprite.scale.set(0.4, 0.4, 1);
+    faceSprite.position.set(0, 0, -0.21); // Front of head
+    head.add(faceSprite);
+
     const pAudio = new THREE.PositionalAudio(listener);
     pAudio.setDistanceModel('linear'); 
     pAudio.setRefDistance(3);  
@@ -264,7 +328,7 @@ function createCatSculpt(startColor = 0xFFFFFF) {
     const crown = createCrown();
     head.add(crown); 
 
-    return { group: containerGroup, body: catBody, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat };
+    return { group: containerGroup, body: catBody, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat, faceSprite: faceSprite };
 }
 
 function setNameLabel(catData, name) {
@@ -375,8 +439,7 @@ let amIStunned = false;
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
-// --- LOBBY BEAM VISUAL ---
-// Bright White/Blue spotlight material with additive blending to look holographic/glowy
+// --- LOBBY BEAM VISUALS ---
 const beamGeo = new THREE.CylinderGeometry(6, 6, 100, 32, 1, true); 
 const beamMat = new THREE.MeshBasicMaterial({ 
     color: 0x88CCFF, 
@@ -390,10 +453,21 @@ const beamMesh = new THREE.Mesh(beamGeo, beamMat);
 beamMesh.position.set(0, 45, 0); 
 scene.add(beamMesh);
 
-// Center spotlight for the beam
 const beamLight = new THREE.PointLight(0x88CCFF, 2, 30);
 beamLight.position.set(0, 2, 0);
 scene.add(beamLight);
+
+// Glowing landing pad for beam
+const beamGroundGeo = new THREE.CircleGeometry(6, 32);
+const beamGroundMat = new THREE.MeshBasicMaterial({ 
+    color: 0x88CCFF, transparent: true, opacity: 0.5, 
+    side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false 
+});
+const beamGroundMesh = new THREE.Mesh(beamGroundGeo, beamGroundMat);
+beamGroundMesh.rotation.x = -Math.PI / 2;
+beamGroundMesh.position.set(0, -4.9, 0); 
+scene.add(beamGroundMesh);
+
 
 let qPressTime = 0;
 let isQPressed = false;
@@ -474,7 +548,8 @@ const myCatData = createCatSculpt();
 myPlayerObject.add(myCatData.group);
 
 window.myBaseColor = 0xFFFFFF; 
-const previewCat = createCatSculpt(window.myBaseColor);
+window.myFace = 'normal';
+const previewCat = createCatSculpt(window.myBaseColor, window.myFace);
 previewCat.group.position.set(0, 100, 0); 
 scene.add(previewCat.group);
 const previewLight = new THREE.AmbientLight(0xffffff, 1.2); 
@@ -502,7 +577,7 @@ nameInput.onblur = () => nameInput.style.borderColor = '#555';
 uiContainer.appendChild(nameInput);
 
 const colorPalette = document.createElement('div');
-colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
+colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
 
 const colors = [
     {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, 
@@ -529,6 +604,32 @@ colors.forEach(c => {
 colorPalette.children[0].style.borderColor = 'gold';
 uiContainer.appendChild(colorPalette);
 
+// --- FACE SELECTION UI ---
+const facePalette = document.createElement('div');
+facePalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 400px;';
+const faces = [
+    { id: 'normal', emoji: '🙂' }, { id: 'happy', emoji: '😄' }, 
+    { id: 'mad', emoji: '😠' }, { id: 'surprised', emoji: '😲' }, 
+    { id: 'meh', emoji: '😑' }, { id: 'crying', emoji: '😭' }
+];
+
+faces.forEach(f => {
+    let btn = document.createElement('button');
+    btn.innerHTML = f.emoji;
+    btn.style.cssText = `width:40px; height:40px; border-radius:8px; background:#333; color:white; font-size:20px; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s; display:flex; align-items:center; justify-content:center; padding:0;`;
+    btn.onclick = () => { 
+        window.myFace = f.id; 
+        previewCat.faceSprite.material.map = getFaceTexture(f.id);
+        Array.from(facePalette.children).forEach(child => child.style.borderColor = '#555');
+        btn.style.borderColor = 'gold';
+    };
+    btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
+    btn.onmouseout = () => btn.style.transform = 'scale(1)';
+    facePalette.appendChild(btn);
+});
+facePalette.children[0].style.borderColor = 'gold';
+uiContainer.appendChild(facePalette);
+
 const startBtn = document.createElement('button');
 startBtn.innerHTML = "PLAY";
 startBtn.style.cssText = 'padding: 12px 50px; font-size: 24px; font-weight:900; background: gold; color: #111; border: none; border-radius: 8px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s;';
@@ -544,7 +645,8 @@ startBtn.onclick = () => {
     }
     
     let chosenName = nameInput.value.trim();
-    socket.emit('joinGame', { name: chosenName, color: window.myBaseColor });
+    // Transmit selected face on spawn
+    socket.emit('joinGame', { name: chosenName, color: window.myBaseColor, face: window.myFace });
     
     startScreen.style.display = 'none';
 
@@ -817,6 +919,7 @@ socket.on('currentPlayers', (players) => {
             amIStunned = players[id].stunned;
 
             myCatData.material.color.setHex(players[id].color);
+            myCatData.faceSprite.material.map = getFaceTexture(players[id].face || 'normal');
             
             let cColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
             myCatData.crownMat.color.setHex(cColor);
@@ -838,6 +941,7 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].material.color.setHex(players[id].color);
                 otherPlayers[id].stunned = players[id].stunned;
                 otherPlayers[id].baseColor = players[id].baseColor;
+                otherPlayers[id].faceSprite.material.map = getFaceTexture(players[id].face || 'normal');
                 
                 let oColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
                 otherPlayers[id].crownMat.color.setHex(oColor);
@@ -893,7 +997,7 @@ socket.on('playerTaunted', (taunterId) => {
 });
 
 socket.on('spawnDecoy', (data) => {
-    const decoy = createCatSculpt(data.color);
+    const decoy = createCatSculpt(data.color, data.face);
     decoy.group.position.set(data.x, data.y, data.z);
     decoy.group.rotation.y = data.rY;
     scene.add(decoy.group);
@@ -920,7 +1024,7 @@ socket.on('spawnHairball', (data) => {
 
 function addOtherPlayer(id, playerInfo) {
     if (otherPlayers[id]) scene.remove(otherPlayers[id].group);
-    const catData = createCatSculpt(playerInfo.color);
+    const catData = createCatSculpt(playerInfo.color, playerInfo.face || 'normal');
     catData.group.position.set(playerInfo.x, playerInfo.y, playerInfo.z);
     catData.group.rotation.y = playerInfo.rY;
     catData.role = playerInfo.role; 
@@ -1125,7 +1229,7 @@ function animate() {
         let timeLoop = (Date.now() % 60000) / 60000; 
         cycleProgress = Math.abs(timeLoop * 2 - 1); 
     } else if (serverGameState === 'LOBBY' || serverGameState === 'BEAMING') {
-        cycleProgress = 1; // Force night time during Lobby!
+        cycleProgress = 1; 
     } else {
         cycleProgress = 0; 
     }
@@ -1145,15 +1249,22 @@ function animate() {
 
     stars.rotation.y += 0.0003; 
 
-    let dimFactor = 1 - (0.15 * cycleProgress); 
-    sunLight.intensity = 0.8 * dimFactor;
-    ambientLight.intensity = 0.4 * dimFactor;
+    if (serverGameState === 'LOBBY' || serverGameState === 'BEAMING') {
+        sunLight.intensity = 0.05; 
+        ambientLight.intensity = 0.05;
+    } else {
+        let dimFactor = 1 - (0.15 * cycleProgress); 
+        sunLight.intensity = 0.8 * dimFactor;
+        ambientLight.intensity = 0.4 * dimFactor;
+    }
 
-    // Toggle Beam & SpotLight Visibility
     beamMesh.visible = (serverGameState === 'LOBBY' || serverGameState === 'BEAMING');
     beamLight.visible = beamMesh.visible;
+    beamGroundMesh.visible = beamMesh.visible;
     if (beamMesh.visible) {
-        beamMat.opacity = 0.4 + Math.sin(performance.now() / 150) * 0.2; // Pulsing glow effect
+        let glowOsc = 0.4 + Math.sin(performance.now() / 150) * 0.2;
+        beamMat.opacity = glowOsc; 
+        beamGroundMat.opacity = glowOsc + 0.2;
         beamMesh.rotation.y += 0.01;
     }
 
