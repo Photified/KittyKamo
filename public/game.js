@@ -452,6 +452,7 @@ let amIStunned = false;
 
 let isCustomizing = true; 
 let customizationZone = null;
+let ignoreServerPositionUntil = 0; // Fixes the customization zone "flash" bounce back
 
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
@@ -600,7 +601,6 @@ function createCraftingTable(x, z) {
     lobbyVisuals.push(tableGroup);
 }
 
-// --- NEW LOBBY BOX PROPS ---
 function createClosedBox(w, h, d, x, y, z, rY) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mat = new THREE.MeshLambertMaterial({ color: 0xC19A6B }); 
@@ -646,7 +646,7 @@ function createOpenBox(w, h, d, x, y, z, rY) {
     });
 
     group.position.set(x, y, z);
-    group.rotation.y = rY || 0; // Kept perfectly orthogonal to prevent AABB collision rot block
+    group.rotation.y = rY || 0; 
     scene.add(group);
     lobbyVisuals.push(group);
 }
@@ -840,6 +840,8 @@ startBtn.onclick = () => {
     
     startScreen.style.display = 'none';
     isCustomizing = false;
+    
+    ignoreServerPositionUntil = Date.now() + 2000; // Ignore server position echo for 2s so you don't bounce back!
 
     if (customizationZone && myPlayerObject.position.distanceTo(customizationZone) < 4) {
         myPlayerObject.position.set(0, -4, -12); 
@@ -1116,7 +1118,6 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
     } else {
-        // FLAT LOBBY
         ground.scale.set(40, 40, 1);
         ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
@@ -1144,7 +1145,6 @@ socket.on('initMap', (mapBlocks) => {
         createCatTree(14, 14, 2);
         createCatTree(-14, -14, 3);
 
-        // --- CUSTOMIZATION HOUSE ---
         createHouseWall(6, 4, 1, 0, -3, -19.5, 0x8B4513); 
         createHouseWall(1, 4, 4, -2.5, -3, -18, 0x8B4513); 
         createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
@@ -1176,7 +1176,6 @@ socket.on('initMap', (mapBlocks) => {
         scene.add(cMesh);
         lobbyVisuals.push(cMesh);
 
-        // --- ADD LOBBY BOXES ---
         createClosedBox(1.5, 1.5, 1.5, -2.5, -4.25, 0, Math.PI/6);
         createClosedBox(1.5, 1.5, 1.5, 11.5, -4.25, 14, -Math.PI/8);
         createClosedBox(1.5, 1.5, 1.5, -11.5, -4.25, -14, Math.PI/4);
@@ -1213,9 +1212,14 @@ socket.on('currentPlayers', (players) => {
             myCatData.crownMat.color.setHex(cColor);
 
             setNameLabel(myCatData, myName); 
-            if (serverGameState === 'WAITING' || serverGameState === 'LOBBY' || myRole !== 'spectator') {
-                myPlayerObject.position.set(players[id].x, players[id].y, players[id].z);
+
+            // IGNORING SERVER POSITION UPDATE IF JUST EXITED MENU
+            if (Date.now() > ignoreServerPositionUntil) {
+                if (serverGameState === 'WAITING' || serverGameState === 'LOBBY' || myRole !== 'spectator') {
+                    myPlayerObject.position.set(players[id].x, players[id].y, players[id].z);
+                }
             }
+
             myCatData.crown.visible = (id === serverWinnerId);
             updateRightBox(null);
         } else { 
@@ -1302,13 +1306,13 @@ socket.on('decoyPopped', (decoyId) => {
 });
 
 socket.on('spawnHairball', (data) => {
-    const hbGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2); // Halved size!
+    const hbGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2); 
     const hbMat = new THREE.MeshLambertMaterial({color: 0x6B4226}); 
     const hbMesh = new THREE.Mesh(hbGeo, hbMat);
     hbMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(hbGeo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
     hbMesh.position.set(data.x, data.y, data.z);
     scene.add(hbMesh);
-    activeHairballs.push({ mesh: hbMesh, dirX: data.dirX, dirZ: data.dirZ, id: data.id, ownerId: data.ownerId, distance: 0 }); // Added distance tracking
+    activeHairballs.push({ mesh: hbMesh, dirX: data.dirX, dirZ: data.dirZ, id: data.id, ownerId: data.ownerId, distance: 0 });
 });
 
 function addOtherPlayer(id, playerInfo) {
@@ -1334,7 +1338,8 @@ function addOtherPlayer(id, playerInfo) {
 function checkCollision(pos) {
     const pBox = new THREE.Box3();
     const currentScaleY = myCatData.body.scale.y; 
-    pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
+    // Slimming the player bounding box to 0.4 width for smoother sliding!
+    pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.4, 1.2 * currentScaleY, 0.4));
     
     for (let i = 0; i < mapObjects.length; i++) {
         const bBox = new THREE.Box3().setFromObject(mapObjects[i]); bBox.expandByScalar(-0.02);
@@ -1428,13 +1433,12 @@ document.addEventListener('keyup', (e) => {
     if(e.key.toLowerCase() === 'q') isQPressed = false;
 });
 
-// DOUBLED VALUES (to account for the 30 FPS Lock) PLUS the 10% requested speed boost 
 const moveSpeed = 0.28; 
 const turnSpeed = 0.13; 
 let velocityY = 0; 
 let isGrounded = true; 
 const gravity = -0.016; 
-const jumpStrength = 0.5;
+const jumpStrength = 0.35; // EXACTLY half of previous max height!
 
 function resetCatPose(cat) {
     cat.head.position.set(0, 0.7, -0.4); cat.head.rotation.set(0, cat.head.rotation.y, 0);
@@ -1519,7 +1523,6 @@ function animateCat(cat, emote, walkTime) {
     }
 }
 
-// THIS TIME THE FPS LOCK COVERS THE WHOLE LOOP!
 function animate() {
     requestAnimationFrame(animate);
 
@@ -1593,25 +1596,22 @@ function animate() {
         if (p.scale.x < 0.01) { scene.remove(p); particles.splice(i, 1); }
     }
 
-    // HAIRBALL DISTANCE FALLOFF ADDED
     for (let i = activeHairballs.length - 1; i >= 0; i--) {
         let hb = activeHairballs[i];
         
-        // Compensating for 30fps lock speed
         hb.mesh.position.x += hb.dirX * 0.6;
         hb.mesh.position.z += hb.dirZ * 0.6;
 
         hb.distance = (hb.distance || 0) + 0.6;
 
         if (hb.distance > 10) {
-            hb.velocityY = (hb.velocityY || 0) - 0.032; // Gravity pulls it down!
+            hb.velocityY = (hb.velocityY || 0) - 0.032; 
             hb.mesh.position.y += hb.velocityY;
         }
 
         let hitWall = false;
         let hitSeekerId = null;
 
-        // If hairball arcs below ground level, pop it. 
         if (hb.mesh.position.y <= -4.8) {
             hitWall = true;
         }
@@ -1716,12 +1716,32 @@ function animate() {
                 if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
                 if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
                 
-                const oldX = myPlayerObject.position.x; const oldZ = myPlayerObject.position.z;
+                const oldX = myPlayerObject.position.x; 
+                const oldZ = myPlayerObject.position.z;
                 
                 if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
                 if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
                 
-                if (checkCollision(myPlayerObject.position)) { myPlayerObject.position.x = oldX; myPlayerObject.position.z = oldZ; }
+                // WALL SLIDING COLLISION LOGIC!
+                if (moved) {
+                    let proposedX = myPlayerObject.position.x;
+                    let proposedZ = myPlayerObject.position.z;
+                    
+                    if (checkCollision(myPlayerObject.position)) { 
+                        // It hit! Let's revert X and see if Z works
+                        myPlayerObject.position.x = oldX; 
+                        if (checkCollision(myPlayerObject.position)) {
+                            // Z also failed, let's restore X and try reverting Z
+                            myPlayerObject.position.x = proposedX;
+                            myPlayerObject.position.z = oldZ;
+                            if (checkCollision(myPlayerObject.position)) {
+                                // Both failed independently. Revert both.
+                                myPlayerObject.position.x = oldX;
+                            }
+                        }
+                    }
+                }
+
                 if (keys[" "] && isGrounded) { 
                     velocityY = jumpStrength; 
                     isGrounded = false; 
