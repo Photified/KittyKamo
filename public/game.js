@@ -387,6 +387,7 @@ function createBlock(x, y, z, color) {
 }
 
 const walls = [];
+
 function createHouseWall(w, h, d, x, y, z, color) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mat = new THREE.MeshLambertMaterial({ color: color, transparent: true });
@@ -512,7 +513,6 @@ function createCatBed(x, z, color) {
     lobbyVisuals.push(bedGroup);
 }
 
-// Generates multiple distinct types of Cat Trees!
 function createCatTree(x, z, type = 1) {
     const treeGroup = new THREE.Group();
     const matBase = new THREE.MeshLambertMaterial({ color: 0xDEB887 }); 
@@ -528,7 +528,6 @@ function createCatTree(x, z, type = 1) {
     }
 
     if (type === 1) {
-        // Classic Climber
         addTreePart(new THREE.BoxGeometry(4, 0.4, 4), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -1, -3.6, 1);
         addTreePart(new THREE.BoxGeometry(2.5, 0.2, 2.5), matBase, -1, -2.5, 1);
@@ -537,14 +536,12 @@ function createCatTree(x, z, type = 1) {
         addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -0.5, 0.6, -0.5);
         addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, -0.5, 1.7, -0.5);
     } else if (type === 2) {
-        // Tall Tower
         addTreePart(new THREE.BoxGeometry(3, 0.4, 3), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 6, 0.6), matPost, 0, -1.8, 0);
         addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.3, 0);
         addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, 1.5, -1, 0);
         addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, -1.5, -3, 0);
     } else if (type === 3) {
-        // Double Post Hideaway
         addTreePart(new THREE.BoxGeometry(4, 0.4, 3), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 3, 0.6), matPost, -1, -3.3, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 3, 0.6), matPost, 1, -3.3, 0);
@@ -558,7 +555,6 @@ function createCatTree(x, z, type = 1) {
     lobbyVisuals.push(treeGroup);
 }
 
-// Function to generate the new Crafting Table inside the house
 function createCraftingTable(x, z) {
     const tableGroup = new THREE.Group();
     const matWood = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
@@ -576,20 +572,16 @@ function createCraftingTable(x, z) {
         if (isCollision) lobbyCollision.push(mesh);
     }
 
-    // Table top
     addPart(new THREE.BoxGeometry(3, 0.2, 1.2), matWood, 0, -3.8, 0, true);
     
-    // Legs
     addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, -1.3, -4.4, -0.4, true);
     addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, 1.3, -4.4, -0.4, true);
     addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, -1.3, -4.4, 0.4, true);
     addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, 1.3, -4.4, 0.4, true);
 
-    // Paper
     addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, -0.5, -3.68, 0);
     addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, 0.2, -3.68, 0.1);
 
-    // Crayons scattered on table
     const cray1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), matCrayonR);
     cray1.position.set(0.8, -3.65, -0.2); cray1.rotation.y = 0.2; tableGroup.add(cray1);
     
@@ -607,6 +599,57 @@ function createCraftingTable(x, z) {
     tableGroup.position.set(x, 0, z);
     scene.add(tableGroup);
     lobbyVisuals.push(tableGroup);
+}
+
+// --- NEW LOBBY BOX PROPS ---
+function createClosedBox(w, h, d, x, y, z, rY) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshLambertMaterial({ color: 0xC19A6B }); // Cardboard brown
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+    mesh.position.set(x, y, z);
+    mesh.rotation.y = rY || 0;
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    scene.add(mesh);
+    lobbyVisuals.push(mesh);
+    lobbyCollision.push(mesh);
+}
+
+function createOpenBox(w, h, d, x, y, z, rY) {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({ color: 0xC19A6B, side: THREE.DoubleSide });
+    const t = 0.1; 
+    
+    const bottom = new THREE.Mesh(new THREE.BoxGeometry(w, t, d), mat);
+    bottom.position.set(0, -h/2 + t/2, 0);
+    group.add(bottom);
+    
+    const left = new THREE.Mesh(new THREE.BoxGeometry(t, h, d), mat);
+    left.position.set(-w/2 + t/2, 0, 0);
+    group.add(left);
+    
+    const right = new THREE.Mesh(new THREE.BoxGeometry(t, h, d), mat);
+    right.position.set(w/2 - t/2, 0, 0);
+    group.add(right);
+    
+    const front = new THREE.Mesh(new THREE.BoxGeometry(w, h, t), mat);
+    front.position.set(0, 0, d/2 - t/2);
+    group.add(front);
+    
+    const back = new THREE.Mesh(new THREE.BoxGeometry(w, h, t), mat);
+    back.position.set(0, 0, -d/2 + t/2);
+    group.add(back);
+
+    group.children.forEach(c => {
+        c.add(new THREE.LineSegments(new THREE.EdgesGeometry(c.geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+        c.castShadow = true; c.receiveShadow = true;
+        lobbyCollision.push(c); 
+    });
+
+    group.position.set(x, y, z);
+    group.rotation.y = rY || 0;
+    scene.add(group);
+    lobbyVisuals.push(group);
 }
 
 let qPressTime = 0;
@@ -1108,7 +1151,6 @@ socket.on('initMap', (mapBlocks) => {
         createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createHouseWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
 
-        // Added Crafting Table
         createCraftingTable(0, -18.4);
         
         const padGeo = new THREE.BoxGeometry(4, 0.1, 4);
@@ -1131,9 +1173,25 @@ socket.on('initMap', (mapBlocks) => {
         const cGeo = new THREE.PlaneGeometry(4, 1);
         const cMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cCanvas), transparent: true, depthWrite: false });
         const cMesh = new THREE.Mesh(cGeo, cMat);
-        cMesh.position.set(0, -1.5, -18.9); 
+        cMesh.position.set(0, -2.6, -18.9); // Adjusted text position lower, towards middle!
         scene.add(cMesh);
         lobbyVisuals.push(cMesh);
+
+        // --- ADD LOBBY BOXES ---
+        // Near Tree 1 (Center)
+        createClosedBox(1.5, 1.5, 1.5, -2.5, -4.25, 0, Math.PI/6);
+        // Near Tree 2
+        createClosedBox(1.5, 1.5, 1.5, 11.5, -4.25, 14, -Math.PI/8);
+        // Near Tree 3
+        createClosedBox(1.5, 1.5, 1.5, -11.5, -4.25, -14, Math.PI/4);
+        
+        // Scattered boxes
+        createOpenBox(2, 1.5, 2, -8, -4.25, -8, Math.PI/5);
+        createClosedBox(1.5, 1.5, 1.5, -9, -4.25, -6, 0);
+        createOpenBox(2.5, 1.5, 2.5, 12, -4.25, -8, -Math.PI/7);
+        createClosedBox(1.2, 1.2, 1.2, 14, -4.4, -6, Math.PI/3);
+        createClosedBox(1.5, 1.5, 1.5, 0, -4.25, 8, Math.PI/6);
+        createOpenBox(2, 1.5, 2, -2, -4.25, 9, -Math.PI/6);
 
         customizationZone = new THREE.Vector3(0, -5, -18);
     }
