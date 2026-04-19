@@ -168,7 +168,6 @@ function getFaceTexture(type) {
     return tex;
 }
 
-
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
