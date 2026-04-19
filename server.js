@@ -8,7 +8,7 @@ app.use(express.static('public'));
 
 let mapBlocks = [];
 let players = {};
-let activeDecoys = {}; // Tracks who owns which decoy
+let activeDecoys = {}; 
 let gameState = 'WAITING'; 
 let timeRemaining = 0;
 let gameTimer = null;
@@ -51,19 +51,21 @@ function startRound() {
     generateMap(); 
     io.emit('initMap', mapBlocks);
 
-    // Reset decoys for the new round
     activeDecoys = {};
 
     const seekerId = ids[Math.floor(Math.random() * ids.length)];
     ids.forEach(id => {
         players[id].role = (id === seekerId) ? 'seeker' : 'hider';
-        players[id].color = (id === seekerId) ? 0xFF0000 : 0xFFFFFF;
-        // --- UPDATED SPAWN AREA TO FIT 40x40 MAP ---
+        // Respect chosen skin color unless they are the seeker
+        players[id].baseColor = players[id].baseColor || 0xFFFFFF; 
+        players[id].color = (id === seekerId) ? 0xFF0000 : players[id].baseColor;
+        
         players[id].x = (Math.random() * 30) - 15;
         players[id].y = 20; 
         players[id].z = (Math.random() * 30) - 15;
-        players[id].score = 0; // Reset score (survival time)
-        players[id].decoyUsed = false; // Reset decoy usage
+        players[id].score = 0; 
+        players[id].decoyUsed = false; 
+        players[id].emote = 0; // Reset emote
     });
     
     io.emit('currentPlayers', players); 
@@ -82,7 +84,7 @@ function startRound() {
             let hidersLeft = false;
             Object.values(players).forEach(p => {
                 if (p.role === 'hider') {
-                    p.score += 1; // +1 survival time per second
+                    p.score += 1; 
                     hidersLeft = true;
                 }
             });
@@ -123,10 +125,9 @@ io.on('connection', (socket) => {
         id: socket.id,
         name: 'Cat-' + socket.id.substring(0, 4),
         score: 0,
-        // --- UPDATED SPAWN AREA TO FIT 40x40 MAP ---
         x: (Math.random() * 30) - 15, y: 20, z: (Math.random() * 30) - 15, 
-        rY: 0, moving: false, role: joinRole, color: 0xFFFFFF,
-        decoyUsed: false
+        rY: 0, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
+        decoyUsed: false, emote: 0
     };
 
     socket.emit('currentPlayers', players);
@@ -136,13 +137,19 @@ io.on('connection', (socket) => {
         startRound();
     }
 
-    socket.on('setName', (customName) => {
-        if (players[socket.id] && typeof customName === 'string') {
-            let cleanName = customName.trim().substring(0, 12).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // New joined event containing skin choice
+    socket.on('joinGame', (data) => {
+        if (players[socket.id]) {
+            let cleanName = data.name.trim().substring(0, 12).replace(/</g, "&lt;").replace(/>/g, "&gt;");
             if (cleanName.length > 0) {
                 players[socket.id].name = cleanName;
-                io.emit('currentPlayers', players);
             }
+            players[socket.id].baseColor = data.color;
+            // Only update active color if they aren't an active seeker
+            if (players[socket.id].role !== 'seeker') {
+                players[socket.id].color = data.color;
+            }
+            io.emit('currentPlayers', players);
         }
     });
 
@@ -163,10 +170,12 @@ io.on('connection', (socket) => {
         players[socket.id].x = movementData.x; players[socket.id].y = movementData.y; players[socket.id].z = movementData.z;
         players[socket.id].rY = movementData.rY; players[socket.id].moving = movementData.moving;
         players[socket.id].color = movementData.color;
+        players[socket.id].emote = movementData.emote;
         
         socket.broadcast.emit('playerMoved', { 
             id: socket.id, x: movementData.x, y: movementData.y, z: movementData.z, 
-            rY: movementData.rY, moving: movementData.moving, color: movementData.color, role: players[socket.id].role
+            rY: movementData.rY, moving: movementData.moving, color: movementData.color, role: players[socket.id].role,
+            emote: movementData.emote
         });
     });
 
