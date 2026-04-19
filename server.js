@@ -17,6 +17,7 @@ let currentWinnerId = null;
 let winReason = "";
 let nextDecoyId = 0;
 let nextHairballId = 0;
+let activePlayers = []; 
 
 function generateMap() {
     mapBlocks = [];
@@ -40,25 +41,24 @@ function generateMap() {
     }
 }
 
-function startRound() {
+function startLobby() {
     const ids = Object.keys(players);
     if (ids.length < 2) {
         gameState = 'WAITING';
+        timeRemaining = 0;
         io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [] });
         return;
     }
 
+    gameState = 'LOBBY';
+    timeRemaining = 20; // 20s to get into the beam
     generateMap(); 
     io.emit('initMap', mapBlocks);
 
-    activeDecoys = {};
-
-    const seekerId = ids[Math.floor(Math.random() * ids.length)];
+    // Turn everyone into a free-roaming hider for the lobby
     ids.forEach(id => {
-        players[id].role = (id === seekerId) ? 'seeker' : 'hider';
-        players[id].baseColor = players[id].baseColor || 0xFFFFFF; 
-        players[id].color = (id === seekerId) ? 0xFF0000 : players[id].baseColor;
-        
+        players[id].role = 'hider';
+        players[id].color = players[id].baseColor;
         players[id].x = (Math.random() * 30) - 15;
         players[id].y = 20; 
         players[id].z = (Math.random() * 30) - 15;
@@ -70,22 +70,35 @@ function startRound() {
     });
     
     io.emit('currentPlayers', players); 
-    gameState = 'HIDING';
-    timeRemaining = 10; // Reduced to 10 seconds
 
     if (gameTimer) clearInterval(gameTimer);
     
     gameTimer = setInterval(() => {
         timeRemaining--;
 
-        if (gameState === 'HIDING' && timeRemaining <= 0) {
+        if (gameState === 'LOBBY' && timeRemaining <= 0) {
+            // Find players inside the beam (Radius 6 from 0,0)
+            activePlayers = Object.values(players).filter(p => {
+                return Math.sqrt(p.x * p.x + p.z * p.z) < 6;
+            }).map(p => p.id);
+
+            if (activePlayers.length < 2) {
+                timeRemaining = 15; // Not enough players, extend lobby
+            } else {
+                gameState = 'BEAMING';
+                timeRemaining = 3; // 3 seconds of upward levitation
+                io.emit('beamingPlayers', activePlayers);
+            }
+        } else if (gameState === 'BEAMING' && timeRemaining <= 0) {
+            startRound(); 
+        } else if (gameState === 'HIDING' && timeRemaining <= 0) {
             gameState = 'SEEKING';
             timeRemaining = 60; 
         } else if (gameState === 'SEEKING') {
             let hidersLeft = false;
-            Object.values(players).forEach(p => {
-                if (p.role === 'hider') {
-                    p.score += 1; 
+            activePlayers.forEach(id => {
+                if (players[id] && players[id].role === 'hider') {
+                    players[id].score += 1; 
                     hidersLeft = true;
                 }
             });
@@ -95,14 +108,15 @@ function startRound() {
                 timeRemaining = 5; 
                 winReason = hidersLeft ? 'HIDERS SURVIVE!' : 'SEEKERS WIN!';
                 
-                let sortedIds = Object.keys(players).sort((a,b) => players[b].score - players[a].score);
+                let sortedIds = activePlayers.filter(id => players[id]).sort((a,b) => players[b].score - players[a].score);
                 currentWinnerId = sortedIds.length > 0 ? sortedIds[0] : null;
             }
         } else if (gameState === 'GAME_OVER' && timeRemaining <= 0) {
-            startRound(); 
+            startLobby(); 
         }
 
         const leaderboardData = Object.values(players)
+            .filter(p => activePlayers.includes(p.id)) // Only show active round players
             .map(p => ({ id: p.id, name: p.name, score: p.score }))
             .sort((a, b) => b.score - a.score); 
 
@@ -116,11 +130,40 @@ function startRound() {
     }, 1000);
 }
 
+function startRound() {
+    gameState = 'HIDING';
+    timeRemaining = 10; 
+    activeDecoys = {};
+
+    const seekerId = activePlayers[Math.floor(Math.random() * activePlayers.length)];
+    
+    Object.keys(players).forEach(id => {
+        if (activePlayers.includes(id)) {
+            players[id].role = (id === seekerId) ? 'seeker' : 'hider';
+            players[id].color = (id === seekerId) ? 0xFF0000 : players[id].baseColor;
+            players[id].y = 25; // Drop them from the sky
+            players[id].x = (Math.random() * 20) - 10; // Scatter drop
+            players[id].z = (Math.random() * 20) - 10;
+            players[id].score = 0; 
+        } else {
+            players[id].role = 'spectator';
+            players[id].color = players[id].baseColor;
+        }
+        players[id].decoyUsed = false; 
+        players[id].hairballs = 3; 
+        players[id].stunned = false;
+        players[id].emote = 0; 
+    });
+    
+    io.emit('currentPlayers', players); 
+}
+
 io.on('connection', (socket) => {
     if (mapBlocks.length === 0) generateMap();
     socket.emit('initMap', mapBlocks);
 
-    let joinRole = (gameState === 'WAITING' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
+    // Default to free-roaming hider if joining the lobby
+    let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
     players[socket.id] = {
         id: socket.id,
@@ -135,7 +178,7 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('newPlayer', { id: socket.id, player: players[socket.id] });
 
     if (Object.keys(players).length >= 2 && gameState === 'WAITING') {
-        startRound();
+        startLobby();
     }
 
     socket.on('joinGame', (data) => {
@@ -217,6 +260,12 @@ io.on('connection', (socket) => {
 
     socket.on('hairballHit', (targetId) => {
         if (players[targetId] && players[targetId].role === 'seeker' && !players[targetId].stunned) {
+            
+            // Add +15 score to the Hider who landed the hit!
+            if (players[socket.id] && players[socket.id].role === 'hider') {
+                players[socket.id].score += 15;
+            }
+
             players[targetId].stunned = true;
             io.emit('playerStunned', targetId);
             
@@ -230,7 +279,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('lobbyMeow', () => {
-        if (gameState === 'WAITING') {
+        if (gameState === 'WAITING' || gameState === 'LOBBY') {
             socket.broadcast.emit('playerTaunted', socket.id);
         }
     });
@@ -245,9 +294,11 @@ io.on('connection', (socket) => {
             }
         }
         
-        const activePlayers = Object.values(players).filter(p => p.role !== 'spectator').length;
-        if (activePlayers < 2) {
-            gameState = 'WAITING';
+        activePlayers = activePlayers.filter(id => id !== socket.id);
+
+        if (gameState !== 'WAITING' && gameState !== 'LOBBY' && activePlayers.length < 2) {
+            startLobby();
+        } else if (gameState === 'WAITING' && Object.keys(players).length < 2) {
             if (gameTimer) clearInterval(gameTimer);
             io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [] });
         }
