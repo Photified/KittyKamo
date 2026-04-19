@@ -53,17 +53,17 @@ function startLobby() {
     gameState = 'LOBBY';
     timeRemaining = 60; 
     
-    // Clear map for a flat lobby arena!
+    // Clear map for a flat lobby arena
     mapBlocks = [];
     io.emit('initMap', mapBlocks);
 
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
-        // Spawn players in the smaller 20x20 lobby area (-10 to 10)
-        players[id].x = (Math.random() * 16) - 8;
+        // Tighter spawn near center to avoid spawning inside the Customization House
+        players[id].x = (Math.random() * 10) - 5;
         players[id].y = 20; 
-        players[id].z = (Math.random() * 16) - 8;
+        players[id].z = (Math.random() * 10) - 5;
         players[id].score = 0; 
         players[id].decoyUsed = false; 
         players[id].hairballs = 3; 
@@ -180,14 +180,13 @@ io.on('connection', (socket) => {
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
-    // Keep spawn tight if joining an active lobby
     players[socket.id] = {
         id: socket.id,
         name: 'Cat-' + socket.id.substring(0, 4),
         score: 0,
-        x: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 16) - 8 : (Math.random() * 30) - 15,
+        x: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 10) - 5 : (Math.random() * 30) - 15,
         y: 20, 
-        z: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 16) - 8 : (Math.random() * 30) - 15,
+        z: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 10) - 5 : (Math.random() * 30) - 15,
         rY: 0, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
         decoyUsed: false, hairballs: 3, stunned: false, emote: 0, face: 'normal'
     };
