@@ -17,11 +17,9 @@ const colorDay = new THREE.Color(0x87CEEB);
 const colorSunset = new THREE.Color(0xFF7E47); 
 const colorNight = new THREE.Color(0x020211); 
 
-// --- 3-STATE VOLUME LOGIC ---
-let volumeState = 1; // 2 = High, 1 = Low, 0 = Mute
+let volumeState = 1; 
 const VOL_EMOJIS = { 2: '🔊', 1: '🔉', 0: '🔇' };
 
-// --- INDEPENDENT MUSIC TOGGLE ---
 window.musicEnabled = true;
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -93,6 +91,13 @@ function playSound(type) {
         gain.gain.setValueAtTime(0.15 * v, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.3);
         osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    } else if (type === 'spit') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 }
 
@@ -297,7 +302,6 @@ function explodeParticles(pos, isRed) {
     }
 }
 
-// --- SHARED GEOMETRIES ---
 const sharedBoxGeo = new THREE.BoxGeometry(1, 1, 1);
 const sharedEdgesGeo = new THREE.EdgesGeometry(sharedBoxGeo);
 const sharedEdgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
@@ -315,7 +319,6 @@ function createBlock(x, y, z, color) {
     mapObjects.push(mesh);
 }
 
-// --- BOUNDARY WALLS ---
 const walls = [];
 const wallMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
 function createWall(w, h, d, x, y, z) {
@@ -329,7 +332,6 @@ function createWall(w, h, d, x, y, z) {
     walls.push(mesh);
 }
 
-// --- INVISIBLE SKY WALLS ---
 const invisibleWalls = [];
 const invisibleMat = new THREE.MeshBasicMaterial({ visible: false });
 function createInvisibleWall(w, h, d, x, y, z) {
@@ -352,6 +354,7 @@ let lastTickTime = -1;
 
 const otherPlayers = {};
 const activeDecoys = {}; 
+const activeHairballs = [];
 
 let myWalkTime = 0; 
 let lastStepTime = 0; 
@@ -360,12 +363,15 @@ let lastRadarTime = 0;
 let lastTauntTime = 0; 
 let myDecoyUsed = false; 
 let wasGroundedLastFrame = true; 
-let myEmote = 0; // State for emotes 1-5
+let myEmote = 0; 
+
+let myHairballs = 3;
+let myDecoys = 1;
+let amIStunned = false;
 
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
-// --- UNSTUCK METER UI ---
 let qPressTime = 0;
 let isQPressed = false;
 const unstuckUI = document.createElement('div');
@@ -417,7 +423,6 @@ for(let i=0; i<3; i++) {
 }
 blindfoldStage.visible = false; 
 
-// --- DYNAMIC GROUND ---
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0x4CAF50, side: THREE.DoubleSide }));
 ground.rotation.x = -Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; 
 scene.add(ground);
@@ -447,23 +452,25 @@ const myCatData = createCatSculpt();
 myPlayerObject.add(myCatData.group);
 
 // --- PREVIEW CAT SETUP ---
-window.myBaseColor = 0xFFFFFF; // Default skin color
+window.myBaseColor = 0xFFFFFF; 
 const previewCat = createCatSculpt(window.myBaseColor);
-previewCat.group.position.set(0, 100, 0); // Hide way up in the sky!
+previewCat.group.position.set(0, 100, 0); 
 scene.add(previewCat.group);
-const previewLight = new THREE.AmbientLight(0xffffff, 1.2); // Light up preview
+const previewLight = new THREE.AmbientLight(0xffffff, 1.2); 
 scene.add(previewLight);
 
 // --- CUSTOM NAME ENTRY SCREEN ---
 const startScreen = document.createElement('div');
 startScreen.id = 'startScreen';
-// Lower opacity to see preview cat behind
-startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:"Segoe UI", sans-serif; z-index:999;';
+startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; font-family:"Segoe UI", sans-serif; z-index:999;';
+
+const uiContainer = document.createElement('div');
+uiContainer.style.cssText = 'margin-top: 45vh; display:flex; flex-direction:column; align-items:center;';
 
 const logo = document.createElement('h1');
 logo.innerHTML = 'KITTY KAMO';
 logo.style.cssText = 'font-size: 48px; color: gold; text-shadow: 3px 3px 0 #000; margin: 0 0 20px 0; font-weight: 900; letter-spacing: 2px; text-align: center;';
-startScreen.appendChild(logo);
+uiContainer.appendChild(logo);
 
 const nameInput = document.createElement('input');
 nameInput.type = 'text';
@@ -472,16 +479,14 @@ nameInput.maxLength = 12;
 nameInput.style.cssText = 'padding: 12px; font-size: 20px; font-weight: bold; text-align: center; border-radius: 8px; border: 3px solid #555; background: #222; color: white; margin-bottom: 20px; width: 250px; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: border-color 0.2s;';
 nameInput.onfocus = () => nameInput.style.borderColor = 'gold';
 nameInput.onblur = () => nameInput.style.borderColor = '#555';
-startScreen.appendChild(nameInput);
+uiContainer.appendChild(nameInput);
 
-// --- SKIN PALETTE UI ---
 const colorPalette = document.createElement('div');
 colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
 const colors = [
-    {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, {n:'Gray', h:0x888888},
+    {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, 
     {n:'Blue', h:0x4169E1}, {n:'Pink', h:0xFF69B4}, {n:'Purple', h:0x800080},
-    {n:'Yellow', h:0xFFD700}, {n:'Cyan', h:0x00FFFF}, {n:'Red', h:0xDD0000},
-    {n:'Orange', h:0xFFA500}
+    {n:'Yellow', h:0xFFD700}, {n:'Cyan', h:0x00FFFF}, {n:'Orange', h:0xFFA500}
 ];
 colors.forEach(c => {
     let btn = document.createElement('button');
@@ -489,7 +494,6 @@ colors.forEach(c => {
     btn.onclick = () => { 
         window.myBaseColor = c.h; 
         previewCat.material.color.setHex(c.h);
-        // Add visual feedback to buttons
         Array.from(colorPalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -497,9 +501,8 @@ colors.forEach(c => {
     btn.onmouseout = () => btn.style.transform = 'scale(1)';
     colorPalette.appendChild(btn);
 });
-// Set default selection UI
 colorPalette.children[0].style.borderColor = 'gold';
-startScreen.appendChild(colorPalette);
+uiContainer.appendChild(colorPalette);
 
 const startBtn = document.createElement('button');
 startBtn.innerHTML = "PLAY";
@@ -516,17 +519,17 @@ startBtn.onclick = () => {
     }
     
     let chosenName = nameInput.value.trim();
-    // Fire joinGame with custom skin color
     socket.emit('joinGame', { name: chosenName, color: window.myBaseColor });
     
     startScreen.style.display = 'none';
 };
-startScreen.appendChild(startBtn);
+uiContainer.appendChild(startBtn);
 
 nameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') startBtn.onclick();
 });
 
+startScreen.appendChild(uiContainer);
 document.body.appendChild(startScreen);
 
 const topBar = document.createElement('div');
@@ -578,8 +581,8 @@ topBar.appendChild(centerBox);
 
 const rightBox = document.createElement('div');
 rightBox.id = 'rightBox';
-rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:column; justify-content:center; text-align:right; color:white; max-width:30%; overflow-wrap: break-word; overflow-y:auto; overflow-x:hidden;';
-rightBox.innerHTML = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
+rightBox.style.cssText = 'background:rgba(20,20,20,0.85); border:2px solid #444; border-radius:8px; padding:6px; box-shadow:0px 4px 10px rgba(0,0,0,0.5); pointer-events:auto; display:flex; flex-direction:row; align-items:center; gap: 10px; color:white; min-width:20%; overflow:hidden; justify-content:space-between;';
+rightBox.innerHTML = `<div></div><div></div>`; 
 topBar.appendChild(rightBox);
 
 const helpModal = document.createElement('div');
@@ -595,14 +598,15 @@ helpModal.innerHTML = `
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W A S D</b> Move &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump<br>
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy<br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: #ff9999;">R</b> Hairball<br>
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">Q (hold)</b> Unstuck &nbsp;
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: cyan;">1-5</b> Emotes
             </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr; gap: 8px; color: #eee; font-size: 12px; line-height: 1.4;">
-            <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color.</p>
+            <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color. Shoot hairballs at Seekers to stun them!</p>
             <p style="margin: 0;"><b>SEEKERS:</b> Touch Hiders to tag them. Listen for Meows!</p>
             <p style="margin: 0; color: #ff6666; font-weight: bold;">When a Hider gets tagged, they become a Seeker!</p>
         </div>
@@ -658,7 +662,47 @@ function updateUI() {
     }
 }
 
-// --- NETWORKING ---
+function updateRightBox(leaderboardData) {
+    let invHTML = `
+        <div style="text-align:left; display:flex; flex-direction:column; justify-content:center; color:#00FFFF; font-size:10px; font-weight:bold; min-width:80px; text-shadow: 1px 1px 0 #000;">
+            <div>DECOYS: <span style="color:gold;">${myDecoys}</span></div>
+            <div>HAIRBALLS: <span style="color:gold;">${myHairballs}</span></div>
+        </div>
+    `;
+
+    let lbText = `<div style="text-align:right; flex:1;"><div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
+    
+    if (leaderboardData && leaderboardData.length > 0) {
+        let p1 = leaderboardData[0];
+        let c1 = (p1.id === serverWinnerId) ? '👑 ' : '';
+        lbText += `<div style="font-size:9px; line-height:1.4;">1. ${c1}${p1.name} : <b style="color:gold;">${p1.score}s</b></div>`;
+
+        if (leaderboardData.length > 1) {
+            let myRank = leaderboardData.findIndex(p => p.id === socket.id);
+            if (myRank === 0) {
+                let p2 = leaderboardData[1];
+                let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
+                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
+            } else if (myRank > 0) {
+                let myP = leaderboardData[myRank];
+                let myC = (myP.id === serverWinnerId) ? '👑 ' : '';
+                lbText += `<div style="font-size:9px; line-height:1.4;">${myRank + 1}. ${myC}${myP.name} : <b style="color:gold;">${myP.score}s</b></div>`;
+            } else {
+                let p2 = leaderboardData[1];
+                let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
+                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
+            }
+        } else {
+            lbText += `<div style="font-size:9px; line-height:1.4; color:#777;">...</div>`;
+        }
+    } else {
+        lbText += `<div style="font-size:9px; line-height:1.4; color:#777;">...</div>`;
+    }
+    lbText += `</div>`;
+
+    rightBox.innerHTML = invHTML + lbText;
+}
+
 socket.on('gameStateUpdate', (data) => {
     serverGameState = data.state;
     serverTime = data.time;
@@ -670,35 +714,7 @@ socket.on('gameStateUpdate', (data) => {
         playSound('tick'); lastTickTime = serverTime;
     }
 
-    if (data.leaderboard && data.leaderboard.length > 0) {
-        let lbText = `<div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
-        
-        let p1 = data.leaderboard[0];
-        let c1 = (p1.id === serverWinnerId) ? '👑 ' : '';
-        lbText += `<div style="font-size:9px; line-height:1.4;">1. ${c1}${p1.name} : <b style="color:gold;">${p1.score}s</b></div>`;
-
-        if (data.leaderboard.length > 1) {
-            let myRank = data.leaderboard.findIndex(p => p.id === socket.id);
-            
-            if (myRank === 0) {
-                let p2 = data.leaderboard[1];
-                let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
-                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
-            } else if (myRank > 0) {
-                let myP = data.leaderboard[myRank];
-                let myC = (myP.id === serverWinnerId) ? '👑 ' : '';
-                lbText += `<div style="font-size:9px; line-height:1.4;">${myRank + 1}. ${myC}${myP.name} : <b style="color:gold;">${myP.score}s</b></div>`;
-            } else {
-                let p2 = data.leaderboard[1];
-                let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
-                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
-            }
-        } else {
-            lbText += `<div style="font-size:9px; line-height:1.4; color:#777;">...</div>`;
-        }
-        
-        rightBox.innerHTML = lbText;
-    }
+    updateRightBox(data.leaderboard);
 });
 
 socket.on('initMap', (mapBlocks) => {
@@ -706,12 +722,14 @@ socket.on('initMap', (mapBlocks) => {
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
     invisibleWalls.forEach(mesh => scene.remove(mesh)); invisibleWalls.length = 0;
     
-    mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
     myDecoyUsed = false; 
     
     Object.keys(activeDecoys).forEach(dId => {
         scene.remove(activeDecoys[dId].group); delete activeDecoys[dId];
     });
+
+    activeHairballs.forEach(hb => scene.remove(hb.mesh));
+    activeHairballs.length = 0;
 
     if (mapBlocks.length > 0) {
         const minX = Math.min(...mapBlocks.map(b => b.x));
@@ -748,6 +766,10 @@ socket.on('currentPlayers', (players) => {
                 playSound('tag');
             }
             myRole = players[id].role; myName = players[id].name; 
+            myHairballs = players[id].hairballs;
+            myDecoys = players[id].decoyUsed ? 0 : 1;
+            amIStunned = players[id].stunned;
+
             myCatData.material.color.setHex(players[id].color);
             
             let cColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
@@ -758,6 +780,7 @@ socket.on('currentPlayers', (players) => {
                 myPlayerObject.position.set(players[id].x, players[id].y, players[id].z);
             }
             myCatData.crown.visible = (id === serverWinnerId);
+            updateRightBox(null);
         } else { 
             if (otherPlayers[id]) {
                 if (otherPlayers[id].role === 'hider' && players[id].role === 'seeker') {
@@ -767,6 +790,7 @@ socket.on('currentPlayers', (players) => {
                 }
                 otherPlayers[id].role = players[id].role;
                 otherPlayers[id].material.color.setHex(players[id].color);
+                otherPlayers[id].stunned = players[id].stunned;
                 
                 let oColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
                 otherPlayers[id].crownMat.color.setHex(oColor);
@@ -780,6 +804,12 @@ socket.on('currentPlayers', (players) => {
     updateUI(); 
 });
 
+socket.on('inventoryUpdate', (data) => {
+    myDecoys = data.decoys;
+    myHairballs = data.hairballs;
+    updateRightBox(null);
+});
+
 socket.on('newPlayer', (data) => addOtherPlayer(data.id, data.player));
 socket.on('playerMoved', (data) => {
     if (otherPlayers[data.id]) {
@@ -788,6 +818,7 @@ socket.on('playerMoved', (data) => {
         otherPlayers[data.id].moving = data.moving;
         otherPlayers[data.id].material.color.setHex(data.color); 
         otherPlayers[data.id].emote = data.emote;
+        otherPlayers[data.id].stunned = data.stunned;
         
         let oColor = (data.color === 0xFFFFFF || data.color === 0xFF0000) ? 0xFFD700 : data.color;
         otherPlayers[data.id].crownMat.color.setHex(oColor);
@@ -795,7 +826,18 @@ socket.on('playerMoved', (data) => {
         otherPlayers[data.id].role = data.role; 
     }
 });
+
 socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) { scene.remove(otherPlayers[id].group); delete otherPlayers[id]; } });
+
+socket.on('playerStunned', (id) => {
+    if (id === socket.id) amIStunned = true;
+    else if (otherPlayers[id]) otherPlayers[id].stunned = true;
+});
+
+socket.on('playerUnstunned', (id) => {
+    if (id === socket.id) amIStunned = false;
+    else if (otherPlayers[id]) otherPlayers[id].stunned = false;
+});
 
 socket.on('playerTaunted', (taunterId) => {
     if (otherPlayers[taunterId]) {
@@ -820,6 +862,15 @@ socket.on('decoyPopped', (decoyId) => {
     }
 });
 
+socket.on('spawnHairball', (data) => {
+    const hbGeo = new THREE.SphereGeometry(0.2, 8, 8);
+    const hbMat = new THREE.MeshLambertMaterial({color: 0x6B4226}); 
+    const hbMesh = new THREE.Mesh(hbGeo, hbMat);
+    hbMesh.position.set(data.x, data.y, data.z);
+    scene.add(hbMesh);
+    activeHairballs.push({ mesh: hbMesh, dirX: data.dirX, dirZ: data.dirZ, id: data.id, ownerId: data.ownerId });
+});
+
 function addOtherPlayer(id, playerInfo) {
     if (otherPlayers[id]) scene.remove(otherPlayers[id].group);
     const catData = createCatSculpt(playerInfo.color);
@@ -827,6 +878,7 @@ function addOtherPlayer(id, playerInfo) {
     catData.group.rotation.y = playerInfo.rY;
     catData.role = playerInfo.role; 
     catData.emote = playerInfo.emote || 0;
+    catData.stunned = playerInfo.stunned || false;
     setNameLabel(catData, playerInfo.name); 
     catData.crown.visible = (id === serverWinnerId);
     
@@ -893,12 +945,28 @@ document.addEventListener('keydown', (e) => {
     }
     
     if(e.key.toLowerCase() === 'e') {
-        if (myRole === 'hider' && serverGameState === 'SEEKING' && !myDecoyUsed) {
+        if (myRole === 'hider' && serverGameState === 'SEEKING' && myDecoys > 0) {
             myDecoyUsed = true; 
+            myDecoys--;
+            updateRightBox(null);
             let targetColor = myCatData.material.color.getHex();
             socket.emit('dropDecoy', { 
                 x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z, 
                 rY: myPlayerObject.rotation.y, color: targetColor 
+            });
+        }
+    }
+
+    if(e.key.toLowerCase() === 'r') {
+        if (myRole === 'hider' && serverGameState === 'SEEKING' && myHairballs > 0) {
+            myHairballs--;
+            updateRightBox(null);
+            playSound('spit');
+            let dirX = -Math.sin(myPlayerObject.rotation.y);
+            let dirZ = -Math.cos(myPlayerObject.rotation.y);
+            socket.emit('shootHairball', { 
+                x: myPlayerObject.position.x, y: myPlayerObject.position.y + 0.5, z: myPlayerObject.position.z, 
+                dirX: dirX, dirZ: dirZ 
             });
         }
     }
@@ -909,8 +977,6 @@ document.addEventListener('keyup', (e) => {
     if(e.key.toLowerCase() === 'q') isQPressed = false;
 });
 
-// --- UPDATED PHYSICS ---
-// Slower moving, lower gravity, stronger jump
 const moveSpeed = 0.1275; 
 const turnSpeed = 0.06; 
 let velocityY = 0; 
@@ -918,7 +984,6 @@ let isGrounded = true;
 const gravity = -0.008; 
 const jumpStrength = 0.25;
 
-// --- ANIMATION / EMOTE HANDLER ---
 function resetCatPose(cat) {
     cat.head.position.set(0, 0.7, -0.4); cat.head.rotation.set(0, cat.head.rotation.y, 0);
     cat.legs[0].position.set(0.15, 0.15, 0.3);
@@ -928,24 +993,33 @@ function resetCatPose(cat) {
     cat.legs.forEach(l => l.rotation.set(0,0,0));
     cat.tail.rotation.set(0, cat.tail.rotation.y, 0);
     cat.group.rotation.x = 0;
+    cat.group.rotation.z = 0; 
     cat.group.position.y = 0;
 }
 
 function animateCat(cat, emote, walkTime) {
     resetCatPose(cat);
-    if (emote === 1) { // Nap
+
+    if (cat.stunned) {
+        cat.group.rotation.z = Math.sin(performance.now() / 20) * 0.2;
+        cat.head.rotation.x = Math.sin(performance.now() / 30) * 0.5;
+        cat.legs.forEach(l => l.rotation.x = (Math.random() - 0.5) * 1);
+        return; 
+    }
+
+    if (emote === 1) { 
         cat.group.position.y = -0.4;
         cat.legs.forEach(l => { l.rotation.z = Math.PI / 2; l.position.y = 0.05; });
         cat.head.position.y = 0.4;
         cat.head.rotation.x = -Math.PI / 4;
-    } else if (emote === 2) { // Dance
+    } else if (emote === 2) { 
         cat.group.position.y = 0.3;
         cat.group.rotation.x = -Math.PI / 4;
         cat.legs[0].rotation.x = Math.sin(walkTime * 2) * 0.5;
         cat.legs[1].rotation.x = -Math.sin(walkTime * 2) * 0.5;
         cat.legs[2].rotation.x = Math.PI / 2;
         cat.legs[3].rotation.x = Math.PI / 2;
-    } else if (emote === 3) { // Stretch
+    } else if (emote === 3) { 
         cat.group.position.y = -0.15;
         cat.group.rotation.x = Math.PI / 8;
         cat.head.position.y = 0.5;
@@ -954,12 +1028,12 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[2].rotation.x = Math.PI / 4;
         cat.legs[3].rotation.x = Math.PI / 4;
         cat.tail.rotation.x = Math.PI / 4;
-    } else if (emote === 4) { // Hiss/Scratch
+    } else if (emote === 4) { 
         cat.head.rotation.x = -Math.PI / 6;
         cat.legs[0].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 3) * 0.8;
         cat.group.position.y = 0.1;
         cat.group.rotation.x = -Math.PI / 8;
-    } else if (emote === 5) { // Sit
+    } else if (emote === 5) { 
         cat.group.position.y = -0.15;
         cat.group.rotation.x = -Math.PI / 6;
         cat.head.rotation.x = Math.PI / 6;
@@ -968,7 +1042,7 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[3].rotation.x = -Math.PI / 2;
         cat.legs[0].rotation.x = Math.PI / 6;
         cat.legs[1].rotation.x = Math.PI / 6;
-    } else { // Normal Walk
+    } else { 
         if (cat.moving || walkTime > 0) {
             cat.legs[0].rotation.x = Math.sin(walkTime) * 0.5;
             cat.legs[1].rotation.x = -Math.sin(walkTime) * 0.5;
@@ -981,14 +1055,13 @@ function animateCat(cat, emote, walkTime) {
 function animate() {
     requestAnimationFrame(animate);
 
-    // --- RENDER START SCREEN SKIN PREVIEW ---
     if (document.getElementById('startScreen').style.display !== 'none') {
         previewCat.group.visible = true;
         camera.position.set(0, 101.5, 4);
         camera.lookAt(0, 100.5, 0);
         previewCat.group.rotation.y += 0.015;
         renderer.render(scene, camera);
-        return; // Pause the game loop while in menu
+        return; 
     } else {
         previewCat.group.visible = false;
     }
@@ -1030,11 +1103,58 @@ function animate() {
         if (p.scale.x < 0.01) { scene.remove(p); particles.splice(i, 1); }
     }
 
+    // --- HAIRBALL PROCESSING ---
+    for (let i = activeHairballs.length - 1; i >= 0; i--) {
+        let hb = activeHairballs[i];
+        hb.mesh.position.x += hb.dirX * 0.3;
+        hb.mesh.position.z += hb.dirZ * 0.3;
+
+        let hitWall = false;
+        let hitSeekerId = null;
+
+        if (Math.abs(hb.mesh.position.x) > 30 || Math.abs(hb.mesh.position.z) > 30) {
+            hitWall = true;
+        }
+
+        const hbBox = new THREE.Box3().setFromObject(hb.mesh);
+
+        if (!hitWall) {
+            for(let j=0; j<mapObjects.length; j++){
+               if(hbBox.intersectsBox(new THREE.Box3().setFromObject(mapObjects[j]))) { hitWall = true; break; }
+            }
+            if(!hitWall){
+               for(let j=0; j<walls.length; j++){
+                  if(hbBox.intersectsBox(new THREE.Box3().setFromObject(walls[j]))) { hitWall = true; break; }
+               }
+            }
+        }
+
+        if (!hitWall && hb.ownerId === socket.id) {
+            Object.keys(otherPlayers).forEach(id => {
+                if (otherPlayers[id].role === 'seeker' && !otherPlayers[id].stunned) {
+                    let sBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
+                    if (hbBox.intersectsBox(sBox)) {
+                        hitSeekerId = id;
+                        hitWall = true;
+                    }
+                }
+            });
+        }
+
+        if (hitSeekerId) {
+            socket.emit('hairballHit', hitSeekerId);
+        }
+
+        if (hitWall) {
+            scene.remove(hb.mesh);
+            activeHairballs.splice(i, 1);
+        }
+    }
+
     let moved = false;
     let targetColor = myRole === 'seeker' ? 0xFF0000 : window.myBaseColor; 
 
-    // --- UNSTUCK (Q key) LOGIC ---
-    if (isQPressed) {
+    if (isQPressed && !amIStunned && myRole !== 'spectator') {
         qPressTime += fpsInterval; 
         unstuckUI.style.display = 'block';
         unstuckFill.style.width = Math.min(100, (qPressTime / 3000) * 100) + '%';
@@ -1068,26 +1188,27 @@ function animate() {
         myCatData.group.visible = true;
 
         if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
-            if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
-            if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
-            
-            const oldX = myPlayerObject.position.x; const oldZ = myPlayerObject.position.z;
-            
-            if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
-            if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
-            
-            if (checkCollision(myPlayerObject.position)) { myPlayerObject.position.x = oldX; myPlayerObject.position.z = oldZ; }
-            if (keys[" "] && isGrounded) { 
-                velocityY = jumpStrength; 
-                isGrounded = false; 
-                moved = true; 
-                playSound('jump'); 
+            if (!amIStunned) {
+                if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
+                if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
+                
+                const oldX = myPlayerObject.position.x; const oldZ = myPlayerObject.position.z;
+                
+                if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
+                if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
+                
+                if (checkCollision(myPlayerObject.position)) { myPlayerObject.position.x = oldX; myPlayerObject.position.z = oldZ; }
+                if (keys[" "] && isGrounded) { 
+                    velocityY = jumpStrength; 
+                    isGrounded = false; 
+                    moved = true; 
+                    playSound('jump'); 
+                }
             }
         }
         
-        // Cancel emote on move
         if (keys.w || keys.a || keys.s || keys.d || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight || keys[" "]) {
-            if (myEmote !== 0) moved = true; // Send an update to server that we stopped emoting
+            if (myEmote !== 0) moved = true; 
             myEmote = 0;
         }
 
@@ -1098,7 +1219,7 @@ function animate() {
         } else { isGrounded = false; }
         if (myPlayerObject.position.y <= -5) { myPlayerObject.position.y = -5; velocityY = 0; isGrounded = true; }
 
-        if (myRole === 'seeker' && serverGameState === 'SEEKING') {
+        if (myRole === 'seeker' && serverGameState === 'SEEKING' && !amIStunned) {
             let closestDist = 999;
             let closestHider = null;
 
@@ -1141,7 +1262,7 @@ function animate() {
             }
         }
 
-        if (myRole === 'hider' && !moved && isGrounded && myEmote === 0) { 
+        if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned) { 
             let minDist = 2.0; let closestBlock = null;
             
             for (let i = 0; i < mapObjects.length; i++) {
@@ -1165,20 +1286,23 @@ function animate() {
         if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
         let targetHeadRot = 0;
-        if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
-        else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
+        if (!amIStunned) {
+            if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
+            else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
+        }
         myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
         
         myTailTime += 0.1; myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
 
-        if (moved && isGrounded) { 
+        if (moved && isGrounded && !amIStunned) { 
             myWalkTime += 0.2; 
             if (myWalkTime - lastStepTime > 1.5) { playSound('step'); lastStepTime = myWalkTime; }
         } else { 
             myWalkTime = 0; 
         }
         
-        let globalTime = performance.now() / 150; // Continuous time for emotes
+        let globalTime = performance.now() / 150; 
+        myCatData.stunned = amIStunned; 
         animateCat(myCatData, myEmote, myEmote > 0 ? globalTime : myWalkTime);
 
         let finalScaleY = 1; let finalScaleXZ = 1;
@@ -1218,7 +1342,7 @@ function animate() {
         
         if (p.nameSprite) { p.nameSprite.visible = !blindfoldStage.visible && (p.role === 'seeker' || p.material.color.getHex() === 0xFFFFFF); }
 
-        if (p.moving) {
+        if (p.moving && !p.stunned) {
             p.walkTime = (p.walkTime || 0) + 0.2;
         }
         animateCat(p, p.emote, p.emote > 0 ? globalTime : (p.moving ? p.walkTime : 0));
@@ -1291,7 +1415,6 @@ function animate() {
     const now = performance.now();
     if (now - lastRenderTime >= fpsInterval) {
         lastRenderTime = now;
-        // Broadcast new emote property
         socket.emit('playerMovement', { 
             x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z,
             rY: myPlayerObject.rotation.y, moving: moved, color: targetColor, role: myRole,
@@ -1319,7 +1442,7 @@ if (isMobile) {
             btn.style.background = 'rgba(255, 215, 0, 0.6)'; 
             btn.style.transform = 'scale(0.9)'; 
 
-            if(key === 'f' || key === 'e' || key === 'q') {
+            if(key === 'f' || key === 'e' || key === 'q' || key === 'r') {
                 document.dispatchEvent(new KeyboardEvent('keydown', {'key': key}));
             }
         }, {passive: false});
@@ -1343,14 +1466,15 @@ if (isMobile) {
     dpad.appendChild(createBtn('▼', 0, 60, 's'));             
     
     const actions = document.createElement('div');
-    actions.style.cssText = 'position:relative; width:170px; height:110px;';
+    actions.style.cssText = 'position:relative; width:230px; height:110px;';
     
     actions.appendChild(createBtn('◀', 30, 0, 'a'));       
     actions.appendChild(createBtn('▶', 90, 0, 'd'));      
     
     actions.appendChild(createBtn('MEOW', 0, 60, 'f'));         
     actions.appendChild(createBtn('JUMP', 60, 60, ' '));       
-    actions.appendChild(createBtn('DROP', 120, 60, 'q'));      
+    actions.appendChild(createBtn('DECOY', 120, 60, 'e'));      
+    actions.appendChild(createBtn('HAIRBALL', 180, 60, 'r'));      
 
     mobileUI.appendChild(dpad);
     mobileUI.appendChild(actions);
