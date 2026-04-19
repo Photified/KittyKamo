@@ -604,7 +604,7 @@ function createCraftingTable(x, z) {
 // --- NEW LOBBY BOX PROPS ---
 function createClosedBox(w, h, d, x, y, z, rY) {
     const geo = new THREE.BoxGeometry(w, h, d);
-    const mat = new THREE.MeshLambertMaterial({ color: 0xC19A6B }); // Cardboard brown
+    const mat = new THREE.MeshLambertMaterial({ color: 0xC19A6B }); 
     const mesh = new THREE.Mesh(geo, mat);
     mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
     mesh.position.set(x, y, z);
@@ -647,7 +647,7 @@ function createOpenBox(w, h, d, x, y, z, rY) {
     });
 
     group.position.set(x, y, z);
-    group.rotation.y = rY || 0;
+    group.rotation.y = rY || 0; // Kept perfectly orthogonal to prevent AABB collision rot block
     scene.add(group);
     lobbyVisuals.push(group);
 }
@@ -1185,13 +1185,14 @@ socket.on('initMap', (mapBlocks) => {
         // Near Tree 3
         createClosedBox(1.5, 1.5, 1.5, -11.5, -4.25, -14, Math.PI/4);
         
-        // Scattered boxes
-        createOpenBox(2, 1.5, 2, -8, -4.25, -8, Math.PI/5);
-        createClosedBox(1.5, 1.5, 1.5, -9, -4.25, -6, 0);
-        createOpenBox(2.5, 1.5, 2.5, 12, -4.25, -8, -Math.PI/7);
-        createClosedBox(1.2, 1.2, 1.2, 14, -4.4, -6, Math.PI/3);
-        createClosedBox(1.5, 1.5, 1.5, 0, -4.25, 8, Math.PI/6);
-        createOpenBox(2, 1.5, 2, -2, -4.25, 9, -Math.PI/6);
+        // Scattered boxes - spaced far from beds and corners!
+        createOpenBox(3.5, 1.5, 3.5, -8, -4.25, -4, 0); // Flat rotation for AABB logic!
+        createOpenBox(3.5, 1.5, 3.5, 10, -4.25, -6, 0);
+        createOpenBox(3.5, 1.5, 3.5, -10, -4.25, 6, 0);
+
+        createClosedBox(1.5, 1.5, 1.5, -6, -4.25, -8, Math.PI/3);
+        createClosedBox(1.2, 1.2, 1.2, 13, -4.4, -4, Math.PI/7);
+        createClosedBox(1.5, 1.5, 1.5, 0, -4.25, 10, Math.PI/6);
 
         customizationZone = new THREE.Vector3(0, -5, -18);
     }
