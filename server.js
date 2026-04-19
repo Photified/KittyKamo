@@ -22,20 +22,81 @@ let activePlayers = [];
 function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
+    let occupiedColumns = new Set(); // Prevents structures from spawning inside each other
 
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
             let y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
-            
-            mapBlocks.push({ x: x, y: y + 0.5, z: z, color: 0x556B2F });
-            mapBlocks.push({ x: x, y: y - 0.5, z: z, color: 0x654321 });
+            let colKey = `${x},${z}`;
 
-            if (Math.random() < 0.04 && y >= 0) {
-                mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x5C4033 }); 
-                mapBlocks.push({ x: x, y: y + 2.5, z: z, color: 0x228B22 }); 
+            // --- BASE TERRAIN ---
+            mapBlocks.push({ x: x, y: y + 0.5, z: z, color: 0x556B2F }); // Grass top
+            mapBlocks.push({ x: x, y: y - 0.5, z: z, color: 0x654321 }); // Dirt bottom
+
+            // Add Puddles in the lowlands
+            if (y < -1 && Math.random() < 0.2) {
+                 mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x1E90FF }); // Blue water block
+                 occupiedColumns.add(colKey);
             }
-            if (Math.random() < 0.05 && y < 0) {
-                mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x006400 }); 
+
+            // --- STRUCTURES & PROPS ---
+            // Only spawn if the column is empty and we hit the 6% random chance
+            if (!occupiedColumns.has(colKey) && Math.random() < 0.06) {
+                let type = Math.random();
+
+                if (type < 0.4) {
+                    // 1. BETTER TREES (Oak Style)
+                    // Trunk
+                    for(let ty = 1; ty <= 3; ty++) {
+                        mapBlocks.push({ x: x, y: y + 0.5 + ty, z: z, color: 0x5C4033 });
+                    }
+                    // Leaves (Plus shape)
+                    const leafColor = 0x228B22;
+                    for(let lx = -1; lx <= 1; lx++) {
+                        for(let lz = -1; lz <= 1; lz++) {
+                            if (Math.abs(lx) === 1 && Math.abs(lz) === 1) continue; // Removes corners for a plus shape
+                            mapBlocks.push({ x: x + lx, y: y + 3.5, z: z + lz, color: leafColor });
+                            occupiedColumns.add(`${x+lx},${z+lz}`);
+                        }
+                    }
+                    mapBlocks.push({ x: x, y: y + 4.5, z: z, color: leafColor }); // Top leaf
+
+                } else if (type < 0.6) {
+                    // 2. GIANT YARN BALLS (2x2x2 bright color cluster)
+                    const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; // Pink, Cyan, Orange, Purple
+                    const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
+                    for(let yx = 0; yx <= 1; yx++) {
+                        for(let yz = 0; yz <= 1; yz++) {
+                            for(let yy = 1; yy <= 2; yy++) {
+                                mapBlocks.push({ x: x + yx, y: y + 0.5 + yy, z: z + yz, color: yColor });
+                                occupiedColumns.add(`${x+yx},${z+yz}`);
+                            }
+                        }
+                    }
+
+                } else if (type < 0.8) {
+                    // 3. TALL FLOWERS
+                    const flowerColors = [0xFFFF00, 0xFF69B4, 0xFFFFFF]; // Yellow, Pink, White
+                    const fColor = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+                    mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x32CD32 }); // Bright green stem
+                    mapBlocks.push({ x: x, y: y + 2.5, z: z, color: fColor }); // Flower head
+                    occupiedColumns.add(colKey);
+
+                } else {
+                    // 4. CARDBOARD BOXES (Hollow 3x3x2 structures)
+                    const boxColor = 0xC19A6B;
+                    for(let bx = -1; bx <= 1; bx++) {
+                        for(let bz = -1; bz <= 1; bz++) {
+                            // Leave one side open for the cat to enter, and keep the middle hollow
+                            if (bx === 0 && bz === 1) continue; 
+                            if (bx === 0 && bz === 0) continue; 
+                            
+                            mapBlocks.push({ x: x + bx, y: y + 1.5, z: z + bz, color: boxColor }); // Bottom wall
+                            mapBlocks.push({ x: x + bx, y: y + 2.5, z: z + bz, color: boxColor }); // Top wall
+                            occupiedColumns.add(`${x+bx},${z+bz}`);
+                        }
+                    }
+                }
             }
         }
     }
