@@ -169,6 +169,7 @@ window.toggleMusic = function(btn) {
             bgmAudio.pause();
         }
     }
+    btn.blur(); // Prevent spacebar from triggering this again
 };
 
 const renderer = new THREE.WebGLRenderer();
@@ -464,7 +465,7 @@ startBtn.onclick = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (listener.context.state === 'suspended') listener.context.resume();
     
-    // Play BGM when starting if not completely muted AND if music is enabled
+    // Play BGM when starting if not muted
     if (volumeState !== 0 && window.musicEnabled && !bgmAudio.isPlaying && bgmAudio.buffer) {
         bgmAudio.play();
     }
@@ -513,12 +514,16 @@ muteBtn.onclick = (e) => {
             bgmAudio.play();
         }
     }
+    muteBtn.blur(); // Drop focus
 };
 soundBtnRow.appendChild(muteBtn);
 
 const helpBtn = document.createElement('button');
 helpBtn.className = 'menu-btn'; helpBtn.innerHTML = '❓';
-helpBtn.onclick = () => { document.getElementById('helpModal').style.display = document.getElementById('helpModal').style.display === 'none' ? 'flex' : 'none'; };
+helpBtn.onclick = () => { 
+    document.getElementById('helpModal').style.display = document.getElementById('helpModal').style.display === 'none' ? 'flex' : 'none'; 
+    helpBtn.blur(); // Drop focus
+};
 soundBtnRow.appendChild(helpBtn);
 
 leftBox.appendChild(soundBtnRow);
@@ -571,8 +576,8 @@ helpModal.innerHTML = `
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 5px;">
-            <button onclick="window.toggleMusic(this)" style="flex: 1; padding: 8px; font-size: 14px; font-weight:bold; background: #4CAF50; color: #111; border: none; border-radius: 4px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🎵 MUSIC: ON</button>
-            <button onclick="document.getElementById('helpModal').style.display='none'" style="flex: 1; padding: 8px; font-size: 14px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">GOT IT!</button>
+            <button onclick="window.toggleMusic(this); this.blur();" style="flex: 1; padding: 8px; font-size: 14px; font-weight:bold; background: #4CAF50; color: #111; border: none; border-radius: 4px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🎵 MUSIC: ON</button>
+            <button onclick="document.getElementById('helpModal').style.display='none'; this.blur();" style="flex: 1; padding: 8px; font-size: 14px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">GOT IT!</button>
         </div>
     </div>
 `;
