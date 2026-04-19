@@ -385,6 +385,16 @@ function createBlock(x, y, z, color) {
 }
 
 const walls = [];
+function createHouseWall(w, h, d, x, y, z, color) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshLambertMaterial({ color: color, transparent: true });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    walls.push(mesh); // Pushed into walls array to inherit physics collisions automatically
+}
+
 const wallMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
 function createWall(w, h, d, x, y, z) {
     const geo = new THREE.BoxGeometry(w, h, d);
@@ -408,7 +418,7 @@ function createInvisibleWall(w, h, d, x, y, z) {
 }
 
 const mapObjects = [];
-const lobbyProps = []; // Store lobby props to easily clear them
+const lobbyProps = []; 
 let myRole = 'hider';
 let myName = 'Connecting...';
 let myScore = 0; 
@@ -436,6 +446,10 @@ let myHairballs = 3;
 let myDecoys = 1;
 let amIStunned = false;
 
+// --- CUSTOMIZATION STATE ---
+let isCustomizing = true; 
+let customizationZone = null;
+
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
@@ -457,7 +471,6 @@ const beamLight = new THREE.PointLight(0x88CCFF, 2, 30);
 beamLight.position.set(0, 2, 0);
 scene.add(beamLight);
 
-// Bright White Square Landing Pad
 const beamGroundGeo = new THREE.PlaneGeometry(12, 12);
 const beamGroundMat = new THREE.MeshBasicMaterial({ 
     color: 0xFFFFFF, 
@@ -469,7 +482,6 @@ beamGroundMesh.rotation.x = -Math.PI / 2;
 beamGroundMesh.position.set(0, -4.9, 0); 
 scene.add(beamGroundMesh);
 
-// Helper to spawn 3D Cat Beds in lobby
 function createCatBed(x, z, color) {
     const bedGroup = new THREE.Group();
     
@@ -494,7 +506,6 @@ function createCatBed(x, z, color) {
     scene.add(bedGroup);
     lobbyProps.push(bedGroup);
 }
-
 
 let qPressTime = 0;
 let isQPressed = false;
@@ -584,7 +595,7 @@ scene.add(previewLight);
 
 const startScreen = document.createElement('div');
 startScreen.id = 'startScreen';
-startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom: 10vh; font-family:"Segoe UI", sans-serif; z-index:999; box-sizing:border-box;';
+startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom: 10vh; font-family:"Segoe UI", sans-serif; z-index:999; box-sizing:border-box;';
 
 const uiContainer = document.createElement('div');
 uiContainer.style.cssText = 'display:flex; flex-direction:column; align-items:center; width:100%;';
@@ -595,6 +606,7 @@ logo.style.cssText = 'font-size: 48px; color: gold; text-shadow: 3px 3px 0 #000;
 uiContainer.appendChild(logo);
 
 const nameInput = document.createElement('input');
+nameInput.id = 'nameInput';
 nameInput.type = 'text';
 nameInput.placeholder = 'Enter Name...';
 nameInput.maxLength = 12;
@@ -657,6 +669,7 @@ facePalette.children[0].style.borderColor = 'gold';
 uiContainer.appendChild(facePalette);
 
 const startBtn = document.createElement('button');
+startBtn.id = 'playBtn';
 startBtn.innerHTML = "PLAY";
 startBtn.style.cssText = 'padding: 12px 50px; font-size: 24px; font-weight:900; background: gold; color: #111; border: none; border-radius: 8px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s;';
 startBtn.onmouseover = () => startBtn.style.transform = 'scale(1.05)';
@@ -674,6 +687,12 @@ startBtn.onclick = () => {
     socket.emit('joinGame', { name: chosenName, color: window.myBaseColor, face: window.myFace });
     
     startScreen.style.display = 'none';
+    isCustomizing = false;
+
+    // Safely bump player out of the customization box so they don't immediately re-trigger it
+    if (customizationZone && myPlayerObject.position.distanceTo(customizationZone) < 3) {
+        myPlayerObject.position.z += 3;
+    }
 
     let mUI = document.getElementById('mobileUI');
     if (mUI) mUI.style.display = 'flex';
@@ -893,6 +912,7 @@ socket.on('initMap', (mapBlocks) => {
     
     lobbyProps.forEach(p => scene.remove(p));
     lobbyProps.length = 0;
+    customizationZone = null;
 
     myDecoyUsed = false; 
     
@@ -931,6 +951,7 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
     } else {
+        // FLAT 20x20 LOBBY
         ground.scale.set(20, 20, 1);
         ground.position.set(0, -5, 0);
         
@@ -943,6 +964,40 @@ socket.on('initMap', (mapBlocks) => {
         createCatBed(-6, -6, 0x4169E1);
         createCatBed(6, -6, 0xFFD700);
         createCatBed(-6, 6, 0x8A2BE2);
+
+        // --- CUSTOMIZATION HOUSE ---
+        createHouseWall(6, 4, 1, 0, -3, -9.5, 0x8B4513); // Back
+        createHouseWall(1, 4, 4, -2.5, -3, -8, 0x8B4513); // Left
+        createHouseWall(1, 4, 4, 2.5, -3, -8, 0x8B4513); // Right
+        createHouseWall(7, 1, 6, 0, -0.5, -8.5, 0xAA4A44); // Roof
+        
+        // Pad
+        const padGeo = new THREE.BoxGeometry(4, 0.1, 4);
+        const padMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
+        const pad = new THREE.Mesh(padGeo, padMat);
+        pad.position.set(0, -4.95, -8);
+        scene.add(pad);
+        lobbyProps.push(pad);
+        
+        // Floating Hologram Text
+        const cCanvas = document.createElement('canvas');
+        cCanvas.width = 256; cCanvas.height = 64;
+        const cCtx = cCanvas.getContext('2d');
+        cCtx.fillStyle = 'transparent'; cCtx.fillRect(0, 0, 256, 64);
+        cCtx.font = '900 36px "Segoe UI", Arial, sans-serif'; 
+        cCtx.fillStyle = '#FFFFFF';
+        cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle'; 
+        cCtx.shadowColor = '#000000'; cCtx.shadowBlur = 4; cCtx.shadowOffsetX = 2; cCtx.shadowOffsetY = 2;
+        cCtx.fillText("CUSTOMIZE", 128, 32);
+        
+        const cSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cCanvas) }));
+        cSprite.position.set(0, -2, -8); 
+        cSprite.scale.set(4, 1, 1);
+        scene.add(cSprite);
+        lobbyProps.push(cSprite);
+
+        // Define Interaction Zone
+        customizationZone = new THREE.Vector3(0, -5, -8);
     }
 });
 
@@ -1108,7 +1163,7 @@ function checkCollision(pos) {
         const oBox = new THREE.Box3().setFromObject(otherPlayers[id].group); oBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(oBox)) return true;
     }
-    
+
     for (let i = 0; i < lobbyProps.length; i++) {
         const propBox = new THREE.Box3().setFromObject(lobbyProps[i]); propBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(propBox)) return true;
@@ -1281,6 +1336,9 @@ function animate() {
     let cycleProgress = 0;
     if (serverGameState === 'SEEKING') {
         cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
+    } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
+        let timeLoop = (Date.now() % 60000) / 60000; 
+        cycleProgress = Math.abs(timeLoop * 2 - 1); 
     } else {
         cycleProgress = 0; 
     }
@@ -1311,6 +1369,16 @@ function animate() {
         let glowOsc = 0.4 + Math.sin(performance.now() / 150) * 0.2;
         beamMat.opacity = glowOsc; 
         beamMesh.rotation.y += 0.01;
+    }
+
+    // --- CHECK CUSTOMIZATION ZONE ---
+    if (customizationZone && (serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
+        if (myPlayerObject.position.distanceTo(customizationZone) < 2.5 && !isCustomizing) {
+            isCustomizing = true;
+            document.getElementById('startScreen').style.display = 'flex';
+            document.getElementById('playBtn').innerHTML = 'SAVE & EXIT';
+            document.getElementById('nameInput').value = myName === 'Connecting...' ? '' : myName;
+        }
     }
 
     for (let i = particles.length - 1; i >= 0; i--) {
