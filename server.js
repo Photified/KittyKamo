@@ -71,7 +71,7 @@ function startRound() {
     
     io.emit('currentPlayers', players); 
     gameState = 'HIDING';
-    timeRemaining = 20; 
+    timeRemaining = 10; // Reduced to 10 seconds
 
     if (gameTimer) clearInterval(gameTimer);
     
