@@ -168,7 +168,6 @@ function getFaceTexture(type) {
     return tex;
 }
 
-
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
@@ -989,7 +988,7 @@ function updateUI() {
     } else if (serverGameState === 'GAME_OVER') {
         centerBox.innerHTML = `
             <div style="font-size:16px; font-weight:900; color:gold; margin-bottom:2px; text-shadow: 1px 1px 0 #000;">${serverWinReason}</div>
-            <div style="font-size:10px; color:white; font-weight:bold;">NEXT ROUND IN ${serverTime}s</div>
+            <div style="font-size:10px; color:white; font-weight:bold;">RUNNING BACK TO LOBBY IN ${serverTime}s</div>
         `;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (myRole === 'spectator') {
@@ -1338,7 +1337,6 @@ function addOtherPlayer(id, playerInfo) {
 function checkCollision(pos) {
     const pBox = new THREE.Box3();
     const currentScaleY = myCatData.body.scale.y; 
-    // Adjusted width to 0.5 to prevent clipping while maintaining slideability
     pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.5, 1.2 * currentScaleY, 0.5));
     
     for (let i = 0; i < mapObjects.length; i++) {
@@ -1479,12 +1477,17 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[3].position.set(-0.15, 0.1, -0.3);
         cat.legs[3].rotation.z = Math.PI / 2;
     } else if (emote === 2) { 
-        cat.body.position.y = 0.3;
-        cat.body.rotation.x = -Math.PI / 4;
-        cat.legs[0].rotation.x = Math.sin(walkTime * 2) * 0.5;
-        cat.legs[1].rotation.x = -Math.sin(walkTime * 2) * 0.5;
-        cat.legs[2].rotation.x = Math.PI / 2;
-        cat.legs[3].rotation.x = Math.PI / 2;
+        // HANDSTAND
+        cat.body.position.y = 0.4;
+        cat.body.rotation.x = Math.PI / 2.5; 
+        cat.head.rotation.x = -Math.PI / 4; 
+        
+        cat.legs[2].rotation.x = Math.PI / 2.5;
+        cat.legs[3].rotation.x = Math.PI / 2.5;
+        
+        cat.legs[0].rotation.x = -Math.PI / 4 + Math.sin(walkTime * 4) * 0.4;
+        cat.legs[1].rotation.x = -Math.PI / 4 + Math.sin(walkTime * 4 + Math.PI) * 0.4;
+        cat.tail.rotation.x = Math.PI / 4;
     } else if (emote === 3) { 
         cat.body.position.y = -0.15;
         cat.body.rotation.x = Math.PI / 8;
@@ -1500,13 +1503,15 @@ function animateCat(cat, emote, walkTime) {
         cat.body.position.y = 0.1;
         cat.body.rotation.x = -Math.PI / 8;
     } else if (emote === 5) { 
+        // STANDING ON BACK LEGS
         cat.body.position.y = 0.3; 
         cat.body.rotation.x = -Math.PI / 4; 
-        
         cat.head.rotation.x = Math.PI / 4; 
         
-        cat.legs[0].position.set(0.15, 0.05, -0.2); 
-        cat.legs[1].position.set(-0.15, 0.05, -0.2);
+        cat.legs[0].position.set(0.15, 0.05, 0.2); 
+        cat.legs[1].position.set(-0.15, 0.05, 0.2);
+        cat.legs[0].rotation.x = -Math.PI / 4;
+        cat.legs[1].rotation.x = -Math.PI / 4;
         
         cat.legs[2].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 6) * 0.4; 
         cat.legs[2].position.set(0.15, 0.3, 0.2);
@@ -1926,7 +1931,11 @@ function animate() {
     focusObject.updateMatrixWorld(); 
     
     let idealOffset = new THREE.Vector3(0, 1.5, 3);
-    if (isMobile && window.innerHeight > window.innerWidth) {
+    
+    // NEW GAME OVER CAMERA VIEW!
+    if (serverGameState === 'GAME_OVER') {
+        idealOffset.set(0, 20, 20); 
+    } else if (isMobile && window.innerHeight > window.innerWidth) {
         idealOffset.set(0, 2.5, 4); 
     }
 
@@ -1934,6 +1943,11 @@ function animate() {
     camera.position.lerp(cameraTargetPos, 0.15);
     
     let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
+    
+    // Smooth LookAt for Game Over
+    if (serverGameState === 'GAME_OVER') {
+        lookAtTarget = focusObject.position.clone(); 
+    }
     camera.lookAt(lookAtTarget);
 
     walls.forEach(w => {
