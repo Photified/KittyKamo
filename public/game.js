@@ -387,7 +387,6 @@ function createBlock(x, y, z, color) {
 }
 
 const walls = [];
-
 function createHouseWall(w, h, d, x, y, z, color) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mat = new THREE.MeshLambertMaterial({ color: color, transparent: true });
@@ -422,7 +421,8 @@ function createInvisibleWall(w, h, d, x, y, z) {
 }
 
 const mapObjects = [];
-const lobbyProps = []; 
+const lobbyVisuals = []; 
+const lobbyCollision = []; 
 let myRole = 'hider';
 let myName = 'Connecting...';
 let myScore = 0; 
@@ -456,6 +456,7 @@ let customizationZone = null;
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
+// --- LOBBY BEAM VISUALS ---
 const beamGeo = new THREE.CylinderGeometry(6, 6, 100, 32, 1, true); 
 const beamMat = new THREE.MeshBasicMaterial({ 
     color: 0x88CCFF, 
@@ -487,30 +488,33 @@ scene.add(beamGroundMesh);
 function createCatBed(x, z, color) {
     const bedGroup = new THREE.Group();
     
-    function addBedPart(geo, mat, px, py, pz) {
+    function addBedPart(geo, mat, px, py, pz, isCollision) {
         const mesh = new THREE.Mesh(geo, mat);
         mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
         mesh.position.set(px, py, pz);
         mesh.receiveShadow = true;
         mesh.castShadow = true;
         bedGroup.add(mesh);
+        if (isCollision) lobbyCollision.push(mesh);
     }
 
     const baseMat = new THREE.MeshLambertMaterial({ color: color });
     const rimMat = new THREE.MeshLambertMaterial({ color: 0xDDDDDD });
 
-    addBedPart(new THREE.BoxGeometry(2.6, 0.4, 2.6), baseMat, 0, -4.8, 0); 
-    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, -1.5, -4.7, 0); 
-    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, 1.5, -4.7, 0);  
-    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, -1.5); 
-    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, 1.5);  
+    addBedPart(new THREE.BoxGeometry(2.6, 0.4, 2.6), baseMat, 0, -4.8, 0, true); 
+    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, -1.5, -4.7, 0, false); 
+    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, 1.5, -4.7, 0, false);  
+    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, -1.5, false); 
+    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, 1.5, false);  
 
     bedGroup.position.set(x, 0, z);
     scene.add(bedGroup);
-    lobbyProps.push(bedGroup);
+    lobbyVisuals.push(bedGroup);
 }
 
-function createCatTree(x, z) {
+// Generates multiple distinct types of Cat Trees!
+function createCatTree(x, z, type = 1) {
+    const treeGroup = new THREE.Group();
     const matBase = new THREE.MeshLambertMaterial({ color: 0xDEB887 }); 
     const matPost = new THREE.MeshLambertMaterial({ color: 0xCD853F }); 
 
@@ -519,17 +523,90 @@ function createCatTree(x, z) {
         mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
         mesh.position.set(px, py, pz);
         mesh.castShadow = true; mesh.receiveShadow = true;
-        scene.add(mesh);
-        lobbyProps.push(mesh);
+        treeGroup.add(mesh);
+        lobbyCollision.push(mesh);
     }
 
-    addTreePart(new THREE.BoxGeometry(4, 0.4, 4), matBase, 0, -4.8, 0);
-    addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -1, -3.6, 1);
-    addTreePart(new THREE.BoxGeometry(2.5, 0.2, 2.5), matBase, -1, -2.5, 1);
-    addTreePart(new THREE.BoxGeometry(0.6, 4, 0.6), matPost, 1, -2.6, 0);
-    addTreePart(new THREE.BoxGeometry(3, 0.2, 3), matBase, 1, -0.5, 0);
-    addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -0.5, 0.6, -0.5);
-    addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, -0.5, 1.7, -0.5);
+    if (type === 1) {
+        // Classic Climber
+        addTreePart(new THREE.BoxGeometry(4, 0.4, 4), matBase, 0, -4.8, 0);
+        addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -1, -3.6, 1);
+        addTreePart(new THREE.BoxGeometry(2.5, 0.2, 2.5), matBase, -1, -2.5, 1);
+        addTreePart(new THREE.BoxGeometry(0.6, 4, 0.6), matPost, 1, -2.6, 0);
+        addTreePart(new THREE.BoxGeometry(3, 0.2, 3), matBase, 1, -0.5, 0);
+        addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -0.5, 0.6, -0.5);
+        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, -0.5, 1.7, -0.5);
+    } else if (type === 2) {
+        // Tall Tower
+        addTreePart(new THREE.BoxGeometry(3, 0.4, 3), matBase, 0, -4.8, 0);
+        addTreePart(new THREE.BoxGeometry(0.6, 6, 0.6), matPost, 0, -1.8, 0);
+        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.3, 0);
+        addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, 1.5, -1, 0);
+        addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, -1.5, -3, 0);
+    } else if (type === 3) {
+        // Double Post Hideaway
+        addTreePart(new THREE.BoxGeometry(4, 0.4, 3), matBase, 0, -4.8, 0);
+        addTreePart(new THREE.BoxGeometry(0.6, 3, 0.6), matPost, -1, -3.3, 0);
+        addTreePart(new THREE.BoxGeometry(0.6, 3, 0.6), matPost, 1, -3.3, 0);
+        addTreePart(new THREE.BoxGeometry(4, 0.2, 2.5), matBase, 0, -1.7, 0);
+        addTreePart(new THREE.BoxGeometry(1.5, 1, 1.5), matPost, 0, -1.1, 0); 
+        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, -0.5, 0);
+    }
+
+    treeGroup.position.set(x, 0, z);
+    scene.add(treeGroup);
+    lobbyVisuals.push(treeGroup);
+}
+
+// Function to generate the new Crafting Table inside the house
+function createCraftingTable(x, z) {
+    const tableGroup = new THREE.Group();
+    const matWood = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+    const matPaper = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+    const matCrayonR = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
+    const matCrayonB = new THREE.MeshLambertMaterial({ color: 0x0000FF });
+    const matCrayonG = new THREE.MeshLambertMaterial({ color: 0x00FF00 });
+
+    function addPart(geo, mat, px, py, pz, isCollision=false) {
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+        mesh.position.set(px, py, pz);
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        tableGroup.add(mesh);
+        if (isCollision) lobbyCollision.push(mesh);
+    }
+
+    // Table top
+    addPart(new THREE.BoxGeometry(3, 0.2, 1.2), matWood, 0, -3.8, 0, true);
+    
+    // Legs
+    addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, -1.3, -4.4, -0.4, true);
+    addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, 1.3, -4.4, -0.4, true);
+    addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, -1.3, -4.4, 0.4, true);
+    addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, 1.3, -4.4, 0.4, true);
+
+    // Paper
+    addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, -0.5, -3.68, 0);
+    addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, 0.2, -3.68, 0.1);
+
+    // Crayons scattered on table
+    const cray1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), matCrayonR);
+    cray1.position.set(0.8, -3.65, -0.2); cray1.rotation.y = 0.2; tableGroup.add(cray1);
+    
+    const cray2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), matCrayonB);
+    cray2.position.set(0.9, -3.65, 0); cray2.rotation.y = -0.1; tableGroup.add(cray2);
+    
+    const cray3 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), matCrayonG);
+    cray3.position.set(0.7, -3.65, 0.2); cray3.rotation.y = 0.4; tableGroup.add(cray3);
+
+    [cray1, cray2, cray3].forEach(c => {
+        c.add(new THREE.LineSegments(new THREE.EdgesGeometry(c.geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+        c.castShadow = true; c.receiveShadow = true;
+    });
+
+    tableGroup.position.set(x, 0, z);
+    scene.add(tableGroup);
+    lobbyVisuals.push(tableGroup);
 }
 
 let qPressTime = 0;
@@ -953,8 +1030,10 @@ socket.on('initMap', (mapBlocks) => {
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
     invisibleWalls.forEach(mesh => scene.remove(mesh)); invisibleWalls.length = 0;
     
-    lobbyProps.forEach(p => scene.remove(p));
-    lobbyProps.length = 0;
+    lobbyVisuals.forEach(v => scene.remove(v));
+    lobbyVisuals.length = 0;
+    lobbyCollision.length = 0;
+
     customizationZone = null;
 
     myDecoyUsed = false; 
@@ -1010,25 +1089,34 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(1, 40, 40, -20.5, 17, 0);
         createInvisibleWall(1, 40, 40, 20.5, 17, 0);
 
-        createCatBed(15, 15, 0xFF69B4);
-        createCatBed(-15, -15, 0x4169E1);
-        createCatBed(15, -15, 0xFFD700);
-        createCatBed(-15, 15, 0x8A2BE2);
+        createCatBed(15, 8, 0xFF69B4);
+        createCatBed(15, -8, 0x4169E1);
+        createCatBed(-15, 8, 0xFFD700);
+        createCatBed(-15, -8, 0x8A2BE2);
+        createCatBed(8, 15, 0x00FFFF);
+        createCatBed(-8, 15, 0xFF00FF);
+        createCatBed(8, -15, 0xFF8C00);
+        createCatBed(-8, -15, 0x00FF00);
 
-        createCatTree(10, 0);
-        createCatTree(-10, 8);
+        createCatTree(0, 0, 1);
+        createCatTree(14, 14, 2);
+        createCatTree(-14, -14, 3);
 
         // --- CUSTOMIZATION HOUSE ---
         createHouseWall(6, 4, 1, 0, -3, -19.5, 0x8B4513); 
         createHouseWall(1, 4, 4, -2.5, -3, -18, 0x8B4513); 
         createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createHouseWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
+
+        // Added Crafting Table
+        createCraftingTable(0, -18.4);
         
         const padGeo = new THREE.BoxGeometry(4, 0.1, 4);
         const padMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
         const pad = new THREE.Mesh(padGeo, padMat);
         pad.position.set(0, -4.95, -18);
         scene.add(pad);
+        lobbyVisuals.push(pad);
         
         const cCanvas = document.createElement('canvas');
         cCanvas.width = 512; cCanvas.height = 128;
@@ -1045,6 +1133,7 @@ socket.on('initMap', (mapBlocks) => {
         const cMesh = new THREE.Mesh(cGeo, cMat);
         cMesh.position.set(0, -1.5, -18.9); 
         scene.add(cMesh);
+        lobbyVisuals.push(cMesh);
 
         customizationZone = new THREE.Vector3(0, -5, -18);
     }
@@ -1208,8 +1297,8 @@ function checkCollision(pos) {
         if (pBox.intersectsBox(wBox)) return true;
     }
 
-    for (let i = 0; i < lobbyProps.length; i++) {
-        const propBox = new THREE.Box3().setFromObject(lobbyProps[i]); propBox.expandByScalar(-0.02);
+    for (let i = 0; i < lobbyCollision.length; i++) {
+        const propBox = new THREE.Box3().setFromObject(lobbyCollision[i]); propBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(propBox)) return true;
     }
 
