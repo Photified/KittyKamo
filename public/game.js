@@ -55,6 +55,38 @@ function playSound(type) {
         gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
         osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+    } else if (type === 'jump') {
+        // Quick rising pitch
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    } else if (type === 'land') {
+        // Low frequency thud
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    } else if (type === 'pop') {
+        // Fast dropping pitch (bloop)
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    } else if (type === 'tag') {
+        // Two-tone victory chime
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(900, audioCtx.currentTime + 0.1); 
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
     }
 }
 
@@ -103,12 +135,11 @@ scene.add(camera);
 const listener = new THREE.AudioListener();
 camera.add(listener);
 
-// --- NEW: BACKGROUND MUSIC SETUP ---
 const bgmAudio = new THREE.Audio(listener);
 audioLoader.load('sounds/bgm.wav', (buffer) => {
     bgmAudio.setBuffer(buffer);
     bgmAudio.setLoop(true);
-    bgmAudio.setVolume(0.15); // Keep it soft so meows stand out!
+    bgmAudio.setVolume(0.15); 
 });
 
 const renderer = new THREE.WebGLRenderer();
@@ -308,7 +339,6 @@ let wasGroundedLastFrame = true;
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
-// --- REVISED BLINDFOLD FIX ---
 const blindfoldStage = new THREE.Group();
 camera.add(blindfoldStage); 
 
@@ -403,7 +433,6 @@ startBtn.onclick = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (listener.context.state === 'suspended') listener.context.resume();
     
-    // --- Start BGM upon joining! ---
     if (!isMuted && !bgmAudio.isPlaying && bgmAudio.buffer) {
         bgmAudio.play();
     }
@@ -442,7 +471,6 @@ muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊';
 muteBtn.onclick = (e) => { 
     isMuted = !isMuted; 
     muteBtn.innerHTML = isMuted ? '🔇' : '🔊'; 
-    // Handle muting the BGM explicitly
     if (isMuted) {
         if (bgmAudio.isPlaying) bgmAudio.pause();
     } else {
@@ -625,7 +653,9 @@ socket.on('currentPlayers', (players) => {
     Object.keys(players).forEach((id) => {
         if (id === socket.id) {
             if (myRole === 'hider' && players[id].role === 'seeker') {
-                playCatMeow(myCatData); explodeParticles(myPlayerObject.position, true);
+                playCatMeow(myCatData); 
+                explodeParticles(myPlayerObject.position, true);
+                playSound('tag'); // Add tag sound for the victim
             }
             myRole = players[id].role; myName = players[id].name; 
             myCatData.material.color.setHex(players[id].color);
@@ -641,7 +671,9 @@ socket.on('currentPlayers', (players) => {
         } else { 
             if (otherPlayers[id]) {
                 if (otherPlayers[id].role === 'hider' && players[id].role === 'seeker') {
-                    playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
+                    playCatMeow(otherPlayers[id]); 
+                    explodeParticles(otherPlayers[id].group.position, true);
+                    playSound('tag'); // Add tag sound for everyone else observing
                 }
                 otherPlayers[id].role = players[id].role;
                 otherPlayers[id].material.color.setHex(players[id].color);
@@ -690,7 +722,7 @@ socket.on('spawnDecoy', (data) => {
 
 socket.on('decoyPopped', (decoyId) => {
     if (activeDecoys[decoyId]) {
-        playSound('tick'); 
+        playSound('pop'); // Replaced generic tick with the new bloop pop sound!
         explodeParticles(activeDecoys[decoyId].group.position, false); 
         scene.remove(activeDecoys[decoyId].group);
         delete activeDecoys[decoyId];
@@ -850,7 +882,12 @@ function animate() {
             if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
             
             if (checkCollision(myPlayerObject.position)) { myPlayerObject.position.x = oldX; myPlayerObject.position.z = oldZ; }
-            if (keys[" "] && isGrounded) { velocityY = jumpStrength; isGrounded = false; moved = true; }
+            if (keys[" "] && isGrounded) { 
+                velocityY = jumpStrength; 
+                isGrounded = false; 
+                moved = true; 
+                playSound('jump'); // Hooked up jumping sound!
+            }
         }
         
         const oldY = myPlayerObject.position.y;
@@ -882,7 +919,9 @@ function animate() {
                     if (seekerBox.intersectsBox(hiderBox)) {
                         otherPlayers[id].role = 'seeker'; 
                         socket.emit('tagPlayer', id);
-                        playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
+                        playCatMeow(otherPlayers[id]); 
+                        explodeParticles(otherPlayers[id].group.position, true);
+                        playSound('tag'); // Add tag sound for the local tagger!
                     }
                 }
             });
@@ -944,7 +983,10 @@ function animate() {
         if (!isGrounded) {
             if (velocityY > 0) { let stretch = 1 + (velocityY * 0.8); finalScaleY *= stretch; finalScaleXZ *= (1 / stretch); }
         } else {
-            if (wasGroundedLastFrame === false) { myPlayerObject.squashAnimTime = 0; }
+            if (wasGroundedLastFrame === false) { 
+                myPlayerObject.squashAnimTime = 0; 
+                playSound('land'); // Hooked up landing thud sound!
+            }
             if (myPlayerObject.squashAnimTime !== undefined && myPlayerObject.squashAnimTime < 1) {
                 myPlayerObject.squashAnimTime += 0.15;
                 let squashAmt = 0.3 * (1 - (1 - Math.pow(1 - myPlayerObject.squashAnimTime, 3))); 
