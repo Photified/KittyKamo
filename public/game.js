@@ -392,7 +392,7 @@ function createHouseWall(w, h, d, x, y, z, color) {
     mesh.castShadow = true; mesh.receiveShadow = true;
     mesh.position.set(x, y, z);
     scene.add(mesh);
-    walls.push(mesh); // Pushed into walls array to inherit physics collisions automatically
+    walls.push(mesh); 
 }
 
 const wallMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
@@ -446,7 +446,6 @@ let myHairballs = 3;
 let myDecoys = 1;
 let amIStunned = false;
 
-// --- CUSTOMIZATION STATE ---
 let isCustomizing = true; 
 let customizationZone = null;
 
@@ -505,6 +504,27 @@ function createCatBed(x, z, color) {
     bedGroup.position.set(x, 0, z);
     scene.add(bedGroup);
     lobbyProps.push(bedGroup);
+}
+
+function createCatTree(x, z) {
+    const matBase = new THREE.MeshLambertMaterial({ color: 0xDEB887 }); 
+    const matPost = new THREE.MeshLambertMaterial({ color: 0xCD853F }); 
+
+    function addTreePart(geo, mat, px, py, pz) {
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x + px, py, z + pz);
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        scene.add(mesh);
+        lobbyProps.push(mesh);
+    }
+
+    addTreePart(new THREE.BoxGeometry(4, 0.4, 4), matBase, 0, -4.8, 0);
+    addTreePart(new THREE.CylinderGeometry(0.3, 0.3, 2, 8), matPost, -1, -3.6, 1);
+    addTreePart(new THREE.BoxGeometry(2.5, 0.2, 2.5), matBase, -1, -2.5, 1);
+    addTreePart(new THREE.CylinderGeometry(0.3, 0.3, 4, 8), matPost, 1, -2.6, 0);
+    addTreePart(new THREE.BoxGeometry(3, 0.2, 3), matBase, 1, -0.5, 0);
+    addTreePart(new THREE.CylinderGeometry(0.3, 0.3, 2, 8), matPost, -0.5, 0.6, -0.5);
+    addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, -0.5, 1.7, -0.5);
 }
 
 let qPressTime = 0;
@@ -689,9 +709,8 @@ startBtn.onclick = () => {
     startScreen.style.display = 'none';
     isCustomizing = false;
 
-    // Safely bump player out of the customization box so they don't immediately re-trigger it
     if (customizationZone && myPlayerObject.position.distanceTo(customizationZone) < 3) {
-        myPlayerObject.position.z += 3;
+        myPlayerObject.position.z += 4;
     }
 
     let mUI = document.getElementById('mobileUI');
@@ -951,35 +970,36 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
     } else {
-        // FLAT 20x20 LOBBY
-        ground.scale.set(20, 20, 1);
+        // FLAT 40x40 LOBBY (-20 to 20)
+        ground.scale.set(40, 40, 1);
         ground.position.set(0, -5, 0);
         
-        createInvisibleWall(20, 40, 2, 0, 25, -11);
-        createInvisibleWall(20, 40, 2, 0, 25, 11);
-        createInvisibleWall(2, 40, 24, -11, 25, 0);
-        createInvisibleWall(2, 40, 24, 11, 25, 0);
+        createInvisibleWall(40, 40, 2, 0, 25, -21);
+        createInvisibleWall(40, 40, 2, 0, 25, 21);
+        createInvisibleWall(2, 40, 44, -21, 25, 0);
+        createInvisibleWall(2, 40, 44, 21, 25, 0);
 
-        createCatBed(6, 6, 0xFF69B4);
-        createCatBed(-6, -6, 0x4169E1);
-        createCatBed(6, -6, 0xFFD700);
-        createCatBed(-6, 6, 0x8A2BE2);
+        createCatBed(15, 15, 0xFF69B4);
+        createCatBed(-15, -15, 0x4169E1);
+        createCatBed(15, -15, 0xFFD700);
+        createCatBed(-15, 15, 0x8A2BE2);
+
+        createCatTree(10, 0);
+        createCatTree(-10, 8);
 
         // --- CUSTOMIZATION HOUSE ---
-        createHouseWall(6, 4, 1, 0, -3, -9.5, 0x8B4513); // Back
-        createHouseWall(1, 4, 4, -2.5, -3, -8, 0x8B4513); // Left
-        createHouseWall(1, 4, 4, 2.5, -3, -8, 0x8B4513); // Right
-        createHouseWall(7, 1, 6, 0, -0.5, -8.5, 0xAA4A44); // Roof
+        createHouseWall(6, 4, 1, 0, -3, -19.5, 0x8B4513); // Back
+        createHouseWall(1, 4, 4, -2.5, -3, -18, 0x8B4513); // Left
+        createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); // Right
+        createHouseWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); // Roof
         
-        // Pad
         const padGeo = new THREE.BoxGeometry(4, 0.1, 4);
         const padMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
         const pad = new THREE.Mesh(padGeo, padMat);
-        pad.position.set(0, -4.95, -8);
+        pad.position.set(0, -4.95, -18);
         scene.add(pad);
         lobbyProps.push(pad);
         
-        // Floating Hologram Text
         const cCanvas = document.createElement('canvas');
         cCanvas.width = 256; cCanvas.height = 64;
         const cCtx = cCanvas.getContext('2d');
@@ -991,13 +1011,12 @@ socket.on('initMap', (mapBlocks) => {
         cCtx.fillText("CUSTOMIZE", 128, 32);
         
         const cSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cCanvas) }));
-        cSprite.position.set(0, -2, -8); 
+        cSprite.position.set(0, -2, -18); 
         cSprite.scale.set(4, 1, 1);
         scene.add(cSprite);
         lobbyProps.push(cSprite);
 
-        // Define Interaction Zone
-        customizationZone = new THREE.Vector3(0, -5, -8);
+        customizationZone = new THREE.Vector3(0, -5, -18);
     }
 });
 
@@ -1163,7 +1182,7 @@ function checkCollision(pos) {
         const oBox = new THREE.Box3().setFromObject(otherPlayers[id].group); oBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(oBox)) return true;
     }
-
+    
     for (let i = 0; i < lobbyProps.length; i++) {
         const propBox = new THREE.Box3().setFromObject(lobbyProps[i]); propBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(propBox)) return true;
@@ -1339,6 +1358,8 @@ function animate() {
     } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         let timeLoop = (Date.now() % 60000) / 60000; 
         cycleProgress = Math.abs(timeLoop * 2 - 1); 
+    } else if (serverGameState === 'LOBBY' || serverGameState === 'BEAMING') {
+        cycleProgress = 0; // Forced sunny daytime! 
     } else {
         cycleProgress = 0; 
     }
@@ -1371,7 +1392,6 @@ function animate() {
         beamMesh.rotation.y += 0.01;
     }
 
-    // --- CHECK CUSTOMIZATION ZONE ---
     if (customizationZone && (serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         if (myPlayerObject.position.distanceTo(customizationZone) < 2.5 && !isCustomizing) {
             isCustomizing = true;
@@ -1411,23 +1431,43 @@ function animate() {
             }
         }
 
-        if (!hitWall && hb.ownerId === socket.id) {
+        // Allow visual collision against ALL players locally
+        if (!hitWall) {
+            if (hb.ownerId !== socket.id) {
+                let myBox = new THREE.Box3();
+                const currentScaleY = myCatData.body.scale.y; 
+                myBox.setFromCenterAndSize(new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY)/2), myPlayerObject.position.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
+                
+                if (hbBox.intersectsBox(myBox)) {
+                    hitWall = true;
+                }
+            }
+            
             Object.keys(otherPlayers).forEach(id => {
-                if (otherPlayers[id].role === 'seeker' && !otherPlayers[id].stunned) {
+                if (id !== hb.ownerId) { 
                     let sBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                     if (hbBox.intersectsBox(sBox)) {
-                        hitSeekerId = id;
                         hitWall = true;
+                        if (hb.ownerId === socket.id) {
+                            hitSeekerId = id; 
+                        }
                     }
                 }
             });
         }
 
-        if (hitSeekerId) {
-            socket.emit('hairballHit', hitSeekerId);
+        if (hitSeekerId && hb.ownerId === socket.id) {
+            let validHit = false;
+            if (serverGameState === 'SEEKING' && otherPlayers[hitSeekerId].role === 'seeker' && !otherPlayers[hitSeekerId].stunned) validHit = true;
+            
+            if (validHit) {
+                socket.emit('hairballHit', hitSeekerId);
+            }
         }
 
         if (hitWall) {
+            explodeParticles(hb.mesh.position, false);
+            playSound('pop');
             scene.remove(hb.mesh);
             activeHairballs.splice(i, 1);
         }
@@ -1470,7 +1510,7 @@ function animate() {
     } else {
         myCatData.group.visible = true;
 
-        if (!(myRole === 'seeker' && serverGameState === 'HIDING') && !isBeaming) {
+        if (!(myRole === 'seeker' && serverGameState === 'HIDING') && !isBeaming && !isCustomizing) {
             if (!amIStunned) {
                 if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
                 if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
@@ -1576,7 +1616,7 @@ function animate() {
         if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
         let targetHeadRot = 0;
-        if (!amIStunned && !isBeaming) {
+        if (!amIStunned && !isBeaming && !isCustomizing) {
             if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
             else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
         }
@@ -1631,7 +1671,7 @@ function animate() {
         p.head.rotation.y += (otherTargetHeadRot - p.head.rotation.y) * 0.15;
         
         if (p.nameSprite) { 
-            p.nameSprite.visible = !blindfoldStage.visible && (p.role === 'seeker' || p.material.color.getHex() === p.baseColor || serverGameState === 'LOBBY'); 
+            p.nameSprite.visible = !blindfoldStage.visible && (p.role === 'seeker' || p.material.color.getHex() === p.baseColor || serverGameState === 'LOBBY' || serverGameState === 'WAITING'); 
         }
 
         if (p.moving && !p.stunned) {
