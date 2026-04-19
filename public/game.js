@@ -139,7 +139,7 @@ const bgmAudio = new THREE.Audio(listener);
 audioLoader.load('sounds/bgm.wav', (buffer) => {
     bgmAudio.setBuffer(buffer);
     bgmAudio.setLoop(true);
-    bgmAudio.setVolume(0.15); 
+    bgmAudio.setVolume(0.1); 
 });
 
 const renderer = new THREE.WebGLRenderer();
