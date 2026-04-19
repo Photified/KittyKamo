@@ -51,11 +51,10 @@ function startLobby() {
     }
 
     gameState = 'LOBBY';
-    timeRemaining = 60; // Increased to 60s
+    timeRemaining = 60; 
     generateMap(); 
     io.emit('initMap', mapBlocks);
 
-    // Turn everyone into a free-roaming hider for the lobby
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
@@ -77,14 +76,12 @@ function startLobby() {
         timeRemaining--;
 
         if (gameState === 'LOBBY') {
-            // Find players inside the beam (Radius 6 from 0,0)
             activePlayers = Object.values(players).filter(p => {
                 return Math.sqrt(p.x * p.x + p.z * p.z) < 6;
             }).map(p => p.id);
 
             let totalPlayers = Object.keys(players).length;
 
-            // If ALL players are in the beam (min 2), speed up the countdown!
             if (totalPlayers >= 2 && activePlayers.length === totalPlayers) {
                 if (timeRemaining > 5) {
                     timeRemaining = 5;
@@ -93,10 +90,10 @@ function startLobby() {
 
             if (timeRemaining <= 0) {
                 if (activePlayers.length < 2) {
-                    timeRemaining = 15; // Not enough players in the beam, extend lobby
+                    timeRemaining = 15; 
                 } else {
                     gameState = 'BEAMING';
-                    timeRemaining = 3; // 3 seconds of upward levitation
+                    timeRemaining = 3; 
                     io.emit('beamingPlayers', activePlayers);
                 }
             }
@@ -152,8 +149,8 @@ function startRound() {
         if (activePlayers.includes(id)) {
             players[id].role = (id === seekerId) ? 'seeker' : 'hider';
             players[id].color = (id === seekerId) ? 0xFF0000 : players[id].baseColor;
-            players[id].y = 25; // Drop them from the sky
-            players[id].x = (Math.random() * 20) - 10; // Scatter drop
+            players[id].y = 25; 
+            players[id].x = (Math.random() * 20) - 10; 
             players[id].z = (Math.random() * 20) - 10;
             players[id].score = 0; 
         } else {
@@ -181,7 +178,7 @@ io.on('connection', (socket) => {
         score: 0,
         x: (Math.random() * 30) - 15, y: 20, z: (Math.random() * 30) - 15, 
         rY: 0, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
-        decoyUsed: false, hairballs: 3, stunned: false, emote: 0
+        decoyUsed: false, hairballs: 3, stunned: false, emote: 0, face: 'normal'
     };
 
     socket.emit('currentPlayers', players);
@@ -198,6 +195,7 @@ io.on('connection', (socket) => {
                 players[socket.id].name = cleanName;
             }
             players[socket.id].baseColor = data.color;
+            players[socket.id].face = data.face || 'normal';
             if (players[socket.id].role !== 'seeker') {
                 players[socket.id].color = data.color;
             }
@@ -243,7 +241,7 @@ io.on('connection', (socket) => {
             players[socket.id].decoyUsed = true; 
             const decoyId = 'decoy_' + (nextDecoyId++);
             activeDecoys[decoyId] = socket.id; 
-            io.emit('spawnDecoy', { id: decoyId, x: data.x, y: data.y, z: data.z, rY: data.rY, color: data.color });
+            io.emit('spawnDecoy', { id: decoyId, x: data.x, y: data.y, z: data.z, rY: data.rY, color: data.color, face: players[socket.id].face });
             socket.emit('inventoryUpdate', { decoys: 0, hairballs: players[socket.id].hairballs });
         }
     });
