@@ -42,9 +42,8 @@ function playSound(type) {
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
-    // Multiply the volume based on our setting (30% for low)
     let v = (volumeState === 1) ? 0.3 : 1.0;
-    let endV = Math.max(0.001, 0.01 * v); // Exponential ramp cannot hit true 0
+    let endV = Math.max(0.001, 0.01 * v); 
 
     if (type === 'step') {
         osc.type = 'triangle';
@@ -103,12 +102,10 @@ function playCatMeow(catData) {
     const randomBuffer = meowBuffers[Math.floor(Math.random() * meowBuffers.length)];
     catData.pAudio.setBuffer(randomBuffer);
     
-    // Scale positional audio volume down if Low setting is active
     catData.pAudio.setVolume(volumeState === 1 ? 0.3 : 1.0);
     catData.pAudio.play();
 }
 
-// --- STRIPPED AND BULLETPROOF CSS ---
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
@@ -120,7 +117,6 @@ style.innerHTML = `
     
     #leftBox, #centerBox, #rightBox { box-sizing: border-box !important; }
     
-    /* STRETCH GRID FOR MOBILE ALIGNMENT */
     @media (max-width: 768px) {
         #topBar { 
             display: grid !important; 
@@ -149,10 +145,9 @@ const bgmAudio = new THREE.Audio(listener);
 audioLoader.load('sounds/bgm.wav', (buffer) => {
     bgmAudio.setBuffer(buffer);
     bgmAudio.setLoop(true);
-    bgmAudio.setVolume(0.05); // Default Low Volume
+    bgmAudio.setVolume(0.05); 
 });
 
-// --- GLOBAL MUSIC TOGGLE FUNCTION ---
 window.toggleMusic = function(btn) {
     window.musicEnabled = !window.musicEnabled;
     
@@ -169,7 +164,7 @@ window.toggleMusic = function(btn) {
             bgmAudio.pause();
         }
     }
-    btn.blur(); // Prevent spacebar from triggering this again
+    btn.blur(); 
 };
 
 const renderer = new THREE.WebGLRenderer();
@@ -365,11 +360,26 @@ let lastRadarTime = 0;
 let lastTauntTime = 0; 
 let myDecoyUsed = false; 
 let wasGroundedLastFrame = true; 
+let myEmote = 0; // State for emotes 1-5
 
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
-// --- REVISED BLINDFOLD FIX ---
+// --- UNSTUCK METER UI ---
+let qPressTime = 0;
+let isQPressed = false;
+const unstuckUI = document.createElement('div');
+unstuckUI.style.cssText = 'position:absolute; bottom:20px; left:50%; transform:translateX(-50%); width:200px; height:20px; background:rgba(0,0,0,0.5); border:2px solid #fff; border-radius:10px; display:none; z-index:200; overflow:hidden;';
+const unstuckFill = document.createElement('div');
+unstuckFill.style.cssText = 'width:0%; height:100%; background:gold; transition:width 0.1s;';
+unstuckUI.appendChild(unstuckFill);
+const unstuckText = document.createElement('div');
+unstuckText.innerHTML = 'RE-DROPPING...';
+unstuckText.style.cssText = 'position:absolute; width:100%; text-align:center; top:2px; font-size:12px; font-weight:bold; color:white; text-shadow:1px 1px 0 #000;';
+unstuckUI.appendChild(unstuckText);
+document.body.appendChild(unstuckUI);
+
+
 const blindfoldStage = new THREE.Group();
 camera.add(blindfoldStage); 
 
@@ -436,10 +446,19 @@ scene.add(stars);
 const myCatData = createCatSculpt(); 
 myPlayerObject.add(myCatData.group);
 
+// --- PREVIEW CAT SETUP ---
+window.myBaseColor = 0xFFFFFF; // Default skin color
+const previewCat = createCatSculpt(window.myBaseColor);
+previewCat.group.position.set(0, 100, 0); // Hide way up in the sky!
+scene.add(previewCat.group);
+const previewLight = new THREE.AmbientLight(0xffffff, 1.2); // Light up preview
+scene.add(previewLight);
+
 // --- CUSTOM NAME ENTRY SCREEN ---
 const startScreen = document.createElement('div');
 startScreen.id = 'startScreen';
-startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:"Segoe UI", sans-serif; z-index:999;';
+// Lower opacity to see preview cat behind
+startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:"Segoe UI", sans-serif; z-index:999;';
 
 const logo = document.createElement('h1');
 logo.innerHTML = 'KITTY KAMO';
@@ -455,6 +474,33 @@ nameInput.onfocus = () => nameInput.style.borderColor = 'gold';
 nameInput.onblur = () => nameInput.style.borderColor = '#555';
 startScreen.appendChild(nameInput);
 
+// --- SKIN PALETTE UI ---
+const colorPalette = document.createElement('div');
+colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
+const colors = [
+    {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, {n:'Gray', h:0x888888},
+    {n:'Blue', h:0x4169E1}, {n:'Pink', h:0xFF69B4}, {n:'Purple', h:0x800080},
+    {n:'Yellow', h:0xFFD700}, {n:'Cyan', h:0x00FFFF}, {n:'Red', h:0xDD0000},
+    {n:'Orange', h:0xFFA500}
+];
+colors.forEach(c => {
+    let btn = document.createElement('button');
+    btn.style.cssText = `width:35px; height:35px; border-radius:50%; background:#${c.h.toString(16).padStart(6,'0')}; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s;`;
+    btn.onclick = () => { 
+        window.myBaseColor = c.h; 
+        previewCat.material.color.setHex(c.h);
+        // Add visual feedback to buttons
+        Array.from(colorPalette.children).forEach(child => child.style.borderColor = '#555');
+        btn.style.borderColor = 'gold';
+    };
+    btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
+    btn.onmouseout = () => btn.style.transform = 'scale(1)';
+    colorPalette.appendChild(btn);
+});
+// Set default selection UI
+colorPalette.children[0].style.borderColor = 'gold';
+startScreen.appendChild(colorPalette);
+
 const startBtn = document.createElement('button');
 startBtn.innerHTML = "PLAY";
 startBtn.style.cssText = 'padding: 12px 50px; font-size: 24px; font-weight:900; background: gold; color: #111; border: none; border-radius: 8px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s;';
@@ -465,15 +511,13 @@ startBtn.onclick = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (listener.context.state === 'suspended') listener.context.resume();
     
-    // Play BGM when starting if not muted
     if (volumeState !== 0 && window.musicEnabled && !bgmAudio.isPlaying && bgmAudio.buffer) {
         bgmAudio.play();
     }
     
     let chosenName = nameInput.value.trim();
-    if (chosenName !== "") {
-        socket.emit('setName', chosenName);
-    }
+    // Fire joinGame with custom skin color
+    socket.emit('joinGame', { name: chosenName, color: window.myBaseColor });
     
     startScreen.style.display = 'none';
 };
@@ -485,7 +529,6 @@ nameInput.addEventListener('keypress', (e) => {
 
 document.body.appendChild(startScreen);
 
-// --- BULLETPROOF MOBILE BANNER ---
 const topBar = document.createElement('div');
 topBar.id = 'topBar';
 topBar.style.cssText = 'position:absolute; top:0; left:0; width:100%; padding:10px; box-sizing:border-box; display:flex; justify-content:space-between; align-items:stretch; z-index:100; pointer-events:none;';
@@ -502,19 +545,18 @@ soundBtnRow.style.cssText = "display: flex; gap: 5px; flex-wrap: wrap;";
 const muteBtn = document.createElement('button');
 muteBtn.className = 'menu-btn'; muteBtn.innerHTML = VOL_EMOJIS[volumeState];
 muteBtn.onclick = (e) => { 
-    // Cycle state: 2 -> 1 -> 0 -> 2
     volumeState = (volumeState === 2) ? 1 : (volumeState === 1) ? 0 : 2;
     muteBtn.innerHTML = VOL_EMOJIS[volumeState]; 
     
     if (volumeState === 0) {
         if (bgmAudio.isPlaying) bgmAudio.pause();
     } else {
-        bgmAudio.setVolume(volumeState === 1 ? 0.05 : 0.15); // Adjust BGM volume directly
+        bgmAudio.setVolume(volumeState === 1 ? 0.05 : 0.15); 
         if (window.musicEnabled && !bgmAudio.isPlaying && document.getElementById('startScreen').style.display === 'none') {
             bgmAudio.play();
         }
     }
-    muteBtn.blur(); // Drop focus
+    muteBtn.blur(); 
 };
 soundBtnRow.appendChild(muteBtn);
 
@@ -522,7 +564,7 @@ const helpBtn = document.createElement('button');
 helpBtn.className = 'menu-btn'; helpBtn.innerHTML = '❓';
 helpBtn.onclick = () => { 
     document.getElementById('helpModal').style.display = document.getElementById('helpModal').style.display === 'none' ? 'flex' : 'none'; 
-    helpBtn.blur(); // Drop focus
+    helpBtn.blur(); 
 };
 soundBtnRow.appendChild(helpBtn);
 
@@ -550,10 +592,12 @@ helpModal.innerHTML = `
         <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; text-align: center; font-size: 12px;">
             <div style="margin-bottom: 8px; color: gold; font-weight: bold; font-size: 14px;">CONTROLS</div>
             <div style="line-height: 2;">
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W A S D</b> or <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">← → ↑ ↓</b> Move <br>
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">W A S D</b> Move &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">SPACE</b> Jump<br>
                 <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">F</b> Meow &nbsp;
-                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: gold;">E</b> Decoy<br>
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777;">Q (hold)</b> Unstuck &nbsp;
+                <b style="background: #333; padding: 3px 6px; border-radius: 4px; border: 1px solid #777; color: cyan;">1-5</b> Emotes
             </div>
         </div>
 
@@ -743,6 +787,7 @@ socket.on('playerMoved', (data) => {
         otherPlayers[data.id].group.rotation.y = data.rY;
         otherPlayers[data.id].moving = data.moving;
         otherPlayers[data.id].material.color.setHex(data.color); 
+        otherPlayers[data.id].emote = data.emote;
         
         let oColor = (data.color === 0xFFFFFF || data.color === 0xFF0000) ? 0xFFD700 : data.color;
         otherPlayers[data.id].crownMat.color.setHex(oColor);
@@ -781,6 +826,7 @@ function addOtherPlayer(id, playerInfo) {
     catData.group.position.set(playerInfo.x, playerInfo.y, playerInfo.z);
     catData.group.rotation.y = playerInfo.rY;
     catData.role = playerInfo.role; 
+    catData.emote = playerInfo.emote || 0;
     setNameLabel(catData, playerInfo.name); 
     catData.crown.visible = (id === serverWinnerId);
     
@@ -826,6 +872,12 @@ document.addEventListener('keydown', (e) => {
 
     if(keys.hasOwnProperty(e.key)) keys[e.key] = true; 
     
+    if (e.key.toLowerCase() === 'q') isQPressed = true;
+    
+    if (['1','2','3','4','5'].includes(e.key)) {
+        myEmote = parseInt(e.key);
+    }
+    
     if(e.key.toLowerCase() === 'f') {
         if (Date.now() - lastTauntTime > 5000) { 
             if (myRole === 'hider' && serverGameState === 'SEEKING') {
@@ -852,12 +904,94 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-document.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+document.addEventListener('keyup', (e) => { 
+    if(keys.hasOwnProperty(e.key)) keys[e.key] = false; 
+    if(e.key.toLowerCase() === 'q') isQPressed = false;
+});
 
-const moveSpeed = 0.15; const turnSpeed = 0.06; let velocityY = 0; let isGrounded = true; const gravity = -0.015; const jumpStrength = 0.3;
+// --- UPDATED PHYSICS ---
+// Slower moving, lower gravity, stronger jump
+const moveSpeed = 0.1275; 
+const turnSpeed = 0.06; 
+let velocityY = 0; 
+let isGrounded = true; 
+const gravity = -0.008; 
+const jumpStrength = 0.25;
+
+// --- ANIMATION / EMOTE HANDLER ---
+function resetCatPose(cat) {
+    cat.head.position.set(0, 0.7, -0.4); cat.head.rotation.set(0, cat.head.rotation.y, 0);
+    cat.legs[0].position.set(0.15, 0.15, 0.3);
+    cat.legs[1].position.set(-0.15, 0.15, 0.3);
+    cat.legs[2].position.set(0.15, 0.15, -0.3);
+    cat.legs[3].position.set(-0.15, 0.15, -0.3);
+    cat.legs.forEach(l => l.rotation.set(0,0,0));
+    cat.tail.rotation.set(0, cat.tail.rotation.y, 0);
+    cat.group.rotation.x = 0;
+    cat.group.position.y = 0;
+}
+
+function animateCat(cat, emote, walkTime) {
+    resetCatPose(cat);
+    if (emote === 1) { // Nap
+        cat.group.position.y = -0.4;
+        cat.legs.forEach(l => { l.rotation.z = Math.PI / 2; l.position.y = 0.05; });
+        cat.head.position.y = 0.4;
+        cat.head.rotation.x = -Math.PI / 4;
+    } else if (emote === 2) { // Dance
+        cat.group.position.y = 0.3;
+        cat.group.rotation.x = -Math.PI / 4;
+        cat.legs[0].rotation.x = Math.sin(walkTime * 2) * 0.5;
+        cat.legs[1].rotation.x = -Math.sin(walkTime * 2) * 0.5;
+        cat.legs[2].rotation.x = Math.PI / 2;
+        cat.legs[3].rotation.x = Math.PI / 2;
+    } else if (emote === 3) { // Stretch
+        cat.group.position.y = -0.15;
+        cat.group.rotation.x = Math.PI / 8;
+        cat.head.position.y = 0.5;
+        cat.legs[0].rotation.x = -Math.PI / 3;
+        cat.legs[1].rotation.x = -Math.PI / 3;
+        cat.legs[2].rotation.x = Math.PI / 4;
+        cat.legs[3].rotation.x = Math.PI / 4;
+        cat.tail.rotation.x = Math.PI / 4;
+    } else if (emote === 4) { // Hiss/Scratch
+        cat.head.rotation.x = -Math.PI / 6;
+        cat.legs[0].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 3) * 0.8;
+        cat.group.position.y = 0.1;
+        cat.group.rotation.x = -Math.PI / 8;
+    } else if (emote === 5) { // Sit
+        cat.group.position.y = -0.15;
+        cat.group.rotation.x = -Math.PI / 6;
+        cat.head.rotation.x = Math.PI / 6;
+        cat.head.position.z = -0.2;
+        cat.legs[2].rotation.x = -Math.PI / 2;
+        cat.legs[3].rotation.x = -Math.PI / 2;
+        cat.legs[0].rotation.x = Math.PI / 6;
+        cat.legs[1].rotation.x = Math.PI / 6;
+    } else { // Normal Walk
+        if (cat.moving || walkTime > 0) {
+            cat.legs[0].rotation.x = Math.sin(walkTime) * 0.5;
+            cat.legs[1].rotation.x = -Math.sin(walkTime) * 0.5;
+            cat.legs[2].rotation.x = -Math.sin(walkTime) * 0.5;
+            cat.legs[3].rotation.x = Math.sin(walkTime) * 0.5;
+        }
+    }
+}
 
 function animate() {
     requestAnimationFrame(animate);
+
+    // --- RENDER START SCREEN SKIN PREVIEW ---
+    if (document.getElementById('startScreen').style.display !== 'none') {
+        previewCat.group.visible = true;
+        camera.position.set(0, 101.5, 4);
+        camera.lookAt(0, 100.5, 0);
+        previewCat.group.rotation.y += 0.015;
+        renderer.render(scene, camera);
+        return; // Pause the game loop while in menu
+    } else {
+        previewCat.group.visible = false;
+    }
 
     myPlayerObject.rotation.x = 0;
     myPlayerObject.rotation.z = 0;
@@ -897,7 +1031,23 @@ function animate() {
     }
 
     let moved = false;
-    let targetColor = myRole === 'seeker' ? 0xFF0000 : 0xFFFFFF; 
+    let targetColor = myRole === 'seeker' ? 0xFF0000 : window.myBaseColor; 
+
+    // --- UNSTUCK (Q key) LOGIC ---
+    if (isQPressed) {
+        qPressTime += fpsInterval; 
+        unstuckUI.style.display = 'block';
+        unstuckFill.style.width = Math.min(100, (qPressTime / 3000) * 100) + '%';
+        if (qPressTime >= 3000) {
+            myPlayerObject.position.set((Math.random() * 30) - 15, 20, (Math.random() * 30) - 15);
+            qPressTime = 0;
+            isQPressed = false;
+            unstuckUI.style.display = 'none';
+        }
+    } else {
+        qPressTime = 0;
+        unstuckUI.style.display = 'none';
+    }
 
     if (blindfoldStage.visible) {
         loadingCats.forEach(cat => {
@@ -905,8 +1055,7 @@ function animate() {
             if (cat.direction === 1 && cat.group.position.x > 6) cat.group.position.x = -6;
             if (cat.direction === -1 && cat.group.position.x < -6) cat.group.position.x = 6;
             cat.walkTime = (cat.walkTime || 0) + 0.2;
-            cat.legs[0].rotation.x = Math.sin(cat.walkTime) * 0.5; cat.legs[1].rotation.x = -Math.sin(cat.walkTime) * 0.5; 
-            cat.legs[2].rotation.x = -Math.sin(cat.walkTime) * 0.5; cat.legs[3].rotation.x = Math.sin(cat.walkTime) * 0.5; 
+            animateCat(cat, 0, cat.walkTime);
             cat.tailTime = (cat.tailTime || 0) + 0.1; cat.tail.rotation.y = Math.sin(cat.tailTime) * 0.3;
         });
     }
@@ -936,6 +1085,12 @@ function animate() {
             }
         }
         
+        // Cancel emote on move
+        if (keys.w || keys.a || keys.s || keys.d || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight || keys[" "]) {
+            if (myEmote !== 0) moved = true; // Send an update to server that we stopped emoting
+            myEmote = 0;
+        }
+
         const oldY = myPlayerObject.position.y;
         velocityY += gravity; myPlayerObject.position.y += velocityY;
         if (checkCollision(myPlayerObject.position)) {
@@ -986,7 +1141,7 @@ function animate() {
             }
         }
 
-        if (myRole === 'hider' && !moved && isGrounded) { 
+        if (myRole === 'hider' && !moved && isGrounded && myEmote === 0) { 
             let minDist = 2.0; let closestBlock = null;
             
             for (let i = 0; i < mapObjects.length; i++) {
@@ -1019,10 +1174,12 @@ function animate() {
         if (moved && isGrounded) { 
             myWalkTime += 0.2; 
             if (myWalkTime - lastStepTime > 1.5) { playSound('step'); lastStepTime = myWalkTime; }
-        } else { myWalkTime = 0; }
+        } else { 
+            myWalkTime = 0; 
+        }
         
-        myCatData.legs[0].rotation.x = Math.sin(myWalkTime) * 0.5; myCatData.legs[1].rotation.x = -Math.sin(myWalkTime) * 0.5; 
-        myCatData.legs[2].rotation.x = -Math.sin(myWalkTime) * 0.5; myCatData.legs[3].rotation.x = Math.sin(myWalkTime) * 0.5; 
+        let globalTime = performance.now() / 150; // Continuous time for emotes
+        animateCat(myCatData, myEmote, myEmote > 0 ? globalTime : myWalkTime);
 
         let finalScaleY = 1; let finalScaleXZ = 1;
         if (!isGrounded) {
@@ -1042,6 +1199,7 @@ function animate() {
         wasGroundedLastFrame = isGrounded; 
     }
 
+    let globalTime = performance.now() / 150;
     Object.values(otherPlayers).forEach(p => {
         if (p.role === 'spectator' || (serverGameState === 'GAME_OVER' && p.id !== serverWinnerId)) { 
             p.group.visible = false; return; 
@@ -1062,9 +1220,8 @@ function animate() {
 
         if (p.moving) {
             p.walkTime = (p.walkTime || 0) + 0.2;
-            p.legs[0].rotation.x = Math.sin(p.walkTime) * 0.5; p.legs[1].rotation.x = -Math.sin(p.walkTime) * 0.5;
-            p.legs[2].rotation.x = -Math.sin(p.walkTime) * 0.5; p.legs[3].rotation.x = Math.sin(p.walkTime) * 0.5;
-        } else { p.legs.forEach(leg => leg.rotation.x = 0); }
+        }
+        animateCat(p, p.emote, p.emote > 0 ? globalTime : (p.moving ? p.walkTime : 0));
     });
 
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
@@ -1134,9 +1291,11 @@ function animate() {
     const now = performance.now();
     if (now - lastRenderTime >= fpsInterval) {
         lastRenderTime = now;
+        // Broadcast new emote property
         socket.emit('playerMovement', { 
             x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z,
-            rY: myPlayerObject.rotation.y, moving: moved, color: targetColor, role: myRole
+            rY: myPlayerObject.rotation.y, moving: moved, color: targetColor, role: myRole,
+            emote: myEmote
         });
         renderer.render(scene, camera);
     }
@@ -1160,7 +1319,7 @@ if (isMobile) {
             btn.style.background = 'rgba(255, 215, 0, 0.6)'; 
             btn.style.transform = 'scale(0.9)'; 
 
-            if(key === 'f' || key === 'e') {
+            if(key === 'f' || key === 'e' || key === 'q') {
                 document.dispatchEvent(new KeyboardEvent('keydown', {'key': key}));
             }
         }, {passive: false});
@@ -1170,6 +1329,9 @@ if (isMobile) {
             keys[key] = false; 
             btn.style.background = 'rgba(0,0,0,0.4)'; 
             btn.style.transform = 'scale(1)';
+            if(key === 'q') {
+                document.dispatchEvent(new KeyboardEvent('keyup', {'key': key}));
+            }
         }, {passive: false});
         
         return btn;
@@ -1188,7 +1350,7 @@ if (isMobile) {
     
     actions.appendChild(createBtn('MEOW', 0, 60, 'f'));         
     actions.appendChild(createBtn('JUMP', 60, 60, ' '));       
-    actions.appendChild(createBtn('DECOY', 120, 60, 'e'));      
+    actions.appendChild(createBtn('DROP', 120, 60, 'q'));      
 
     mobileUI.appendChild(dpad);
     mobileUI.appendChild(actions);
