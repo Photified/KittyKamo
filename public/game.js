@@ -17,7 +17,13 @@ const colorDay = new THREE.Color(0x87CEEB);
 const colorSunset = new THREE.Color(0xFF7E47); 
 const colorNight = new THREE.Color(0x020211); 
 
-let isMuted = false;
+// --- 3-STATE VOLUME LOGIC ---
+let volumeState = 2; // 2 = High, 1 = Low, 0 = Mute
+const VOL_EMOJIS = { 2: '🔊', 1: '🔉', 0: '🔇' };
+
+// --- INDEPENDENT MUSIC TOGGLE ---
+window.musicEnabled = true;
+
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 const audioLoader = new THREE.AudioLoader();
@@ -29,72 +35,76 @@ for (let i = 1; i <= 5; i++) {
 }
 
 function playSound(type) {
-    if (isMuted || audioCtx.state === 'suspended') return; 
+    if (volumeState === 0 || audioCtx.state === 'suspended') return; 
+    
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
+    // Multiply the volume based on our setting (30% for low)
+    let v = (volumeState === 1) ? 0.3 : 1.0;
+    let endV = Math.max(0.001, 0.01 * v); // Exponential ramp cannot hit true 0
+
     if (type === 'step') {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(80, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2 * v, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     } else if (type === 'radar') { 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(400, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(550, audioCtx.currentTime + 0.25);
-        gain.gain.setValueAtTime(0.05, audioCtx.currentTime); 
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+        gain.gain.setValueAtTime(0.05 * v, audioCtx.currentTime); 
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.25);
         osc.start(); osc.stop(audioCtx.currentTime + 0.25);
     } else if (type === 'tick') {
         osc.type = 'square';
         osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.05);
         osc.start(); osc.stop(audioCtx.currentTime + 0.05);
     } else if (type === 'jump') {
-        // Quick rising pitch
         osc.type = 'sine';
         osc.frequency.setValueAtTime(300, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.15);
         osc.start(); osc.stop(audioCtx.currentTime + 0.15);
     } else if (type === 'land') {
-        // Low frequency thud
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(100, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2 * v, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     } else if (type === 'pop') {
-        // Fast dropping pitch (bloop)
         osc.type = 'square';
         osc.frequency.setValueAtTime(800, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.15);
         osc.start(); osc.stop(audioCtx.currentTime + 0.15);
     } else if (type === 'tag') {
-        // Two-tone victory chime
         osc.type = 'square';
         osc.frequency.setValueAtTime(600, audioCtx.currentTime);
         osc.frequency.setValueAtTime(900, audioCtx.currentTime + 0.1); 
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.15 * v, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.3);
         osc.start(); osc.stop(audioCtx.currentTime + 0.3);
     }
 }
 
 function playCatMeow(catData) {
-    if (isMuted || meowBuffers.length === 0) return;
+    if (volumeState === 0 || meowBuffers.length === 0) return;
     if (catData.pAudio.isPlaying) catData.pAudio.stop();
     const randomBuffer = meowBuffers[Math.floor(Math.random() * meowBuffers.length)];
     catData.pAudio.setBuffer(randomBuffer);
+    
+    // Scale positional audio volume down if Low setting is active
+    catData.pAudio.setVolume(volumeState === 1 ? 0.3 : 1.0);
     catData.pAudio.play();
 }
 
@@ -139,8 +149,27 @@ const bgmAudio = new THREE.Audio(listener);
 audioLoader.load('sounds/bgm.wav', (buffer) => {
     bgmAudio.setBuffer(buffer);
     bgmAudio.setLoop(true);
-    bgmAudio.setVolume(0.1); 
+    bgmAudio.setVolume(0.15); // Default High Volume
 });
+
+// --- GLOBAL MUSIC TOGGLE FUNCTION ---
+window.toggleMusic = function(btn) {
+    window.musicEnabled = !window.musicEnabled;
+    
+    if (window.musicEnabled) {
+        btn.innerHTML = '🎵 MUSIC: ON';
+        btn.style.background = '#4CAF50';
+        if (volumeState > 0 && !bgmAudio.isPlaying && document.getElementById('startScreen').style.display === 'none') {
+            bgmAudio.play();
+        }
+    } else {
+        btn.innerHTML = '🎵 MUSIC: OFF';
+        btn.style.background = '#ff6666';
+        if (bgmAudio.isPlaying) {
+            bgmAudio.pause();
+        }
+    }
+};
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -339,6 +368,7 @@ let wasGroundedLastFrame = true;
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
+// --- REVISED BLINDFOLD FIX ---
 const blindfoldStage = new THREE.Group();
 camera.add(blindfoldStage); 
 
@@ -407,6 +437,7 @@ myPlayerObject.add(myCatData.group);
 
 // --- CUSTOM NAME ENTRY SCREEN ---
 const startScreen = document.createElement('div');
+startScreen.id = 'startScreen';
 startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:"Segoe UI", sans-serif; z-index:999;';
 
 const logo = document.createElement('h1');
@@ -433,7 +464,8 @@ startBtn.onclick = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (listener.context.state === 'suspended') listener.context.resume();
     
-    if (!isMuted && !bgmAudio.isPlaying && bgmAudio.buffer) {
+    // Play BGM when starting if not completely muted AND if music is enabled
+    if (volumeState !== 0 && window.musicEnabled && !bgmAudio.isPlaying && bgmAudio.buffer) {
         bgmAudio.play();
     }
     
@@ -467,21 +499,26 @@ const soundBtnRow = document.createElement('div');
 soundBtnRow.style.cssText = "display: flex; gap: 5px; flex-wrap: wrap;";
 
 const muteBtn = document.createElement('button');
-muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊';
+muteBtn.className = 'menu-btn'; muteBtn.innerHTML = VOL_EMOJIS[volumeState];
 muteBtn.onclick = (e) => { 
-    isMuted = !isMuted; 
-    muteBtn.innerHTML = isMuted ? '🔇' : '🔊'; 
-    if (isMuted) {
+    // Cycle state: 2 -> 1 -> 0 -> 2
+    volumeState = (volumeState === 2) ? 1 : (volumeState === 1) ? 0 : 2;
+    muteBtn.innerHTML = VOL_EMOJIS[volumeState]; 
+    
+    if (volumeState === 0) {
         if (bgmAudio.isPlaying) bgmAudio.pause();
     } else {
-        if (!bgmAudio.isPlaying && startScreen.style.display === 'none') bgmAudio.play();
+        bgmAudio.setVolume(volumeState === 1 ? 0.05 : 0.15); // Adjust BGM volume directly
+        if (window.musicEnabled && !bgmAudio.isPlaying && document.getElementById('startScreen').style.display === 'none') {
+            bgmAudio.play();
+        }
     }
 };
 soundBtnRow.appendChild(muteBtn);
 
 const helpBtn = document.createElement('button');
 helpBtn.className = 'menu-btn'; helpBtn.innerHTML = '❓';
-helpBtn.onclick = () => { helpModal.style.display = helpModal.style.display === 'none' ? 'flex' : 'none'; };
+helpBtn.onclick = () => { document.getElementById('helpModal').style.display = document.getElementById('helpModal').style.display === 'none' ? 'flex' : 'none'; };
 soundBtnRow.appendChild(helpBtn);
 
 leftBox.appendChild(soundBtnRow);
@@ -499,6 +536,7 @@ rightBox.innerHTML = `<div style="font-weight:900; font-size:10px; margin-bottom
 topBar.appendChild(rightBox);
 
 const helpModal = document.createElement('div');
+helpModal.id = 'helpModal';
 helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:20px; color:white; z-index:150; display:none; width:90%; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column;';
 helpModal.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
@@ -532,7 +570,10 @@ helpModal.innerHTML = `
             </div>
         </div>
 
-        <button onclick="this.parentElement.parentElement.style.display='none'" style="display:block; margin: 0 auto; padding: 8px 30px; font-size: 14px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer;">GOT IT!</button>
+        <div style="display: flex; gap: 10px; margin-top: 5px;">
+            <button onclick="window.toggleMusic(this)" style="flex: 1; padding: 8px; font-size: 14px; font-weight:bold; background: #4CAF50; color: #111; border: none; border-radius: 4px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🎵 MUSIC: ON</button>
+            <button onclick="document.getElementById('helpModal').style.display='none'" style="flex: 1; padding: 8px; font-size: 14px; font-weight:bold; background: gold; color: #111; border: none; border-radius: 4px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">GOT IT!</button>
+        </div>
     </div>
 `;
 document.body.appendChild(helpModal);
@@ -655,7 +696,7 @@ socket.on('currentPlayers', (players) => {
             if (myRole === 'hider' && players[id].role === 'seeker') {
                 playCatMeow(myCatData); 
                 explodeParticles(myPlayerObject.position, true);
-                playSound('tag'); // Add tag sound for the victim
+                playSound('tag');
             }
             myRole = players[id].role; myName = players[id].name; 
             myCatData.material.color.setHex(players[id].color);
@@ -673,7 +714,7 @@ socket.on('currentPlayers', (players) => {
                 if (otherPlayers[id].role === 'hider' && players[id].role === 'seeker') {
                     playCatMeow(otherPlayers[id]); 
                     explodeParticles(otherPlayers[id].group.position, true);
-                    playSound('tag'); // Add tag sound for everyone else observing
+                    playSound('tag');
                 }
                 otherPlayers[id].role = players[id].role;
                 otherPlayers[id].material.color.setHex(players[id].color);
@@ -722,7 +763,7 @@ socket.on('spawnDecoy', (data) => {
 
 socket.on('decoyPopped', (decoyId) => {
     if (activeDecoys[decoyId]) {
-        playSound('pop'); // Replaced generic tick with the new bloop pop sound!
+        playSound('pop'); 
         explodeParticles(activeDecoys[decoyId].group.position, false); 
         scene.remove(activeDecoys[decoyId].group);
         delete activeDecoys[decoyId];
@@ -886,7 +927,7 @@ function animate() {
                 velocityY = jumpStrength; 
                 isGrounded = false; 
                 moved = true; 
-                playSound('jump'); // Hooked up jumping sound!
+                playSound('jump'); 
             }
         }
         
@@ -919,9 +960,8 @@ function animate() {
                     if (seekerBox.intersectsBox(hiderBox)) {
                         otherPlayers[id].role = 'seeker'; 
                         socket.emit('tagPlayer', id);
-                        playCatMeow(otherPlayers[id]); 
-                        explodeParticles(otherPlayers[id].group.position, true);
-                        playSound('tag'); // Add tag sound for the local tagger!
+                        playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
+                        playSound('tag'); 
                     }
                 }
             });
@@ -985,7 +1025,7 @@ function animate() {
         } else {
             if (wasGroundedLastFrame === false) { 
                 myPlayerObject.squashAnimTime = 0; 
-                playSound('land'); // Hooked up landing thud sound!
+                playSound('land'); 
             }
             if (myPlayerObject.squashAnimTime !== undefined && myPlayerObject.squashAnimTime < 1) {
                 myPlayerObject.squashAnimTime += 0.15;
