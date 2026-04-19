@@ -60,9 +60,14 @@ function startLobby() {
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
-        players[id].x = (Math.random() * 10) - 5;
+        
+        // Spawn players outside of the beam (radius > 6)
+        let angle = Math.random() * Math.PI * 2;
+        let dist = 8 + Math.random() * 8; // Dist between 8 and 16
+        players[id].x = Math.cos(angle) * dist;
         players[id].y = 20; 
-        players[id].z = (Math.random() * 10) - 5;
+        players[id].z = Math.sin(angle) * dist;
+        
         players[id].score = 0; 
         players[id].decoyUsed = false; 
         players[id].hairballs = 3; 
@@ -155,8 +160,8 @@ function startRound() {
             players[id].role = (id === seekerId) ? 'seeker' : 'hider';
             players[id].color = (id === seekerId) ? 0xFF0000 : players[id].baseColor;
             players[id].y = 25; 
-            players[id].x = (Math.random() * 20) - 10; 
-            players[id].z = (Math.random() * 20) - 10;
+            players[id].x = (Math.random() * 30) - 15; 
+            players[id].z = (Math.random() * 30) - 15;
             players[id].score = 0; 
         } else {
             players[id].role = 'spectator';
@@ -179,13 +184,19 @@ io.on('connection', (socket) => {
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
+    // Calculate a safe lobby spawn
+    let angle = Math.random() * Math.PI * 2;
+    let dist = 8 + Math.random() * 8;
+    let startX = (gameState === 'LOBBY' || gameState === 'WAITING') ? Math.cos(angle) * dist : (Math.random() * 30) - 15;
+    let startZ = (gameState === 'LOBBY' || gameState === 'WAITING') ? Math.sin(angle) * dist : (Math.random() * 30) - 15;
+
     players[socket.id] = {
         id: socket.id,
         name: 'Cat-' + socket.id.substring(0, 4),
         score: 0,
-        x: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 10) - 5 : (Math.random() * 30) - 15,
+        x: startX,
         y: 20, 
-        z: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 10) - 5 : (Math.random() * 30) - 15,
+        z: startZ,
         rY: 0, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
         decoyUsed: false, hairballs: 3, stunned: false, emote: 0, face: 'normal'
     };
