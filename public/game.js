@@ -310,12 +310,11 @@ function createCatSculpt(startColor = 0xFFFFFF, startFace = 'normal') {
         addPart(0.1, 0.3, 0.1, 0.15, 0.15, -0.3), addPart(0.1, 0.3, 0.1, -0.15, 0.15, -0.3)
     ];
 
-    // Swapped Sprite to PlaneGeometry so faces properly rotate with the head!
     const faceGeo = new THREE.PlaneGeometry(0.4, 0.4);
     const faceMat = new THREE.MeshBasicMaterial({ map: getFaceTexture(startFace), transparent: true, depthWrite: false });
     const faceMesh = new THREE.Mesh(faceGeo, faceMat);
-    faceMesh.position.set(0, 0, -0.201); // Just slightly off the front face to avoid z-fighting
-    faceMesh.rotation.y = Math.PI; // Face outwards
+    faceMesh.position.set(0, 0, -0.201); 
+    faceMesh.rotation.y = Math.PI; 
     head.add(faceMesh);
 
     const pAudio = new THREE.PositionalAudio(listener);
@@ -409,6 +408,7 @@ function createInvisibleWall(w, h, d, x, y, z) {
 }
 
 const mapObjects = [];
+const lobbyProps = []; // Store lobby props to easily clear them
 let myRole = 'hider';
 let myName = 'Connecting...';
 let myScore = 0; 
@@ -457,20 +457,43 @@ const beamLight = new THREE.PointLight(0x88CCFF, 2, 30);
 beamLight.position.set(0, 2, 0);
 scene.add(beamLight);
 
-const beamGroundGeo = new THREE.CircleGeometry(6, 32);
+// Bright White Square Landing Pad
+const beamGroundGeo = new THREE.PlaneGeometry(12, 12);
 const beamGroundMat = new THREE.MeshBasicMaterial({ 
-    color: 0x88CCFF, transparent: true, opacity: 0.5, 
-    side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false 
+    color: 0xFFFFFF, 
+    side: THREE.DoubleSide, 
+    depthWrite: false 
 });
 const beamGroundMesh = new THREE.Mesh(beamGroundGeo, beamGroundMat);
 beamGroundMesh.rotation.x = -Math.PI / 2;
 beamGroundMesh.position.set(0, -4.9, 0); 
 scene.add(beamGroundMesh);
 
-// --- THE OMINOUS GIANT CAT ---
-const giantCat = createCatSculpt(0x111111, 'normal'); 
-giantCat.group.scale.set(40, 40, 40);
-scene.add(giantCat.group);
+// Helper to spawn 3D Cat Beds in lobby
+function createCatBed(x, z, color) {
+    const bedGroup = new THREE.Group();
+    
+    const baseGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.4, 16);
+    const baseMat = new THREE.MeshLambertMaterial({ color: color });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.set(0, -4.8, 0); 
+    base.receiveShadow = true;
+    base.castShadow = true;
+    bedGroup.add(base);
+    
+    const rimGeo = new THREE.TorusGeometry(1.5, 0.3, 8, 16);
+    const rimMat = new THREE.MeshLambertMaterial({ color: 0xDDDDDD });
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.set(0, -4.6, 0);
+    rim.receiveShadow = true;
+    rim.castShadow = true;
+    bedGroup.add(rim);
+
+    bedGroup.position.set(x, 0, z);
+    scene.add(bedGroup);
+    lobbyProps.push(bedGroup);
+}
 
 
 let qPressTime = 0;
@@ -868,6 +891,9 @@ socket.on('initMap', (mapBlocks) => {
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
     invisibleWalls.forEach(mesh => scene.remove(mesh)); invisibleWalls.length = 0;
     
+    lobbyProps.forEach(p => scene.remove(p));
+    lobbyProps.length = 0;
+
     myDecoyUsed = false; 
     
     Object.keys(activeDecoys).forEach(dId => {
@@ -905,13 +931,18 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
     } else {
-        // Flat lobby limits
-        ground.scale.set(60, 60, 1);
+        ground.scale.set(20, 20, 1);
         ground.position.set(0, -5, 0);
-        createInvisibleWall(60, 40, 2, 0, 25, -30);
-        createInvisibleWall(60, 40, 2, 0, 25, 30);
-        createInvisibleWall(2, 40, 60, -30, 25, 0);
-        createInvisibleWall(2, 40, 60, 30, 25, 0);
+        
+        createInvisibleWall(20, 40, 2, 0, 25, -11);
+        createInvisibleWall(20, 40, 2, 0, 25, 11);
+        createInvisibleWall(2, 40, 24, -11, 25, 0);
+        createInvisibleWall(2, 40, 24, 11, 25, 0);
+
+        createCatBed(6, 6, 0xFF69B4);
+        createCatBed(-6, -6, 0x4169E1);
+        createCatBed(6, -6, 0xFFD700);
+        createCatBed(-6, 6, 0x8A2BE2);
     }
 });
 
@@ -1077,6 +1108,12 @@ function checkCollision(pos) {
         const oBox = new THREE.Box3().setFromObject(otherPlayers[id].group); oBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(oBox)) return true;
     }
+    
+    for (let i = 0; i < lobbyProps.length; i++) {
+        const propBox = new THREE.Box3().setFromObject(lobbyProps[i]); propBox.expandByScalar(-0.02);
+        if (pBox.intersectsBox(propBox)) return true;
+    }
+
     return false;
 }
 
@@ -1128,7 +1165,7 @@ document.addEventListener('keydown', (e) => {
                 updateRightBox(null);
                 canShoot = true;
             } else if (serverGameState === 'LOBBY' || serverGameState === 'WAITING') {
-                canShoot = true; // Unlimited in lobby!
+                canShoot = true; 
             }
 
             if (canShoot) {
@@ -1244,11 +1281,6 @@ function animate() {
     let cycleProgress = 0;
     if (serverGameState === 'SEEKING') {
         cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
-    } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
-        let timeLoop = (Date.now() % 60000) / 60000; 
-        cycleProgress = Math.abs(timeLoop * 2 - 1); 
-    } else if (serverGameState === 'LOBBY' || serverGameState === 'BEAMING') {
-        cycleProgress = 1; 
     } else {
         cycleProgress = 0; 
     }
@@ -1268,15 +1300,9 @@ function animate() {
 
     stars.rotation.y += 0.0003; 
 
-    // Make Lobby extremely dark and atmospheric
-    if (serverGameState === 'LOBBY' || serverGameState === 'BEAMING') {
-        sunLight.intensity = 0.05; 
-        ambientLight.intensity = 0.05;
-    } else {
-        let dimFactor = 1 - (0.15 * cycleProgress); 
-        sunLight.intensity = 0.8 * dimFactor;
-        ambientLight.intensity = 0.4 * dimFactor;
-    }
+    let dimFactor = 1 - (0.15 * cycleProgress); 
+    sunLight.intensity = 0.8 * dimFactor;
+    ambientLight.intensity = 0.4 * dimFactor;
 
     beamMesh.visible = (serverGameState === 'LOBBY' || serverGameState === 'BEAMING');
     beamLight.visible = beamMesh.visible;
@@ -1284,16 +1310,7 @@ function animate() {
     if (beamMesh.visible) {
         let glowOsc = 0.4 + Math.sin(performance.now() / 150) * 0.2;
         beamMat.opacity = glowOsc; 
-        beamGroundMat.opacity = glowOsc + 0.2;
         beamMesh.rotation.y += 0.01;
-    }
-
-    giantCat.group.visible = (serverGameState === 'LOBBY' || serverGameState === 'BEAMING');
-    if (giantCat.group.visible) {
-        giantCat.group.position.set(0, 45 + Math.sin(performance.now() / 1000) * 3, 0);
-        giantCat.group.rotation.y += 0.005;
-        giantCat.walkTime = (giantCat.walkTime || 0) + 0.05;
-        animateCat(giantCat, 0, giantCat.walkTime);
     }
 
     for (let i = particles.length - 1; i >= 0; i--) {
