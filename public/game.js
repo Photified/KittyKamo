@@ -111,7 +111,6 @@ function playCatMeow(catData) {
     catData.pAudio.play();
 }
 
-// --- Dynamic Canvas Face Generator ---
 const faceTextures = {};
 function getFaceTexture(type) {
     if (faceTextures[type]) return faceTextures[type];
@@ -311,12 +310,13 @@ function createCatSculpt(startColor = 0xFFFFFF, startFace = 'normal') {
         addPart(0.1, 0.3, 0.1, 0.15, 0.15, -0.3), addPart(0.1, 0.3, 0.1, -0.15, 0.15, -0.3)
     ];
 
-    // Added Face Sprite dynamically attached to front of head
-    const faceMat = new THREE.SpriteMaterial({ map: getFaceTexture(startFace), transparent: true });
-    const faceSprite = new THREE.Sprite(faceMat);
-    faceSprite.scale.set(0.4, 0.4, 1);
-    faceSprite.position.set(0, 0, -0.21); // Front of head
-    head.add(faceSprite);
+    // Swapped Sprite to PlaneGeometry so faces properly rotate with the head!
+    const faceGeo = new THREE.PlaneGeometry(0.4, 0.4);
+    const faceMat = new THREE.MeshBasicMaterial({ map: getFaceTexture(startFace), transparent: true, depthWrite: false });
+    const faceMesh = new THREE.Mesh(faceGeo, faceMat);
+    faceMesh.position.set(0, 0, -0.201); // Just slightly off the front face to avoid z-fighting
+    faceMesh.rotation.y = Math.PI; // Face outwards
+    head.add(faceMesh);
 
     const pAudio = new THREE.PositionalAudio(listener);
     pAudio.setDistanceModel('linear'); 
@@ -328,7 +328,7 @@ function createCatSculpt(startColor = 0xFFFFFF, startFace = 'normal') {
     const crown = createCrown();
     head.add(crown); 
 
-    return { group: containerGroup, body: catBody, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat, faceSprite: faceSprite };
+    return { group: containerGroup, body: catBody, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat, faceMesh: faceMesh };
 }
 
 function setNameLabel(catData, name) {
@@ -457,7 +457,6 @@ const beamLight = new THREE.PointLight(0x88CCFF, 2, 30);
 beamLight.position.set(0, 2, 0);
 scene.add(beamLight);
 
-// Glowing landing pad for beam
 const beamGroundGeo = new THREE.CircleGeometry(6, 32);
 const beamGroundMat = new THREE.MeshBasicMaterial({ 
     color: 0x88CCFF, transparent: true, opacity: 0.5, 
@@ -467,6 +466,11 @@ const beamGroundMesh = new THREE.Mesh(beamGroundGeo, beamGroundMat);
 beamGroundMesh.rotation.x = -Math.PI / 2;
 beamGroundMesh.position.set(0, -4.9, 0); 
 scene.add(beamGroundMesh);
+
+// --- THE OMINOUS GIANT CAT ---
+const giantCat = createCatSculpt(0x111111, 'normal'); 
+giantCat.group.scale.set(40, 40, 40);
+scene.add(giantCat.group);
 
 
 let qPressTime = 0;
@@ -604,7 +608,6 @@ colors.forEach(c => {
 colorPalette.children[0].style.borderColor = 'gold';
 uiContainer.appendChild(colorPalette);
 
-// --- FACE SELECTION UI ---
 const facePalette = document.createElement('div');
 facePalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 400px;';
 const faces = [
@@ -619,7 +622,7 @@ faces.forEach(f => {
     btn.style.cssText = `width:40px; height:40px; border-radius:8px; background:#333; color:white; font-size:20px; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s; display:flex; align-items:center; justify-content:center; padding:0;`;
     btn.onclick = () => { 
         window.myFace = f.id; 
-        previewCat.faceSprite.material.map = getFaceTexture(f.id);
+        previewCat.faceMesh.material.map = getFaceTexture(f.id);
         Array.from(facePalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -645,7 +648,6 @@ startBtn.onclick = () => {
     }
     
     let chosenName = nameInput.value.trim();
-    // Transmit selected face on spawn
     socket.emit('joinGame', { name: chosenName, color: window.myBaseColor, face: window.myFace });
     
     startScreen.style.display = 'none';
@@ -902,6 +904,14 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, maxZ + 1.5);
         createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
+    } else {
+        // Flat lobby limits
+        ground.scale.set(60, 60, 1);
+        ground.position.set(0, -5, 0);
+        createInvisibleWall(60, 40, 2, 0, 25, -30);
+        createInvisibleWall(60, 40, 2, 0, 25, 30);
+        createInvisibleWall(2, 40, 60, -30, 25, 0);
+        createInvisibleWall(2, 40, 60, 30, 25, 0);
     }
 });
 
@@ -919,7 +929,7 @@ socket.on('currentPlayers', (players) => {
             amIStunned = players[id].stunned;
 
             myCatData.material.color.setHex(players[id].color);
-            myCatData.faceSprite.material.map = getFaceTexture(players[id].face || 'normal');
+            myCatData.faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
             
             let cColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
             myCatData.crownMat.color.setHex(cColor);
@@ -941,7 +951,7 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].material.color.setHex(players[id].color);
                 otherPlayers[id].stunned = players[id].stunned;
                 otherPlayers[id].baseColor = players[id].baseColor;
-                otherPlayers[id].faceSprite.material.map = getFaceTexture(players[id].face || 'normal');
+                otherPlayers[id].faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
                 
                 let oColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
                 otherPlayers[id].crownMat.color.setHex(oColor);
@@ -1084,16 +1094,16 @@ document.addEventListener('keydown', (e) => {
     }
     
     if(e.key.toLowerCase() === 'f') {
-        if (Date.now() - lastTauntTime > 5000) { 
-            if (myRole === 'hider' && serverGameState === 'SEEKING') {
+        if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || Date.now() - lastTauntTime > 5000) { 
+            if (serverGameState !== 'LOBBY' && serverGameState !== 'WAITING') {
                 lastTauntTime = Date.now();
-                socket.emit('taunt'); 
-                playCatMeow(myCatData); 
-            } else if (serverGameState === 'WAITING' || serverGameState === 'LOBBY') {
-                lastTauntTime = Date.now();
-                socket.emit('lobbyMeow'); 
-                playCatMeow(myCatData); 
             }
+            if (myRole === 'hider' && serverGameState === 'SEEKING') {
+                socket.emit('taunt'); 
+            } else if (serverGameState === 'WAITING' || serverGameState === 'LOBBY') {
+                socket.emit('lobbyMeow'); 
+            }
+            playCatMeow(myCatData); 
         }
     }
     
@@ -1111,16 +1121,25 @@ document.addEventListener('keydown', (e) => {
     }
 
     if(e.key.toLowerCase() === 'r') {
-        if (myRole === 'hider' && serverGameState === 'SEEKING' && myHairballs > 0) {
-            myHairballs--;
-            updateRightBox(null);
-            playSound('spit');
-            let dirX = -Math.sin(myPlayerObject.rotation.y);
-            let dirZ = -Math.cos(myPlayerObject.rotation.y);
-            socket.emit('shootHairball', { 
-                x: myPlayerObject.position.x, y: myPlayerObject.position.y + 0.5, z: myPlayerObject.position.z, 
-                dirX: dirX, dirZ: dirZ 
-            });
+        if (myRole === 'hider') {
+            let canShoot = false;
+            if (serverGameState === 'SEEKING' && myHairballs > 0) {
+                myHairballs--;
+                updateRightBox(null);
+                canShoot = true;
+            } else if (serverGameState === 'LOBBY' || serverGameState === 'WAITING') {
+                canShoot = true; // Unlimited in lobby!
+            }
+
+            if (canShoot) {
+                playSound('spit');
+                let dirX = -Math.sin(myPlayerObject.rotation.y);
+                let dirZ = -Math.cos(myPlayerObject.rotation.y);
+                socket.emit('shootHairball', { 
+                    x: myPlayerObject.position.x, y: myPlayerObject.position.y + 0.5, z: myPlayerObject.position.z, 
+                    dirX: dirX, dirZ: dirZ 
+                });
+            }
         }
     }
 });
@@ -1249,6 +1268,7 @@ function animate() {
 
     stars.rotation.y += 0.0003; 
 
+    // Make Lobby extremely dark and atmospheric
     if (serverGameState === 'LOBBY' || serverGameState === 'BEAMING') {
         sunLight.intensity = 0.05; 
         ambientLight.intensity = 0.05;
@@ -1266,6 +1286,14 @@ function animate() {
         beamMat.opacity = glowOsc; 
         beamGroundMat.opacity = glowOsc + 0.2;
         beamMesh.rotation.y += 0.01;
+    }
+
+    giantCat.group.visible = (serverGameState === 'LOBBY' || serverGameState === 'BEAMING');
+    if (giantCat.group.visible) {
+        giantCat.group.position.set(0, 45 + Math.sin(performance.now() / 1000) * 3, 0);
+        giantCat.group.rotation.y += 0.005;
+        giantCat.walkTime = (giantCat.walkTime || 0) + 0.05;
+        animateCat(giantCat, 0, giantCat.walkTime);
     }
 
     for (let i = particles.length - 1; i >= 0; i--) {
