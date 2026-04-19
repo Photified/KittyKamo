@@ -168,6 +168,7 @@ function getFaceTexture(type) {
     return tex;
 }
 
+
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
@@ -1432,12 +1433,13 @@ document.addEventListener('keyup', (e) => {
     if(e.key.toLowerCase() === 'q') isQPressed = false;
 });
 
-const moveSpeed = 0.1275; 
-const turnSpeed = 0.06; 
+// DELIBERATELY HALVED SPEEDS
+const moveSpeed = 0.065; 
+const turnSpeed = 0.03; 
 let velocityY = 0; 
 let isGrounded = true; 
-const gravity = -0.008; 
-const jumpStrength = 0.25;
+const gravity = -0.005; 
+const jumpStrength = 0.18;
 
 function resetCatPose(cat) {
     cat.head.position.set(0, 0.7, -0.4); cat.head.rotation.set(0, cat.head.rotation.y, 0);
@@ -1488,15 +1490,25 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[0].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 3) * 0.8;
         cat.body.position.y = 0.1;
         cat.body.rotation.x = -Math.PI / 8;
-    } else if (emote === 5) { 
-        cat.body.position.y = -0.15;
-        cat.body.rotation.x = -Math.PI / 6;
-        cat.head.rotation.x = Math.PI / 6;
-        cat.head.position.z = -0.2;
-        cat.legs[2].rotation.x = -Math.PI / 2;
-        cat.legs[3].rotation.x = -Math.PI / 2;
+    } else if (emote === 5) { // HANDSTAND EMOTE
+        cat.body.position.y = 0.4;
+        cat.body.rotation.x = -Math.PI / 2.5; 
+        
+        cat.head.position.y = 0.8;
+        cat.head.position.z = -0.1;
+        cat.head.rotation.x = Math.PI / 4; 
+        
+        // Front legs touch the ground
+        cat.legs[2].rotation.x = Math.PI / 2.5;
+        cat.legs[3].rotation.x = Math.PI / 2.5;
+        
+        // Back legs go up in the air
         cat.legs[0].rotation.x = Math.PI / 6;
+        cat.legs[0].rotation.z = -Math.PI / 6;
         cat.legs[1].rotation.x = Math.PI / 6;
+        cat.legs[1].rotation.z = Math.PI / 6;
+        
+        cat.tail.rotation.x = Math.PI / 4;
     } else { 
         if (cat.moving || walkTime > 0) {
             cat.legs[0].rotation.x = Math.sin(walkTime) * 0.5;
@@ -1509,6 +1521,11 @@ function animateCat(cat, emote, walkTime) {
 
 function animate() {
     requestAnimationFrame(animate);
+
+    // FIX: Moving the game logic inside the FPS timer prevents it from running faster on higher refresh rate monitors
+    const now = performance.now();
+    if (now - lastRenderTime < fpsInterval) return; 
+    lastRenderTime = now - (now % fpsInterval);
 
     if (document.getElementById('startScreen').style.display !== 'none') {
         previewCat.group.visible = true;
@@ -1666,9 +1683,10 @@ function animate() {
             cat.group.position.x += cat.speed * cat.direction;
             if (cat.direction === 1 && cat.group.position.x > 6) cat.group.position.x = -6;
             if (cat.direction === -1 && cat.group.position.x < -6) cat.group.position.x = 6;
-            cat.walkTime = (cat.walkTime || 0) + 0.2;
+            cat.walkTime = (cat.walkTime || 0) + 0.1; // HALVED speed
             animateCat(cat, 0, cat.walkTime);
-            cat.tailTime = (cat.tailTime || 0) + 0.1; cat.tail.rotation.y = Math.sin(cat.tailTime) * 0.3;
+            cat.tailTime = (cat.tailTime || 0) + 0.05; // HALVED speed
+            cat.tail.rotation.y = Math.sin(cat.tailTime) * 0.3;
         });
     }
 
@@ -1803,16 +1821,17 @@ function animate() {
         }
         myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
         
-        myTailTime += 0.1; myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
+        myTailTime += 0.05; // HALVED speed
+        myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
 
         if (moved && isGrounded && !amIStunned) { 
-            myWalkTime += 0.2; 
+            myWalkTime += 0.1; // HALVED speed
             if (myWalkTime - lastStepTime > 1.5) { playSound('step'); lastStepTime = myWalkTime; }
         } else { 
             myWalkTime = 0; 
         }
         
-        let globalTime = performance.now() / 150; 
+        let globalTime = performance.now() / 250; // SLOWED global sway
         myCatData.stunned = amIStunned; 
         animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
 
@@ -1834,7 +1853,7 @@ function animate() {
         wasGroundedLastFrame = isGrounded; 
     }
 
-    let globalTime = performance.now() / 150;
+    let globalTime = performance.now() / 250; // SLOWED global sway
     Object.values(otherPlayers).forEach(p => {
         if (p.role === 'spectator' || (serverGameState === 'GAME_OVER' && p.id !== serverWinnerId)) { 
             p.group.visible = false; return; 
@@ -1844,7 +1863,9 @@ function animate() {
         
         p.group.scale.set(1, 1, 1);
         
-        p.tailTime = (p.tailTime || 0) + 0.1; p.tail.rotation.y = Math.sin(p.tailTime) * 0.3;
+        p.tailTime = (p.tailTime || 0) + 0.05; // HALVED speed
+        p.tail.rotation.y = Math.sin(p.tailTime) * 0.3;
+        
         let rYDelta = p.group.rotation.y - (p.lastRY === undefined ? p.group.rotation.y : p.lastRY);
         p.lastRY = p.group.rotation.y;
         let otherTargetHeadRot = 0;
@@ -1856,7 +1877,7 @@ function animate() {
         }
 
         if (p.moving && !p.stunned) {
-            p.walkTime = (p.walkTime || 0) + 0.2;
+            p.walkTime = (p.walkTime || 0) + 0.1; // HALVED speed
         }
 
         let isOtherBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(p.id));
@@ -1927,16 +1948,13 @@ function animate() {
         });
     });
 
-    const now = performance.now();
-    if (now - lastRenderTime >= fpsInterval) {
-        lastRenderTime = now;
-        socket.emit('playerMovement', { 
-            x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z,
-            rY: myPlayerObject.rotation.y, moving: moved, color: targetColor, role: myRole,
-            emote: myEmote
-        });
-        renderer.render(scene, camera);
-    }
+    socket.emit('playerMovement', { 
+        x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z,
+        rY: myPlayerObject.rotation.y, moving: moved, color: targetColor, role: myRole,
+        emote: myEmote
+    });
+    
+    renderer.render(scene, camera);
 }
 animate();
 
