@@ -51,7 +51,7 @@ function startLobby() {
     }
 
     gameState = 'LOBBY';
-    timeRemaining = 20; // 20s to get into the beam
+    timeRemaining = 60; // Increased to 60s
     generateMap(); 
     io.emit('initMap', mapBlocks);
 
@@ -76,18 +76,29 @@ function startLobby() {
     gameTimer = setInterval(() => {
         timeRemaining--;
 
-        if (gameState === 'LOBBY' && timeRemaining <= 0) {
+        if (gameState === 'LOBBY') {
             // Find players inside the beam (Radius 6 from 0,0)
             activePlayers = Object.values(players).filter(p => {
                 return Math.sqrt(p.x * p.x + p.z * p.z) < 6;
             }).map(p => p.id);
 
-            if (activePlayers.length < 2) {
-                timeRemaining = 15; // Not enough players, extend lobby
-            } else {
-                gameState = 'BEAMING';
-                timeRemaining = 3; // 3 seconds of upward levitation
-                io.emit('beamingPlayers', activePlayers);
+            let totalPlayers = Object.keys(players).length;
+
+            // If ALL players are in the beam (min 2), speed up the countdown!
+            if (totalPlayers >= 2 && activePlayers.length === totalPlayers) {
+                if (timeRemaining > 5) {
+                    timeRemaining = 5;
+                }
+            }
+
+            if (timeRemaining <= 0) {
+                if (activePlayers.length < 2) {
+                    timeRemaining = 15; // Not enough players in the beam, extend lobby
+                } else {
+                    gameState = 'BEAMING';
+                    timeRemaining = 3; // 3 seconds of upward levitation
+                    io.emit('beamingPlayers', activePlayers);
+                }
             }
         } else if (gameState === 'BEAMING' && timeRemaining <= 0) {
             startRound(); 
@@ -116,7 +127,7 @@ function startLobby() {
         }
 
         const leaderboardData = Object.values(players)
-            .filter(p => activePlayers.includes(p.id)) // Only show active round players
+            .filter(p => activePlayers.includes(p.id)) 
             .map(p => ({ id: p.id, name: p.name, score: p.score }))
             .sort((a, b) => b.score - a.score); 
 
@@ -162,7 +173,6 @@ io.on('connection', (socket) => {
     if (mapBlocks.length === 0) generateMap();
     socket.emit('initMap', mapBlocks);
 
-    // Default to free-roaming hider if joining the lobby
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
     players[socket.id] = {
@@ -261,7 +271,6 @@ io.on('connection', (socket) => {
     socket.on('hairballHit', (targetId) => {
         if (players[targetId] && players[targetId].role === 'seeker' && !players[targetId].stunned) {
             
-            // Add +15 score to the Hider who landed the hit!
             if (players[socket.id] && players[socket.id].role === 'hider') {
                 players[socket.id].score += 15;
             }
