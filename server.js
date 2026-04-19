@@ -52,7 +52,9 @@ function startLobby() {
 
     gameState = 'LOBBY';
     timeRemaining = 60; 
-    generateMap(); 
+    
+    // Clear map for a flat lobby arena!
+    mapBlocks = [];
     io.emit('initMap', mapBlocks);
 
     ids.forEach(id => {
@@ -143,6 +145,10 @@ function startRound() {
     timeRemaining = 10; 
     activeDecoys = {};
 
+    // Generate the actual maze for the round
+    generateMap();
+    io.emit('initMap', mapBlocks);
+
     const seekerId = activePlayers[Math.floor(Math.random() * activePlayers.length)];
     
     Object.keys(players).forEach(id => {
@@ -167,7 +173,9 @@ function startRound() {
 }
 
 io.on('connection', (socket) => {
-    if (mapBlocks.length === 0) generateMap();
+    if (mapBlocks.length === 0 && gameState !== 'LOBBY' && gameState !== 'WAITING') {
+        generateMap();
+    }
     socket.emit('initMap', mapBlocks);
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
@@ -258,15 +266,24 @@ io.on('connection', (socket) => {
     });
 
     socket.on('shootHairball', (data) => {
-        if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING' && players[socket.id].hairballs > 0) {
-            players[socket.id].hairballs--;
-            const hbId = 'hb_' + (nextHairballId++);
-            io.emit('spawnHairball', { id: hbId, ownerId: socket.id, x: data.x, y: data.y, z: data.z, dirX: data.dirX, dirZ: data.dirZ });
-            socket.emit('inventoryUpdate', { decoys: players[socket.id].decoyUsed ? 0 : 1, hairballs: players[socket.id].hairballs });
+        if (players[socket.id] && players[socket.id].role === 'hider') {
+            if (gameState === 'SEEKING' && players[socket.id].hairballs > 0) {
+                players[socket.id].hairballs--;
+                const hbId = 'hb_' + (nextHairballId++);
+                io.emit('spawnHairball', { id: hbId, ownerId: socket.id, x: data.x, y: data.y, z: data.z, dirX: data.dirX, dirZ: data.dirZ });
+                socket.emit('inventoryUpdate', { decoys: players[socket.id].decoyUsed ? 0 : 1, hairballs: players[socket.id].hairballs });
+            } else if (gameState === 'LOBBY' || gameState === 'WAITING') {
+                // Unlimited hairballs in lobby, no decrement!
+                const hbId = 'hb_' + (nextHairballId++);
+                io.emit('spawnHairball', { id: hbId, ownerId: socket.id, x: data.x, y: data.y, z: data.z, dirX: data.dirX, dirZ: data.dirZ });
+            }
         }
     });
 
     socket.on('hairballHit', (targetId) => {
+        // PREVENT STUNS IN LOBBY
+        if (gameState !== 'SEEKING') return; 
+
         if (players[targetId] && players[targetId].role === 'seeker' && !players[targetId].stunned) {
             
             if (players[socket.id] && players[socket.id].role === 'hider') {
