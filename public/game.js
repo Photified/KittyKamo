@@ -168,6 +168,7 @@ function getFaceTexture(type) {
     return tex;
 }
 
+
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
@@ -1100,25 +1101,27 @@ socket.on('initMap', (mapBlocks) => {
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
 
         const widthX = (maxX - minX) + 5; 
-        const depthZ = (maxZ - minZ) + 5;
         
-        ground.scale.set(widthX, depthZ, 1);
+        // Massive ground to cover the horizon
+        ground.scale.set(100, 100, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        createWall(widthX, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5);
-        createWall(widthX, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5);
+        // Walls shifted inward by 0.5 to overlap the outermost blocks seamlessly!
+        createWall(widthX, 40, 2, (minX + maxX) / 2, 10, minZ - 0.5);
+        createWall(widthX, 40, 2, (minX + maxX) / 2, 10, maxZ + 0.5);
         
-        const wallDepthZ = (maxZ - minZ) + 1;
-        createWall(2, 10, wallDepthZ, minX - 1.5, 0, (minZ + maxZ) / 2);
-        createWall(2, 10, wallDepthZ, maxX + 1.5, 0, (minZ + maxZ) / 2);
+        const wallDepthZ = (maxZ - minZ) + 4;
+        createWall(2, 40, wallDepthZ, minX - 0.5, 10, (minZ + maxZ) / 2);
+        createWall(2, 40, wallDepthZ, maxX + 0.5, 10, (minZ + maxZ) / 2);
         
-        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, minZ - 1.5);
-        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, maxZ + 1.5);
-        createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
-        createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
+        createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 25, minZ - 0.5);
+        createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
+        createInvisibleWall(2, 100, wallDepthZ, minX - 0.5, 25, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 100, wallDepthZ, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
-        ground.scale.set(40, 40, 1);
+        // FLAT LOBBY
+        ground.scale.set(100, 100, 1);
         ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
         
@@ -1479,14 +1482,16 @@ function animateCat(cat, emote, walkTime) {
     } else if (emote === 2) { 
         // HANDSTAND
         cat.body.position.y = 0.4;
-        cat.body.rotation.x = Math.PI / 2.5; 
-        cat.head.rotation.x = -Math.PI / 4; 
+        cat.body.rotation.x = -Math.PI / 2.5; // Pitch forward
+        cat.head.rotation.x = -Math.PI / 6; // Look up
         
+        // Front legs touch ground
         cat.legs[2].rotation.x = Math.PI / 2.5;
         cat.legs[3].rotation.x = Math.PI / 2.5;
         
-        cat.legs[0].rotation.x = -Math.PI / 4 + Math.sin(walkTime * 4) * 0.4;
-        cat.legs[1].rotation.x = -Math.PI / 4 + Math.sin(walkTime * 4 + Math.PI) * 0.4;
+        // Back legs wave
+        cat.legs[0].rotation.x = Math.PI / 6 + Math.sin(walkTime * 4) * 0.4;
+        cat.legs[1].rotation.x = Math.PI / 6 + Math.sin(walkTime * 4 + Math.PI) * 0.4;
         cat.tail.rotation.x = Math.PI / 4;
     } else if (emote === 3) { 
         cat.body.position.y = -0.15;
@@ -1503,20 +1508,18 @@ function animateCat(cat, emote, walkTime) {
         cat.body.position.y = 0.1;
         cat.body.rotation.x = -Math.PI / 8;
     } else if (emote === 5) { 
-        // STANDING ON BACK LEGS
+        // STANDING ON BACK LEGS, SCRATCHING
         cat.body.position.y = 0.3; 
-        cat.body.rotation.x = -Math.PI / 4; 
-        cat.head.rotation.x = Math.PI / 4; 
+        cat.body.rotation.x = Math.PI / 3; // Pitch backward
+        cat.head.rotation.x = Math.PI / 6; // Look forward
         
-        cat.legs[0].position.set(0.15, 0.05, 0.2); 
-        cat.legs[1].position.set(-0.15, 0.05, 0.2);
-        cat.legs[0].rotation.x = -Math.PI / 4;
-        cat.legs[1].rotation.x = -Math.PI / 4;
+        // Back legs touch ground
+        cat.legs[0].rotation.x = -Math.PI / 3; 
+        cat.legs[1].rotation.x = -Math.PI / 3;
         
-        cat.legs[2].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 6) * 0.4; 
-        cat.legs[2].position.set(0.15, 0.3, 0.2);
-        cat.legs[3].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 6 + Math.PI) * 0.4;
-        cat.legs[3].position.set(-0.15, 0.3, 0.2);
+        // Front legs scratch
+        cat.legs[2].rotation.x = -Math.PI / 4 + Math.sin(walkTime * 6) * 0.4; 
+        cat.legs[3].rotation.x = -Math.PI / 4 + Math.sin(walkTime * 6 + Math.PI) * 0.4;
         cat.tail.rotation.x = -Math.PI / 4;
     } else { 
         if (cat.moving || walkTime > 0) {
@@ -1932,7 +1935,6 @@ function animate() {
     
     let idealOffset = new THREE.Vector3(0, 1.5, 3);
     
-    // NEW GAME OVER CAMERA VIEW!
     if (serverGameState === 'GAME_OVER') {
         idealOffset.set(0, 20, 20); 
     } else if (isMobile && window.innerHeight > window.innerWidth) {
@@ -1944,7 +1946,6 @@ function animate() {
     
     let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
     
-    // Smooth LookAt for Game Over
     if (serverGameState === 'GAME_OVER') {
         lookAtTarget = focusObject.position.clone(); 
     }
