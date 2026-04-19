@@ -21,8 +21,9 @@ function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
 
-    for (let x = -20; x <= 20; x++) {
-        for (let z = -20; z <= 20; z++) {
+    // --- INCREASED TO 100x100 MAP (-50 to 50) ---
+    for (let x = -50; x <= 50; x++) {
+        for (let z = -50; z <= 50; z++) {
             let y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
             
             mapBlocks.push({ x: x, y: y + 0.5, z: z, color: 0x556B2F });
@@ -57,9 +58,10 @@ function startRound() {
     ids.forEach(id => {
         players[id].role = (id === seekerId) ? 'seeker' : 'hider';
         players[id].color = (id === seekerId) ? 0xFF0000 : 0xFFFFFF;
-        players[id].x = (Math.random() * 20) - 10;
+        // --- INCREASED SPAWN SCATTER AREA ---
+        players[id].x = (Math.random() * 90) - 45;
         players[id].y = 20; 
-        players[id].z = (Math.random() * 20) - 10;
+        players[id].z = (Math.random() * 90) - 45;
         players[id].score = 0; // Reset score (survival time)
         players[id].decoyUsed = false; // Reset decoy usage
     });
@@ -121,7 +123,8 @@ io.on('connection', (socket) => {
         id: socket.id,
         name: 'Cat-' + socket.id.substring(0, 4),
         score: 0,
-        x: (Math.random() * 20) - 10, y: 20, z: (Math.random() * 20) - 10, 
+        // --- INCREASED SPAWN SCATTER AREA ---
+        x: (Math.random() * 90) - 45, y: 20, z: (Math.random() * 90) - 45, 
         rY: 0, moving: false, role: joinRole, color: 0xFFFFFF,
         decoyUsed: false
     };
@@ -133,21 +136,18 @@ io.on('connection', (socket) => {
         startRound();
     }
 
-    // --- NEW: ACCEPT CUSTOM NAMES ---
     socket.on('setName', (customName) => {
         if (players[socket.id] && typeof customName === 'string') {
-            // Trim and sanitize to prevent HTML injection/oversized names
             let cleanName = customName.trim().substring(0, 12).replace(/</g, "&lt;").replace(/>/g, "&gt;");
             if (cleanName.length > 0) {
                 players[socket.id].name = cleanName;
-                io.emit('currentPlayers', players); // Update everyone's screens with the new name!
+                io.emit('currentPlayers', players);
             }
         }
     });
 
     socket.on('tagPlayer', (targetId) => {
         if (players[targetId] && players[targetId].role === 'hider') {
-            // Verify the tagger is actually a seeker
             if (players[socket.id] && players[socket.id].role === 'seeker') {
                 players[targetId].role = 'seeker';
                 players[targetId].color = 0xFF0000;
