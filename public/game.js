@@ -385,7 +385,6 @@ unstuckText.style.cssText = 'position:absolute; width:100%; text-align:center; t
 unstuckUI.appendChild(unstuckText);
 document.body.appendChild(unstuckUI);
 
-
 const blindfoldStage = new THREE.Group();
 camera.add(blindfoldStage); 
 
@@ -462,7 +461,6 @@ scene.add(previewLight);
 // --- CUSTOM NAME ENTRY SCREEN ---
 const startScreen = document.createElement('div');
 startScreen.id = 'startScreen';
-// Use flex-end with padding to push the UI to the bottom, exposing the 3D cat above it perfectly!
 startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom: 10vh; font-family:"Segoe UI", sans-serif; z-index:999; box-sizing:border-box;';
 
 const uiContainer = document.createElement('div');
@@ -484,15 +482,17 @@ uiContainer.appendChild(nameInput);
 
 const colorPalette = document.createElement('div');
 colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
-// Completely refined 12 color options (No Reds, Greens, or Browns)
+
+// Updated Vibrant Color Palette (No Red, Green, or Browns)
 const colors = [
     {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, 
-    {n:'Blue', h:0x4169E1}, {n:'Pink', h:0xFF69B4}, 
-    {n:'Purple', h:0x800080}, {n:'Yellow', h:0xFFD700}, 
-    {n:'Cyan', h:0x00FFFF}, {n:'Orange', h:0xFFA500},
-    {n:'Teal', h:0x008080}, {n:'Magenta', h:0xFF00FF}, 
-    {n:'Peach', h:0xFFDAB9}, {n:'Navy', h:0x000080}
+    {n:'Bright Blue', h:0x0066FF}, {n:'Deep Pink', h:0xFF1493}, 
+    {n:'Bright Purple', h:0x9932CC}, {n:'Bright Yellow', h:0xFFFF00}, 
+    {n:'Cyan', h:0x00FFFF}, {n:'Bright Orange', h:0xFF8C00},
+    {n:'Magenta', h:0xFF00FF}, {n:'Violet', h:0x8A2BE2}, 
+    {n:'Deep Sky Blue', h:0x00BFFF}, {n:'Light Pink', h:0xFFB6C1}
 ];
+
 colors.forEach(c => {
     let btn = document.createElement('button');
     btn.style.cssText = `width:35px; height:35px; border-radius:50%; background:#${c.h.toString(16).padStart(6,'0')}; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s;`;
@@ -527,6 +527,10 @@ startBtn.onclick = () => {
     socket.emit('joinGame', { name: chosenName, color: window.myBaseColor });
     
     startScreen.style.display = 'none';
+
+    // Show mobile UI when play button is clicked
+    let mUI = document.getElementById('mobileUI');
+    if (mUI) mUI.style.display = 'flex';
 };
 uiContainer.appendChild(startBtn);
 
@@ -736,7 +740,6 @@ socket.on('initMap', (mapBlocks) => {
     activeHairballs.forEach(hb => scene.remove(hb.mesh));
     activeHairballs.length = 0;
 
-    // --- The highly crucial, mysteriously vanished code from last update! ---
     mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
 
     if (mapBlocks.length > 0) {
@@ -1065,7 +1068,6 @@ function animate() {
 
     if (document.getElementById('startScreen').style.display !== 'none') {
         previewCat.group.visible = true;
-        // Position camera to elegantly frame the cat in the higher portion of the screen
         camera.position.set(0, 100.5, 4);
         camera.lookAt(0, 100, 0);
         previewCat.group.rotation.y += 0.015;
@@ -1435,7 +1437,8 @@ animate();
 
 if (isMobile) {
     const mobileUI = document.createElement('div');
-    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:110px; pointer-events:none; z-index:150; display:flex; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
+    mobileUI.id = 'mobileUI';
+    mobileUI.style.cssText = 'position:absolute; bottom:50px; left:0; width:100%; height:110px; pointer-events:none; z-index:150; display:none; justify-content:space-between; padding:0 20px; box-sizing:border-box;';
     
     function createBtn(text, x, y, key) {
         const btn = document.createElement('button');
@@ -1444,26 +1447,42 @@ if (isMobile) {
         
         btn.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:50px; height:50px; background:rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.6); border-radius:50%; color:white; font-weight:900; font-size:${fontSize}; user-select:none; touch-action:none; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);`;
         
-        btn.addEventListener('touchstart', (e) => { 
-            e.preventDefault(); 
-            keys[key] = true;
-            btn.style.background = 'rgba(255, 215, 0, 0.6)'; 
-            btn.style.transform = 'scale(0.9)'; 
+        if (key === 'emote') {
+            btn.addEventListener('touchstart', (e) => { 
+                e.preventDefault(); 
+                let randomEmote = Math.floor(Math.random() * 5) + 1;
+                document.dispatchEvent(new KeyboardEvent('keydown', {'key': randomEmote.toString()}));
+                btn.style.background = 'rgba(255, 215, 0, 0.6)'; 
+                btn.style.transform = 'scale(0.9)'; 
+            }, {passive: false});
+            
+            btn.addEventListener('touchend', (e) => { 
+                e.preventDefault(); 
+                btn.style.background = 'rgba(0,0,0,0.4)'; 
+                btn.style.transform = 'scale(1)';
+            }, {passive: false});
+        } else {
+            btn.addEventListener('touchstart', (e) => { 
+                e.preventDefault(); 
+                keys[key] = true;
+                btn.style.background = 'rgba(255, 215, 0, 0.6)'; 
+                btn.style.transform = 'scale(0.9)'; 
 
-            if(key === 'f' || key === 'e' || key === 'q' || key === 'r') {
-                document.dispatchEvent(new KeyboardEvent('keydown', {'key': key}));
-            }
-        }, {passive: false});
-        
-        btn.addEventListener('touchend', (e) => { 
-            e.preventDefault(); 
-            keys[key] = false; 
-            btn.style.background = 'rgba(0,0,0,0.4)'; 
-            btn.style.transform = 'scale(1)';
-            if(key === 'q') {
-                document.dispatchEvent(new KeyboardEvent('keyup', {'key': key}));
-            }
-        }, {passive: false});
+                if(key === 'f' || key === 'e' || key === 'q' || key === 'r') {
+                    document.dispatchEvent(new KeyboardEvent('keydown', {'key': key}));
+                }
+            }, {passive: false});
+            
+            btn.addEventListener('touchend', (e) => { 
+                e.preventDefault(); 
+                keys[key] = false; 
+                btn.style.background = 'rgba(0,0,0,0.4)'; 
+                btn.style.transform = 'scale(1)';
+                if(key === 'q') {
+                    document.dispatchEvent(new KeyboardEvent('keyup', {'key': key}));
+                }
+            }, {passive: false});
+        }
         
         return btn;
     }
@@ -1474,15 +1493,17 @@ if (isMobile) {
     dpad.appendChild(createBtn('▼', 0, 60, 's'));             
     
     const actions = document.createElement('div');
-    actions.style.cssText = 'position:relative; width:230px; height:110px;';
+    actions.style.cssText = 'position:relative; width:290px; height:110px;';
     
-    actions.appendChild(createBtn('◀', 30, 0, 'a'));       
-    actions.appendChild(createBtn('▶', 90, 0, 'd'));      
+    // Adjusted D-pad (left/right) placement to match wider action bar
+    actions.appendChild(createBtn('◀', 60, 0, 'a'));       
+    actions.appendChild(createBtn('▶', 120, 0, 'd'));      
     
-    actions.appendChild(createBtn('MEOW', 0, 60, 'f'));         
-    actions.appendChild(createBtn('JUMP', 60, 60, ' '));       
-    actions.appendChild(createBtn('DECOY', 120, 60, 'e'));      
-    actions.appendChild(createBtn('HAIRBALL', 180, 60, 'r'));      
+    actions.appendChild(createBtn('EMOTE', 0, 60, 'emote'));         
+    actions.appendChild(createBtn('MEOW', 60, 60, 'f'));         
+    actions.appendChild(createBtn('JUMP', 120, 60, ' '));       
+    actions.appendChild(createBtn('DECOY', 180, 60, 'e'));      
+    actions.appendChild(createBtn('HAIRBALL', 240, 60, 'r'));      
 
     mobileUI.appendChild(dpad);
     mobileUI.appendChild(actions);
