@@ -168,7 +168,6 @@ function getFaceTexture(type) {
     return tex;
 }
 
-
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
@@ -1173,20 +1172,16 @@ socket.on('initMap', (mapBlocks) => {
         const cGeo = new THREE.PlaneGeometry(4, 1);
         const cMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cCanvas), transparent: true, depthWrite: false });
         const cMesh = new THREE.Mesh(cGeo, cMat);
-        cMesh.position.set(0, -2.6, -18.9); // Adjusted text position lower, towards middle!
+        cMesh.position.set(0, -2.6, -18.9); 
         scene.add(cMesh);
         lobbyVisuals.push(cMesh);
 
         // --- ADD LOBBY BOXES ---
-        // Near Tree 1 (Center)
         createClosedBox(1.5, 1.5, 1.5, -2.5, -4.25, 0, Math.PI/6);
-        // Near Tree 2
         createClosedBox(1.5, 1.5, 1.5, 11.5, -4.25, 14, -Math.PI/8);
-        // Near Tree 3
         createClosedBox(1.5, 1.5, 1.5, -11.5, -4.25, -14, Math.PI/4);
         
-        // Scattered boxes - spaced far from beds and corners!
-        createOpenBox(3.5, 1.5, 3.5, -8, -4.25, -4, 0); // Flat rotation for AABB logic!
+        createOpenBox(3.5, 1.5, 3.5, -8, -4.25, -4, 0); 
         createOpenBox(3.5, 1.5, 3.5, 10, -4.25, -6, 0);
         createOpenBox(3.5, 1.5, 3.5, -10, -4.25, 6, 0);
 
@@ -1307,13 +1302,13 @@ socket.on('decoyPopped', (decoyId) => {
 });
 
 socket.on('spawnHairball', (data) => {
-    const hbGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+    const hbGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2); // Halved size!
     const hbMat = new THREE.MeshLambertMaterial({color: 0x6B4226}); 
     const hbMesh = new THREE.Mesh(hbGeo, hbMat);
     hbMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(hbGeo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
     hbMesh.position.set(data.x, data.y, data.z);
     scene.add(hbMesh);
-    activeHairballs.push({ mesh: hbMesh, dirX: data.dirX, dirZ: data.dirZ, id: data.id, ownerId: data.ownerId });
+    activeHairballs.push({ mesh: hbMesh, dirX: data.dirX, dirZ: data.dirZ, id: data.id, ownerId: data.ownerId, distance: 0 }); // Added distance tracking
 });
 
 function addOtherPlayer(id, playerInfo) {
@@ -1433,13 +1428,13 @@ document.addEventListener('keyup', (e) => {
     if(e.key.toLowerCase() === 'q') isQPressed = false;
 });
 
-// INCREASED SPEEDS 10%
-const moveSpeed = 0.14; 
-const turnSpeed = 0.066; 
+// DOUBLED VALUES (to account for the 30 FPS Lock) PLUS the 10% requested speed boost 
+const moveSpeed = 0.28; 
+const turnSpeed = 0.13; 
 let velocityY = 0; 
 let isGrounded = true; 
-const gravity = -0.008; 
-const jumpStrength = 0.25;
+const gravity = -0.016; 
+const jumpStrength = 0.5;
 
 function resetCatPose(cat) {
     cat.head.position.set(0, 0.7, -0.4); cat.head.rotation.set(0, cat.head.rotation.y, 0);
@@ -1464,19 +1459,17 @@ function animateCat(cat, emote, walkTime) {
         return; 
     }
 
-    if (emote === 1) { // Redo Play Bow pose
+    if (emote === 1) { 
         cat.body.position.y = -0.1; 
         cat.body.rotation.x = Math.PI / 8; 
         cat.head.position.y = 0.5;
-        cat.head.rotation.x = -Math.PI / 8; // LOOKING UP relative standard body standard, i.e., straight forward world standard. Face visible.
+        cat.head.rotation.x = -Math.PI / 8; 
         
-        // Back legs (standing, standard relative standard world standard view view)
         cat.legs[0].position.set(0.15, 0.15, 0.3);
-        cat.legs[0].rotation.x = -Math.PI / 8; // standard standard standard compensating standard standard standard view view view view
+        cat.legs[0].rotation.x = -Math.PI / 8; 
         cat.legs[1].position.set(-0.15, 0.15, 0.3);
         cat.legs[1].rotation.x = -Math.PI / 8;
         
-        // Front legs (sploot)
         cat.legs[2].position.set(0.15, 0.1, -0.3);
         cat.legs[2].rotation.z = Math.PI / 2;
         cat.legs[3].position.set(-0.15, 0.1, -0.3);
@@ -1502,18 +1495,15 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[0].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 3) * 0.8;
         cat.body.position.y = 0.1;
         cat.body.rotation.x = -Math.PI / 8;
-    } else if (emote === 5) { // Redo Scratching on Back Legs
-        cat.body.position.y = 0.3; // Raised
-        cat.body.rotation.x = -Math.PI / 4; // Tilted way back
+    } else if (emote === 5) { 
+        cat.body.position.y = 0.3; 
+        cat.body.rotation.x = -Math.PI / 4; 
         
-        // Head standard looking forward world space standard view view view
         cat.head.rotation.x = Math.PI / 4; 
         
-        // Back legs (standing, standard relative standard world standard view view)
-        cat.legs[0].position.set(0.15, 0.05, -0.2); // adjusting to hit ground standard standard standard view view view view
+        cat.legs[0].position.set(0.15, 0.05, -0.2); 
         cat.legs[1].position.set(-0.15, 0.05, -0.2);
         
-        // Front legs (pawing air alternating rapid motion)
         cat.legs[2].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 6) * 0.4; 
         cat.legs[2].position.set(0.15, 0.3, 0.2);
         cat.legs[3].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 6 + Math.PI) * 0.4;
@@ -1529,8 +1519,13 @@ function animateCat(cat, emote, walkTime) {
     }
 }
 
+// THIS TIME THE FPS LOCK COVERS THE WHOLE LOOP!
 function animate() {
     requestAnimationFrame(animate);
+
+    const now = performance.now();
+    if (now - lastRenderTime < fpsInterval) return; 
+    lastRenderTime = now - (now % fpsInterval);
 
     if (document.getElementById('startScreen').style.display !== 'none') {
         previewCat.group.visible = true;
@@ -1598,13 +1593,28 @@ function animate() {
         if (p.scale.x < 0.01) { scene.remove(p); particles.splice(i, 1); }
     }
 
+    // HAIRBALL DISTANCE FALLOFF ADDED
     for (let i = activeHairballs.length - 1; i >= 0; i--) {
         let hb = activeHairballs[i];
-        hb.mesh.position.x += hb.dirX * 0.3;
-        hb.mesh.position.z += hb.dirZ * 0.3;
+        
+        // Compensating for 30fps lock speed
+        hb.mesh.position.x += hb.dirX * 0.6;
+        hb.mesh.position.z += hb.dirZ * 0.6;
+
+        hb.distance = (hb.distance || 0) + 0.6;
+
+        if (hb.distance > 10) {
+            hb.velocityY = (hb.velocityY || 0) - 0.032; // Gravity pulls it down!
+            hb.mesh.position.y += hb.velocityY;
+        }
 
         let hitWall = false;
         let hitSeekerId = null;
+
+        // If hairball arcs below ground level, pop it. 
+        if (hb.mesh.position.y <= -4.8) {
+            hitWall = true;
+        }
 
         if (Math.abs(hb.mesh.position.x) > 30 || Math.abs(hb.mesh.position.z) > 30) {
             hitWall = true;
@@ -1688,9 +1698,9 @@ function animate() {
             cat.group.position.x += cat.speed * cat.direction;
             if (cat.direction === 1 && cat.group.position.x > 6) cat.group.position.x = -6;
             if (cat.direction === -1 && cat.group.position.x < -6) cat.group.position.x = 6;
-            cat.walkTime = (cat.walkTime || 0) + 0.22; // INCREASED standard increment 10%
+            cat.walkTime = (cat.walkTime || 0) + 0.44; 
             animateCat(cat, 0, cat.walkTime);
-            cat.tailTime = (cat.tailTime || 0) + 0.11; cat.tail.rotation.y = Math.sin(cat.tailTime) * 0.3;
+            cat.tailTime = (cat.tailTime || 0) + 0.22; cat.tail.rotation.y = Math.sin(cat.tailTime) * 0.3;
         });
     }
 
@@ -1825,17 +1835,17 @@ function animate() {
         }
         myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
         
-        myTailTime += 0.11; // INCREASED increment 10% wag Y Wag
+        myTailTime += 0.22; 
         myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
 
         if (moved && isGrounded && !amIStunned) { 
-            myWalkTime += 0.22; // INCREASED standard increment 10%
+            myWalkTime += 0.44; 
             if (myWalkTime - lastStepTime > 1.5) { playSound('step'); lastStepTime = myWalkTime; }
         } else { 
             myWalkTime = 0; 
         }
         
-        let globalTime = performance.now() / 136; // BOOSTED divisions 10% sway, down standard standard standard relative standard divisions
+        let globalTime = performance.now() / 136; 
         myCatData.stunned = amIStunned; 
         animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
 
@@ -1857,7 +1867,7 @@ function animate() {
         wasGroundedLastFrame = isGrounded; 
     }
 
-    let globalTime = performance.now() / 136; // BOOSTED divisions 10% standard standard view
+    let globalTime = performance.now() / 136; 
     Object.values(otherPlayers).forEach(p => {
         if (p.role === 'spectator' || (serverGameState === 'GAME_OVER' && p.id !== serverWinnerId)) { 
             p.group.visible = false; return; 
@@ -1867,7 +1877,7 @@ function animate() {
         
         p.group.scale.set(1, 1, 1);
         
-        p.tailTime = (p.tailTime || 0) + 0.11; p.tail.rotation.y = Math.sin(p.tailTime) * 0.3; // BOOSTED 10% Wag
+        p.tailTime = (p.tailTime || 0) + 0.22; p.tail.rotation.y = Math.sin(p.tailTime) * 0.3; 
         let rYDelta = p.group.rotation.y - (p.lastRY === undefined ? p.group.rotation.y : p.lastRY);
         p.lastRY = p.group.rotation.y;
         let otherTargetHeadRot = 0;
@@ -1879,7 +1889,7 @@ function animate() {
         }
 
         if (p.moving && !p.stunned) {
-            p.walkTime = (p.walkTime || 0) + 0.22; // BOOSTED standard increment 10%
+            p.walkTime = (p.walkTime || 0) + 0.44; 
         }
 
         let isOtherBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(p.id));
@@ -1950,16 +1960,13 @@ function animate() {
         });
     });
 
-    const now = performance.now();
-    if (now - lastRenderTime >= fpsInterval) {
-        lastRenderTime = now;
-        socket.emit('playerMovement', { 
-            x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z,
-            rY: myPlayerObject.rotation.y, moving: moved, color: targetColor, role: myRole,
-            emote: myEmote
-        });
-        renderer.render(scene, camera);
-    }
+    socket.emit('playerMovement', { 
+        x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z,
+        rY: myPlayerObject.rotation.y, moving: moved, color: targetColor, role: myRole,
+        emote: myEmote
+    });
+    
+    renderer.render(scene, camera);
 }
 animate();
 
