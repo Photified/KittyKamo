@@ -917,6 +917,12 @@ socket.on('gameStateUpdate', (data) => {
         playSound('tick'); lastTickTime = serverTime;
     }
 
+    if (serverGameState === 'LOBBY' || serverGameState === 'WAITING') {
+        ground.material.color.setHex(0x654321); 
+    } else {
+        ground.material.color.setHex(0x4CAF50); 
+    }
+
     updateRightBox(data.leaderboard);
 });
 
@@ -957,6 +963,7 @@ socket.on('initMap', (mapBlocks) => {
         
         ground.scale.set(widthX, depthZ, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
+        ground.material.color.setHex(0x4CAF50); 
 
         createWall(widthX, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5);
         createWall(widthX, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5);
@@ -970,9 +977,10 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
     } else {
-        // FLAT 40x40 LOBBY (-20 to 20)
+        // FLAT LOBBY
         ground.scale.set(40, 40, 1);
         ground.position.set(0, -5, 0);
+        ground.material.color.setHex(0x654321); 
         
         createInvisibleWall(40, 40, 2, 0, 25, -21);
         createInvisibleWall(40, 40, 2, 0, 25, 21);
@@ -988,10 +996,10 @@ socket.on('initMap', (mapBlocks) => {
         createCatTree(-10, 8);
 
         // --- CUSTOMIZATION HOUSE ---
-        createHouseWall(6, 4, 1, 0, -3, -19.5, 0x8B4513); // Back
-        createHouseWall(1, 4, 4, -2.5, -3, -18, 0x8B4513); // Left
-        createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); // Right
-        createHouseWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); // Roof
+        createHouseWall(6, 4, 1, 0, -3, -19.5, 0x8B4513); 
+        createHouseWall(1, 4, 4, -2.5, -3, -18, 0x8B4513); 
+        createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
+        createHouseWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
         
         const padGeo = new THREE.BoxGeometry(4, 0.1, 4);
         const padMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
@@ -1001,20 +1009,21 @@ socket.on('initMap', (mapBlocks) => {
         lobbyProps.push(pad);
         
         const cCanvas = document.createElement('canvas');
-        cCanvas.width = 256; cCanvas.height = 64;
+        cCanvas.width = 512; cCanvas.height = 128;
         const cCtx = cCanvas.getContext('2d');
-        cCtx.fillStyle = 'transparent'; cCtx.fillRect(0, 0, 256, 64);
-        cCtx.font = '900 36px "Segoe UI", Arial, sans-serif'; 
+        cCtx.fillStyle = 'transparent'; cCtx.fillRect(0, 0, 512, 128);
+        cCtx.font = '900 64px "Segoe UI", Arial, sans-serif'; 
         cCtx.fillStyle = '#FFFFFF';
         cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle'; 
-        cCtx.shadowColor = '#000000'; cCtx.shadowBlur = 4; cCtx.shadowOffsetX = 2; cCtx.shadowOffsetY = 2;
-        cCtx.fillText("CUSTOMIZE", 128, 32);
+        cCtx.shadowColor = '#000000'; cCtx.shadowBlur = 6; cCtx.shadowOffsetX = 3; cCtx.shadowOffsetY = 3;
+        cCtx.fillText("CUSTOMIZE", 256, 64);
         
-        const cSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cCanvas) }));
-        cSprite.position.set(0, -2, -18); 
-        cSprite.scale.set(4, 1, 1);
-        scene.add(cSprite);
-        lobbyProps.push(cSprite);
+        const cGeo = new THREE.PlaneGeometry(4, 1);
+        const cMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cCanvas), transparent: true, depthWrite: false });
+        const cMesh = new THREE.Mesh(cGeo, cMat);
+        cMesh.position.set(0, -1.5, -19.49); 
+        scene.add(cMesh);
+        lobbyProps.push(cMesh);
 
         customizationZone = new THREE.Vector3(0, -5, -18);
     }
@@ -1177,17 +1186,12 @@ function checkCollision(pos) {
         if (pBox.intersectsBox(wBox)) return true;
     }
 
-    for (let id in otherPlayers) {
-        if (otherPlayers[id].role === 'spectator') continue;
-        const oBox = new THREE.Box3().setFromObject(otherPlayers[id].group); oBox.expandByScalar(-0.02);
-        if (pBox.intersectsBox(oBox)) return true;
-    }
-    
     for (let i = 0; i < lobbyProps.length; i++) {
         const propBox = new THREE.Box3().setFromObject(lobbyProps[i]); propBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(propBox)) return true;
     }
 
+    // Completely removed physical collision against other players!
     return false;
 }
 
@@ -1358,8 +1362,6 @@ function animate() {
     } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         let timeLoop = (Date.now() % 60000) / 60000; 
         cycleProgress = Math.abs(timeLoop * 2 - 1); 
-    } else if (serverGameState === 'LOBBY' || serverGameState === 'BEAMING') {
-        cycleProgress = 0; // Forced sunny daytime! 
     } else {
         cycleProgress = 0; 
     }
@@ -1431,7 +1433,6 @@ function animate() {
             }
         }
 
-        // Allow visual collision against ALL players locally
         if (!hitWall) {
             if (hb.ownerId !== socket.id) {
                 let myBox = new THREE.Box3();
@@ -1542,10 +1543,23 @@ function animate() {
             moved = true; 
         } else {
             const oldY = myPlayerObject.position.y;
-            velocityY += gravity; myPlayerObject.position.y += velocityY;
+            velocityY += gravity; 
+            myPlayerObject.position.y += velocityY;
+            
+            // Fixed jump bouncing logic
             if (checkCollision(myPlayerObject.position)) {
-                myPlayerObject.position.y = oldY; velocityY = 0; isGrounded = (velocityY <= 0);
-            } else { isGrounded = false; }
+                myPlayerObject.position.y = oldY; 
+                if (velocityY > 0) {
+                    velocityY = 0; 
+                    isGrounded = false; 
+                } else {
+                    velocityY = 0; 
+                    isGrounded = true; 
+                }
+            } else { 
+                isGrounded = false; 
+            }
+            
             if (myPlayerObject.position.y <= -5) { myPlayerObject.position.y = -5; velocityY = 0; isGrounded = true; }
         }
 
@@ -1559,7 +1573,8 @@ function animate() {
                 new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
                 new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
             );
-            seekerBox.expandByScalar(0.8);
+            // Reduced massively to avoid bluetooth tagging
+            seekerBox.expandByScalar(0.2);
 
             Object.keys(otherPlayers).forEach(id => {
                 if (otherPlayers[id].role === 'hider') {
