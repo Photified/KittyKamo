@@ -225,7 +225,6 @@ function createCrown() {
     return crownGroup;
 }
 
-// Separated logic to ensure body transforms don't override global container positions
 function createCatSculpt(startColor = 0xFFFFFF) {
     const uniqueMat = new THREE.MeshLambertMaterial({ color: startColor });
     const containerGroup = new THREE.Group();
@@ -354,6 +353,7 @@ let serverTime = 0;
 let serverWinnerId = null;
 let serverWinReason = "";
 let lastTickTime = -1; 
+let beamingPlayerIds = [];
 
 const otherPlayers = {};
 const activeDecoys = {}; 
@@ -374,6 +374,14 @@ let amIStunned = false;
 
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
+
+// --- LOBBY BEAM VISUAL ---
+const beamGeo = new THREE.CylinderGeometry(6, 6, 100, 32, 1, true); 
+const beamMat = new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide });
+const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+beamMesh.position.set(0, 45, 0); 
+scene.add(beamMesh);
+
 
 let qPressTime = 0;
 let isQPressed = false;
@@ -596,6 +604,7 @@ topBar.appendChild(rightBox);
 const helpModal = document.createElement('div');
 helpModal.id = 'helpModal';
 helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:20px; color:white; z-index:150; display:none; width:90%; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column;';
+// Added Hairball Hit reward to the Help Page UI
 helpModal.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
         <h2 style="margin: 0; font-size: 20px; font-weight:900; text-align: center; color: gold;">HOW TO PLAY</h2>
@@ -619,15 +628,18 @@ helpModal.innerHTML = `
             <p style="margin: 0; color: #ff6666; font-weight: bold;">When a Hider gets tagged, they become a Seeker!</p>
         </div>
 
-        <div style="display: flex; justify-content: space-between; gap: 5px;">
-            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; flex: 1; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
                 <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Meowing
             </div>
-            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; flex: 1; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
                 <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Decoy Hit
             </div>
-            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; flex: 1; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
                 <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Tagging
+            </div>
+            <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
+                <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Hairball Hit
             </div>
         </div>
 
@@ -650,6 +662,13 @@ function updateUI() {
     
     if (serverGameState === 'WAITING') {
         centerBox.innerHTML = `<div style="font-size:10px; color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:12px; color:#aaa; font-weight:bold;">WAITING FOR PLAYERS...</div>`;
+        blindfold.style.display = 'none'; blindfoldStage.visible = false;
+    } else if (serverGameState === 'LOBBY') {
+        centerBox.innerHTML = `<div style="font-size:10px; color:#ddd; margin-bottom:2px;">YOU ARE: <b style="color:gold;">${myName}</b></div><div style="font-size:14px; font-weight:900; color:cyan; text-shadow:1px 1px 0 #000;">ENTER THE BEAM!</div><div style="font-size:12px; font-weight:bold; color:white;">STARTS IN ${serverTime}s</div>`;
+        blindfold.style.display = 'none'; blindfoldStage.visible = false;
+    } else if (serverGameState === 'BEAMING') {
+        let isMe = beamingPlayerIds.includes(socket.id);
+        centerBox.innerHTML = `<div style="font-size:16px; font-weight:900; color:gold; text-shadow:1px 1px 0 #000; margin-top:5px;">${isMe ? 'BEAMING UP!' : 'SPECTATING...'}</div>`;
         blindfold.style.display = 'none'; blindfoldStage.visible = false;
     } else if (serverGameState === 'GAME_OVER') {
         centerBox.innerHTML = `
@@ -725,6 +744,10 @@ socket.on('gameStateUpdate', (data) => {
     updateRightBox(data.leaderboard);
 });
 
+socket.on('beamingPlayers', (ids) => {
+    beamingPlayerIds = ids;
+});
+
 socket.on('initMap', (mapBlocks) => {
     mapObjects.forEach(mesh => scene.remove(mesh)); mapObjects.length = 0;
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
@@ -741,7 +764,6 @@ socket.on('initMap', (mapBlocks) => {
 
     mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
     
-    // FORCES THE MAP MATRICES TO UPDATE IMMEDIATELY SO PLAYERS DONT FALL THROUGH ON SPAWN!
     scene.updateMatrixWorld(true);
 
     if (mapBlocks.length > 0) {
@@ -789,7 +811,7 @@ socket.on('currentPlayers', (players) => {
             myCatData.crownMat.color.setHex(cColor);
 
             setNameLabel(myCatData, myName); 
-            if (serverGameState === 'WAITING' || myRole !== 'spectator') {
+            if (serverGameState === 'WAITING' || serverGameState === 'LOBBY' || myRole !== 'spectator') {
                 myPlayerObject.position.set(players[id].x, players[id].y, players[id].z);
             }
             myCatData.crown.visible = (id === serverWinnerId);
@@ -893,7 +915,7 @@ function addOtherPlayer(id, playerInfo) {
     catData.role = playerInfo.role; 
     catData.emote = playerInfo.emote || 0;
     catData.stunned = playerInfo.stunned || false;
-    catData.baseColor = playerInfo.baseColor || 0xFFFFFF; // Cache base color for nameplate logic
+    catData.baseColor = playerInfo.baseColor || 0xFFFFFF; 
 
     setNameLabel(catData, playerInfo.name); 
     catData.crown.visible = (id === serverWinnerId);
@@ -907,7 +929,7 @@ function addOtherPlayer(id, playerInfo) {
 
 function checkCollision(pos) {
     const pBox = new THREE.Box3();
-    const currentScaleY = myCatData.body.scale.y; // Correctly uses body bounds now
+    const currentScaleY = myCatData.body.scale.y; 
     pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
     
     for (let i = 0; i < mapObjects.length; i++) {
@@ -952,7 +974,7 @@ document.addEventListener('keydown', (e) => {
                 lastTauntTime = Date.now();
                 socket.emit('taunt'); 
                 playCatMeow(myCatData); 
-            } else if (serverGameState === 'WAITING') {
+            } else if (serverGameState === 'WAITING' || serverGameState === 'LOBBY') {
                 lastTauntTime = Date.now();
                 socket.emit('lobbyMeow'); 
                 playCatMeow(myCatData); 
@@ -1000,7 +1022,6 @@ let isGrounded = true;
 const gravity = -0.008; 
 const jumpStrength = 0.25;
 
-// Properly scopes transformations to the body group to prevent global positional snapping
 function resetCatPose(cat) {
     cat.head.position.set(0, 0.7, -0.4); cat.head.rotation.set(0, cat.head.rotation.y, 0);
     cat.legs[0].position.set(0.15, 0.15, 0.3);
@@ -1089,7 +1110,7 @@ function animate() {
     let cycleProgress = 0;
     if (serverGameState === 'SEEKING') {
         cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
-    } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
+    } else if (serverGameState === 'WAITING' || serverGameState === 'LOBBY' || serverGameState === 'GAME_OVER' || serverGameState === 'BEAMING') {
         let timeLoop = (Date.now() % 60000) / 60000; 
         cycleProgress = Math.abs(timeLoop * 2 - 1); 
     } else {
@@ -1114,6 +1135,12 @@ function animate() {
     let dimFactor = 1 - (0.15 * cycleProgress); 
     sunLight.intensity = 0.8 * dimFactor;
     ambientLight.intensity = 0.4 * dimFactor;
+
+    beamMesh.visible = (serverGameState === 'LOBBY' || serverGameState === 'BEAMING');
+    if (beamMesh.visible) {
+        beamMat.opacity = 0.2 + Math.sin(performance.now() / 150) * 0.15;
+        beamMesh.rotation.y += 0.01;
+    }
 
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i]; p.position.add(p.velocity); p.velocity.y -= 0.02; p.scale.multiplyScalar(0.9); 
@@ -1169,8 +1196,9 @@ function animate() {
 
     let moved = false;
     let targetColor = myRole === 'seeker' ? 0xFF0000 : window.myBaseColor; 
+    let isBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(socket.id));
 
-    if (isQPressed && !amIStunned && myRole !== 'spectator') {
+    if (isQPressed && !amIStunned && myRole !== 'spectator' && !isBeaming) {
         qPressTime += fpsInterval; 
         unstuckUI.style.display = 'block';
         unstuckFill.style.width = Math.min(100, (qPressTime / 3000) * 100) + '%';
@@ -1203,7 +1231,7 @@ function animate() {
     } else {
         myCatData.group.visible = true;
 
-        if (!(myRole === 'seeker' && serverGameState === 'HIDING')) {
+        if (!(myRole === 'seeker' && serverGameState === 'HIDING') && !isBeaming) {
             if (!amIStunned) {
                 if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
                 if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
@@ -1228,12 +1256,19 @@ function animate() {
             myEmote = 0;
         }
 
-        const oldY = myPlayerObject.position.y;
-        velocityY += gravity; myPlayerObject.position.y += velocityY;
-        if (checkCollision(myPlayerObject.position)) {
-            myPlayerObject.position.y = oldY; velocityY = 0; isGrounded = (velocityY <= 0);
-        } else { isGrounded = false; }
-        if (myPlayerObject.position.y <= -5) { myPlayerObject.position.y = -5; velocityY = 0; isGrounded = true; }
+        if (isBeaming) {
+            velocityY = 0.2; 
+            myPlayerObject.position.y += velocityY;
+            isGrounded = false;
+            moved = true; // Updates animation
+        } else {
+            const oldY = myPlayerObject.position.y;
+            velocityY += gravity; myPlayerObject.position.y += velocityY;
+            if (checkCollision(myPlayerObject.position)) {
+                myPlayerObject.position.y = oldY; velocityY = 0; isGrounded = (velocityY <= 0);
+            } else { isGrounded = false; }
+            if (myPlayerObject.position.y <= -5) { myPlayerObject.position.y = -5; velocityY = 0; isGrounded = true; }
+        }
 
         if (myRole === 'seeker' && serverGameState === 'SEEKING' && !amIStunned) {
             let closestDist = 999;
@@ -1278,7 +1313,7 @@ function animate() {
             }
         }
 
-        if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned) { 
+        if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned && serverGameState === 'SEEKING') { 
             let minDist = 2.0; let closestBlock = null;
             
             for (let i = 0; i < mapObjects.length; i++) {
@@ -1302,7 +1337,7 @@ function animate() {
         if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
         let targetHeadRot = 0;
-        if (!amIStunned) {
+        if (!amIStunned && !isBeaming) {
             if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
             else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
         }
@@ -1319,10 +1354,10 @@ function animate() {
         
         let globalTime = performance.now() / 150; 
         myCatData.stunned = amIStunned; 
-        animateCat(myCatData, myEmote, myEmote > 0 ? globalTime : myWalkTime);
+        animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime); // Use stretching emote while beaming
 
         let finalScaleY = 1; let finalScaleXZ = 1;
-        if (!isGrounded) {
+        if (!isGrounded && !isBeaming) {
             if (velocityY > 0) { let stretch = 1 + (velocityY * 0.8); finalScaleY *= stretch; finalScaleXZ *= (1 / stretch); }
         } else {
             if (wasGroundedLastFrame === false) { 
@@ -1356,15 +1391,16 @@ function animate() {
         if (rYDelta > 0.01) otherTargetHeadRot = 0.4; else if (rYDelta < -0.01) otherTargetHeadRot = -0.4; 
         p.head.rotation.y += (otherTargetHeadRot - p.head.rotation.y) * 0.15;
         
-        // Corrected Nameplate check to compare against their chosen Base Color!
         if (p.nameSprite) { 
-            p.nameSprite.visible = !blindfoldStage.visible && (p.role === 'seeker' || p.material.color.getHex() === p.baseColor); 
+            p.nameSprite.visible = !blindfoldStage.visible && (p.role === 'seeker' || p.material.color.getHex() === p.baseColor || serverGameState === 'LOBBY'); 
         }
 
         if (p.moving && !p.stunned) {
             p.walkTime = (p.walkTime || 0) + 0.2;
         }
-        animateCat(p, p.emote, p.emote > 0 ? globalTime : (p.moving ? p.walkTime : 0));
+
+        let isOtherBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(p.id));
+        animateCat(p, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
     });
 
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
