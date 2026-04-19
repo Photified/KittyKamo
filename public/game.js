@@ -103,6 +103,14 @@ scene.add(camera);
 const listener = new THREE.AudioListener();
 camera.add(listener);
 
+// --- NEW: BACKGROUND MUSIC SETUP ---
+const bgmAudio = new THREE.Audio(listener);
+audioLoader.load('sounds/bgm.wav', (buffer) => {
+    bgmAudio.setBuffer(buffer);
+    bgmAudio.setLoop(true);
+    bgmAudio.setVolume(0.15); // Keep it soft so meows stand out!
+});
+
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(isMobile ? 1 : window.devicePixelRatio);
@@ -196,12 +204,10 @@ function createCatSculpt(startColor = 0xFFFFFF) {
     return { group: catGroup, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat };
 }
 
-// --- FIX: Dynamic Name Sprite Generation ---
 function setNameLabel(catData, name) {
-    if (catData.currentName === name) return; // Don't redraw if name hasn't changed
+    if (catData.currentName === name) return; 
     
     if (catData.nameSprite) {
-        // Memory cleanup of old sprite
         catData.group.remove(catData.nameSprite);
         if (catData.nameSprite.material.map) catData.nameSprite.material.map.dispose();
         catData.nameSprite.material.dispose();
@@ -218,7 +224,7 @@ function setNameLabel(catData, name) {
     sprite.position.y = 1.4; sprite.scale.set(1.5, 0.375, 1);
     catData.group.add(sprite); 
     catData.nameSprite = sprite; 
-    catData.currentName = name; // Store it for future checks
+    catData.currentName = name; 
 }
 
 const particles = [];
@@ -369,7 +375,7 @@ scene.add(stars);
 const myCatData = createCatSculpt(); 
 myPlayerObject.add(myCatData.group);
 
-// --- NEW: CUSTOM NAME ENTRY SCREEN ---
+// --- CUSTOM NAME ENTRY SCREEN ---
 const startScreen = document.createElement('div');
 startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:"Segoe UI", sans-serif; z-index:999;';
 
@@ -396,6 +402,11 @@ startBtn.onmouseout = () => startBtn.style.transform = 'scale(1)';
 startBtn.onclick = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (listener.context.state === 'suspended') listener.context.resume();
+    
+    // --- Start BGM upon joining! ---
+    if (!isMuted && !bgmAudio.isPlaying && bgmAudio.buffer) {
+        bgmAudio.play();
+    }
     
     let chosenName = nameInput.value.trim();
     if (chosenName !== "") {
@@ -428,7 +439,16 @@ soundBtnRow.style.cssText = "display: flex; gap: 5px; flex-wrap: wrap;";
 
 const muteBtn = document.createElement('button');
 muteBtn.className = 'menu-btn'; muteBtn.innerHTML = '🔊';
-muteBtn.onclick = (e) => { isMuted = !isMuted; muteBtn.innerHTML = isMuted ? '🔇' : '🔊'; };
+muteBtn.onclick = (e) => { 
+    isMuted = !isMuted; 
+    muteBtn.innerHTML = isMuted ? '🔇' : '🔊'; 
+    // Handle muting the BGM explicitly
+    if (isMuted) {
+        if (bgmAudio.isPlaying) bgmAudio.pause();
+    } else {
+        if (!bgmAudio.isPlaying && startScreen.style.display === 'none') bgmAudio.play();
+    }
+};
 soundBtnRow.appendChild(muteBtn);
 
 const helpBtn = document.createElement('button');
@@ -631,7 +651,6 @@ socket.on('currentPlayers', (players) => {
 
                 otherPlayers[id].crown.visible = (id === serverWinnerId);
                 
-                // --- FIX: Add name update trigger for existing players! ---
                 setNameLabel(otherPlayers[id], players[id].name);
             } else { addOtherPlayer(id, players[id]); }
         }
