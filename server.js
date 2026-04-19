@@ -16,12 +16,12 @@ let gameTimer = null;
 let currentWinnerId = null;
 let winReason = "";
 let nextDecoyId = 0;
+let nextHairballId = 0;
 
 function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
 
-    // --- 40x40 MAP (-20 to 20) ---
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
             let y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
@@ -56,7 +56,6 @@ function startRound() {
     const seekerId = ids[Math.floor(Math.random() * ids.length)];
     ids.forEach(id => {
         players[id].role = (id === seekerId) ? 'seeker' : 'hider';
-        // Respect chosen skin color unless they are the seeker
         players[id].baseColor = players[id].baseColor || 0xFFFFFF; 
         players[id].color = (id === seekerId) ? 0xFF0000 : players[id].baseColor;
         
@@ -65,7 +64,9 @@ function startRound() {
         players[id].z = (Math.random() * 30) - 15;
         players[id].score = 0; 
         players[id].decoyUsed = false; 
-        players[id].emote = 0; // Reset emote
+        players[id].hairballs = 3; 
+        players[id].stunned = false;
+        players[id].emote = 0; 
     });
     
     io.emit('currentPlayers', players); 
@@ -127,7 +128,7 @@ io.on('connection', (socket) => {
         score: 0,
         x: (Math.random() * 30) - 15, y: 20, z: (Math.random() * 30) - 15, 
         rY: 0, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
-        decoyUsed: false, emote: 0
+        decoyUsed: false, hairballs: 3, stunned: false, emote: 0
     };
 
     socket.emit('currentPlayers', players);
@@ -137,7 +138,6 @@ io.on('connection', (socket) => {
         startRound();
     }
 
-    // New joined event containing skin choice
     socket.on('joinGame', (data) => {
         if (players[socket.id]) {
             let cleanName = data.name.trim().substring(0, 12).replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -145,7 +145,6 @@ io.on('connection', (socket) => {
                 players[socket.id].name = cleanName;
             }
             players[socket.id].baseColor = data.color;
-            // Only update active color if they aren't an active seeker
             if (players[socket.id].role !== 'seeker') {
                 players[socket.id].color = data.color;
             }
@@ -155,7 +154,7 @@ io.on('connection', (socket) => {
 
     socket.on('tagPlayer', (targetId) => {
         if (players[targetId] && players[targetId].role === 'hider') {
-            if (players[socket.id] && players[socket.id].role === 'seeker') {
+            if (players[socket.id] && players[socket.id].role === 'seeker' && !players[socket.id].stunned) {
                 players[targetId].role = 'seeker';
                 players[targetId].color = 0xFF0000;
                 
@@ -175,7 +174,7 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('playerMoved', { 
             id: socket.id, x: movementData.x, y: movementData.y, z: movementData.z, 
             rY: movementData.rY, moving: movementData.moving, color: movementData.color, role: players[socket.id].role,
-            emote: movementData.emote
+            emote: movementData.emote, stunned: players[socket.id].stunned
         });
     });
 
@@ -190,23 +189,43 @@ io.on('connection', (socket) => {
         if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING' && !players[socket.id].decoyUsed) {
             players[socket.id].decoyUsed = true; 
             const decoyId = 'decoy_' + (nextDecoyId++);
-            
             activeDecoys[decoyId] = socket.id; 
-            
             io.emit('spawnDecoy', { id: decoyId, x: data.x, y: data.y, z: data.z, rY: data.rY, color: data.color });
+            socket.emit('inventoryUpdate', { decoys: 0, hairballs: players[socket.id].hairballs });
         }
     });
 
     socket.on('tagDecoy', (decoyId) => {
         if (players[socket.id] && players[socket.id].role === 'seeker') {
             const ownerId = activeDecoys[decoyId];
-            
             if (ownerId && players[ownerId] && players[ownerId].role === 'hider') {
                 players[ownerId].score += 15;
             }
-            
             io.emit('decoyPopped', decoyId);
             delete activeDecoys[decoyId]; 
+        }
+    });
+
+    socket.on('shootHairball', (data) => {
+        if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING' && players[socket.id].hairballs > 0) {
+            players[socket.id].hairballs--;
+            const hbId = 'hb_' + (nextHairballId++);
+            io.emit('spawnHairball', { id: hbId, ownerId: socket.id, x: data.x, y: data.y, z: data.z, dirX: data.dirX, dirZ: data.dirZ });
+            socket.emit('inventoryUpdate', { decoys: players[socket.id].decoyUsed ? 0 : 1, hairballs: players[socket.id].hairballs });
+        }
+    });
+
+    socket.on('hairballHit', (targetId) => {
+        if (players[targetId] && players[targetId].role === 'seeker' && !players[targetId].stunned) {
+            players[targetId].stunned = true;
+            io.emit('playerStunned', targetId);
+            
+            setTimeout(() => {
+                if (players[targetId]) {
+                    players[targetId].stunned = false;
+                    io.emit('playerUnstunned', targetId);
+                }
+            }, 3000);
         }
     });
 
