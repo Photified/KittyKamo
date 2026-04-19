@@ -225,16 +225,19 @@ function createCrown() {
     return crownGroup;
 }
 
+// Separated logic to ensure body transforms don't override global container positions
 function createCatSculpt(startColor = 0xFFFFFF) {
     const uniqueMat = new THREE.MeshLambertMaterial({ color: startColor });
-    const catGroup = new THREE.Group();
+    const containerGroup = new THREE.Group();
+    const catBody = new THREE.Group(); 
+    containerGroup.add(catBody);
 
     function addPart(w, h, d, x, y, z) {
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), uniqueMat);
         mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
         mesh.castShadow = true; mesh.receiveShadow = true;
         mesh.position.set(x, y, z);
-        catGroup.add(mesh);
+        catBody.add(mesh);
         return mesh;
     }
 
@@ -245,7 +248,7 @@ function createCatSculpt(startColor = 0xFFFFFF) {
     const tailPivot = new THREE.Group();
     tailPivot.position.set(0, 0.5, 0.4); 
     tailPivot.add(addPart(0.1, 0.1, 0.5, 0, 0, 0.25)); 
-    catGroup.add(tailPivot);
+    catBody.add(tailPivot);
 
     const legs = [
         addPart(0.1, 0.3, 0.1, 0.15, 0.15, 0.3), addPart(0.1, 0.3, 0.1, -0.15, 0.15, 0.3),
@@ -257,12 +260,12 @@ function createCatSculpt(startColor = 0xFFFFFF) {
     pAudio.setRefDistance(3);  
     pAudio.setMaxDistance(30); 
     pAudio.setRolloffFactor(1);
-    catGroup.add(pAudio);
+    containerGroup.add(pAudio);
 
     const crown = createCrown();
     head.add(crown); 
 
-    return { group: catGroup, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat };
+    return { group: containerGroup, body: catBody, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat };
 }
 
 function setNameLabel(catData, name) {
@@ -450,7 +453,6 @@ scene.add(stars);
 const myCatData = createCatSculpt(); 
 myPlayerObject.add(myCatData.group);
 
-// --- PREVIEW CAT SETUP ---
 window.myBaseColor = 0xFFFFFF; 
 const previewCat = createCatSculpt(window.myBaseColor);
 previewCat.group.position.set(0, 100, 0); 
@@ -458,7 +460,6 @@ scene.add(previewCat.group);
 const previewLight = new THREE.AmbientLight(0xffffff, 1.2); 
 scene.add(previewLight);
 
-// --- CUSTOM NAME ENTRY SCREEN ---
 const startScreen = document.createElement('div');
 startScreen.id = 'startScreen';
 startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom: 10vh; font-family:"Segoe UI", sans-serif; z-index:999; box-sizing:border-box;';
@@ -483,7 +484,6 @@ uiContainer.appendChild(nameInput);
 const colorPalette = document.createElement('div');
 colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
 
-// Updated Vibrant Color Palette (No Red, Green, or Browns)
 const colors = [
     {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, 
     {n:'Bright Blue', h:0x0066FF}, {n:'Deep Pink', h:0xFF1493}, 
@@ -528,7 +528,6 @@ startBtn.onclick = () => {
     
     startScreen.style.display = 'none';
 
-    // Show mobile UI when play button is clicked
     let mUI = document.getElementById('mobileUI');
     if (mUI) mUI.style.display = 'flex';
 };
@@ -741,6 +740,9 @@ socket.on('initMap', (mapBlocks) => {
     activeHairballs.length = 0;
 
     mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
+    
+    // FORCES THE MAP MATRICES TO UPDATE IMMEDIATELY SO PLAYERS DONT FALL THROUGH ON SPAWN!
+    scene.updateMatrixWorld(true);
 
     if (mapBlocks.length > 0) {
         const minX = Math.min(...mapBlocks.map(b => b.x));
@@ -802,6 +804,7 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].role = players[id].role;
                 otherPlayers[id].material.color.setHex(players[id].color);
                 otherPlayers[id].stunned = players[id].stunned;
+                otherPlayers[id].baseColor = players[id].baseColor;
                 
                 let oColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
                 otherPlayers[id].crownMat.color.setHex(oColor);
@@ -890,6 +893,8 @@ function addOtherPlayer(id, playerInfo) {
     catData.role = playerInfo.role; 
     catData.emote = playerInfo.emote || 0;
     catData.stunned = playerInfo.stunned || false;
+    catData.baseColor = playerInfo.baseColor || 0xFFFFFF; // Cache base color for nameplate logic
+
     setNameLabel(catData, playerInfo.name); 
     catData.crown.visible = (id === serverWinnerId);
     
@@ -902,7 +907,7 @@ function addOtherPlayer(id, playerInfo) {
 
 function checkCollision(pos) {
     const pBox = new THREE.Box3();
-    const currentScaleY = myCatData.group.scale.y;
+    const currentScaleY = myCatData.body.scale.y; // Correctly uses body bounds now
     pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
     
     for (let i = 0; i < mapObjects.length; i++) {
@@ -995,6 +1000,7 @@ let isGrounded = true;
 const gravity = -0.008; 
 const jumpStrength = 0.25;
 
+// Properly scopes transformations to the body group to prevent global positional snapping
 function resetCatPose(cat) {
     cat.head.position.set(0, 0.7, -0.4); cat.head.rotation.set(0, cat.head.rotation.y, 0);
     cat.legs[0].position.set(0.15, 0.15, 0.3);
@@ -1003,36 +1009,36 @@ function resetCatPose(cat) {
     cat.legs[3].position.set(-0.15, 0.15, -0.3);
     cat.legs.forEach(l => l.rotation.set(0,0,0));
     cat.tail.rotation.set(0, cat.tail.rotation.y, 0);
-    cat.group.rotation.x = 0;
-    cat.group.rotation.z = 0; 
-    cat.group.position.y = 0;
+    cat.body.rotation.x = 0;
+    cat.body.rotation.z = 0; 
+    cat.body.position.y = 0; 
 }
 
 function animateCat(cat, emote, walkTime) {
     resetCatPose(cat);
 
     if (cat.stunned) {
-        cat.group.rotation.z = Math.sin(performance.now() / 20) * 0.2;
+        cat.body.rotation.z = Math.sin(performance.now() / 20) * 0.2;
         cat.head.rotation.x = Math.sin(performance.now() / 30) * 0.5;
         cat.legs.forEach(l => l.rotation.x = (Math.random() - 0.5) * 1);
         return; 
     }
 
     if (emote === 1) { 
-        cat.group.position.y = -0.4;
+        cat.body.position.y = -0.4;
         cat.legs.forEach(l => { l.rotation.z = Math.PI / 2; l.position.y = 0.05; });
         cat.head.position.y = 0.4;
         cat.head.rotation.x = -Math.PI / 4;
     } else if (emote === 2) { 
-        cat.group.position.y = 0.3;
-        cat.group.rotation.x = -Math.PI / 4;
+        cat.body.position.y = 0.3;
+        cat.body.rotation.x = -Math.PI / 4;
         cat.legs[0].rotation.x = Math.sin(walkTime * 2) * 0.5;
         cat.legs[1].rotation.x = -Math.sin(walkTime * 2) * 0.5;
         cat.legs[2].rotation.x = Math.PI / 2;
         cat.legs[3].rotation.x = Math.PI / 2;
     } else if (emote === 3) { 
-        cat.group.position.y = -0.15;
-        cat.group.rotation.x = Math.PI / 8;
+        cat.body.position.y = -0.15;
+        cat.body.rotation.x = Math.PI / 8;
         cat.head.position.y = 0.5;
         cat.legs[0].rotation.x = -Math.PI / 3;
         cat.legs[1].rotation.x = -Math.PI / 3;
@@ -1042,11 +1048,11 @@ function animateCat(cat, emote, walkTime) {
     } else if (emote === 4) { 
         cat.head.rotation.x = -Math.PI / 6;
         cat.legs[0].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 3) * 0.8;
-        cat.group.position.y = 0.1;
-        cat.group.rotation.x = -Math.PI / 8;
+        cat.body.position.y = 0.1;
+        cat.body.rotation.x = -Math.PI / 8;
     } else if (emote === 5) { 
-        cat.group.position.y = -0.15;
-        cat.group.rotation.x = -Math.PI / 6;
+        cat.body.position.y = -0.15;
+        cat.body.rotation.x = -Math.PI / 6;
         cat.head.rotation.x = Math.PI / 6;
         cat.head.position.z = -0.2;
         cat.legs[2].rotation.x = -Math.PI / 2;
@@ -1233,7 +1239,7 @@ function animate() {
             let closestDist = 999;
             let closestHider = null;
 
-            const currentScaleY = myCatData.group.scale.y;
+            const currentScaleY = myCatData.body.scale.y;
             const seekerBox = new THREE.Box3();
             seekerBox.setFromCenterAndSize(
                 new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
@@ -1329,7 +1335,7 @@ function animate() {
                 finalScaleY *= (1 - squashAmt); finalScaleXZ *= (1 + squashAmt);
             }
         }
-        myCatData.group.scale.set(finalScaleXZ, finalScaleY, finalScaleXZ);
+        myCatData.body.scale.set(finalScaleXZ, finalScaleY, finalScaleXZ);
         wasGroundedLastFrame = isGrounded; 
     }
 
@@ -1350,7 +1356,10 @@ function animate() {
         if (rYDelta > 0.01) otherTargetHeadRot = 0.4; else if (rYDelta < -0.01) otherTargetHeadRot = -0.4; 
         p.head.rotation.y += (otherTargetHeadRot - p.head.rotation.y) * 0.15;
         
-        if (p.nameSprite) { p.nameSprite.visible = !blindfoldStage.visible && (p.role === 'seeker' || p.material.color.getHex() === 0xFFFFFF); }
+        // Corrected Nameplate check to compare against their chosen Base Color!
+        if (p.nameSprite) { 
+            p.nameSprite.visible = !blindfoldStage.visible && (p.role === 'seeker' || p.material.color.getHex() === p.baseColor); 
+        }
 
         if (p.moving && !p.stunned) {
             p.walkTime = (p.walkTime || 0) + 0.2;
@@ -1495,7 +1504,6 @@ if (isMobile) {
     const actions = document.createElement('div');
     actions.style.cssText = 'position:relative; width:290px; height:110px;';
     
-    // Adjusted D-pad (left/right) placement to match wider action bar
     actions.appendChild(createBtn('◀', 60, 0, 'a'));       
     actions.appendChild(createBtn('▶', 120, 0, 'd'));      
     
