@@ -387,10 +387,12 @@ function createBlock(x, y, z, color) {
 }
 
 const walls = [];
+
 function createHouseWall(w, h, d, x, y, z, color) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mat = new THREE.MeshLambertMaterial({ color: color, transparent: true });
     const mesh = new THREE.Mesh(geo, mat);
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
     mesh.castShadow = true; mesh.receiveShadow = true;
     mesh.position.set(x, y, z);
     scene.add(mesh);
@@ -454,7 +456,6 @@ let customizationZone = null;
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
-// --- LOBBY BEAM VISUALS ---
 const beamGeo = new THREE.CylinderGeometry(6, 6, 100, 32, 1, true); 
 const beamMat = new THREE.MeshBasicMaterial({ 
     color: 0x88CCFF, 
@@ -486,22 +487,23 @@ scene.add(beamGroundMesh);
 function createCatBed(x, z, color) {
     const bedGroup = new THREE.Group();
     
-    const baseGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.4, 16);
+    function addBedPart(geo, mat, px, py, pz) {
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+        mesh.position.set(px, py, pz);
+        mesh.receiveShadow = true;
+        mesh.castShadow = true;
+        bedGroup.add(mesh);
+    }
+
     const baseMat = new THREE.MeshLambertMaterial({ color: color });
-    const base = new THREE.Mesh(baseGeo, baseMat);
-    base.position.set(0, -4.8, 0); 
-    base.receiveShadow = true;
-    base.castShadow = true;
-    bedGroup.add(base);
-    
-    const rimGeo = new THREE.TorusGeometry(1.5, 0.3, 8, 16);
     const rimMat = new THREE.MeshLambertMaterial({ color: 0xDDDDDD });
-    const rim = new THREE.Mesh(rimGeo, rimMat);
-    rim.rotation.x = Math.PI / 2;
-    rim.position.set(0, -4.6, 0);
-    rim.receiveShadow = true;
-    rim.castShadow = true;
-    bedGroup.add(rim);
+
+    addBedPart(new THREE.BoxGeometry(2.6, 0.4, 2.6), baseMat, 0, -4.8, 0); 
+    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, -1.5, -4.7, 0); 
+    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, 1.5, -4.7, 0);  
+    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, -1.5); 
+    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, 1.5);  
 
     bedGroup.position.set(x, 0, z);
     scene.add(bedGroup);
@@ -514,18 +516,19 @@ function createCatTree(x, z) {
 
     function addTreePart(geo, mat, px, py, pz) {
         const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(x + px, py, z + pz);
+        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+        mesh.position.set(px, py, pz);
         mesh.castShadow = true; mesh.receiveShadow = true;
         scene.add(mesh);
         lobbyProps.push(mesh);
     }
 
     addTreePart(new THREE.BoxGeometry(4, 0.4, 4), matBase, 0, -4.8, 0);
-    addTreePart(new THREE.CylinderGeometry(0.3, 0.3, 2, 8), matPost, -1, -3.6, 1);
+    addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -1, -3.6, 1);
     addTreePart(new THREE.BoxGeometry(2.5, 0.2, 2.5), matBase, -1, -2.5, 1);
-    addTreePart(new THREE.CylinderGeometry(0.3, 0.3, 4, 8), matPost, 1, -2.6, 0);
+    addTreePart(new THREE.BoxGeometry(0.6, 4, 0.6), matPost, 1, -2.6, 0);
     addTreePart(new THREE.BoxGeometry(3, 0.2, 3), matBase, 1, -0.5, 0);
-    addTreePart(new THREE.CylinderGeometry(0.3, 0.3, 2, 8), matPost, -0.5, 0.6, -0.5);
+    addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -0.5, 0.6, -0.5);
     addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, -0.5, 1.7, -0.5);
 }
 
@@ -680,7 +683,6 @@ const fCtx = faceCanvas.getContext('2d');
 faces.forEach(f => {
     let btn = document.createElement('button');
     
-    // Draw the specific face onto our temporary canvas and convert to an image URL
     drawFaceOnCanvas(fCtx, f.id);
     let dataURL = faceCanvas.toDataURL();
 
@@ -720,7 +722,6 @@ startBtn.onclick = () => {
     startScreen.style.display = 'none';
     isCustomizing = false;
 
-    // Pop the player safely back outside the Customization House so they don't get trapped
     if (customizationZone && myPlayerObject.position.distanceTo(customizationZone) < 4) {
         myPlayerObject.position.set(0, -4, -12); 
         socket.emit('playerMovement', { 
@@ -999,10 +1000,15 @@ socket.on('initMap', (mapBlocks) => {
         ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
         
-        createInvisibleWall(40, 40, 2, 0, 25, -21);
-        createInvisibleWall(40, 40, 2, 0, 25, 21);
-        createInvisibleWall(2, 40, 44, -21, 25, 0);
-        createInvisibleWall(2, 40, 44, 21, 25, 0);
+        createHouseWall(42, 2, 1, 0, -4, -20.5, 0x8B4513); 
+        createHouseWall(42, 2, 1, 0, -4, 20.5, 0x8B4513);  
+        createHouseWall(1, 2, 40, -20.5, -4, 0, 0x8B4513); 
+        createHouseWall(1, 2, 40, 20.5, -4, 0, 0x8B4513);  
+
+        createInvisibleWall(42, 40, 1, 0, 17, -20.5);
+        createInvisibleWall(42, 40, 1, 0, 17, 20.5);
+        createInvisibleWall(1, 40, 40, -20.5, 17, 0);
+        createInvisibleWall(1, 40, 40, 20.5, 17, 0);
 
         createCatBed(15, 15, 0xFF69B4);
         createCatBed(-15, -15, 0x4169E1);
@@ -1018,7 +1024,6 @@ socket.on('initMap', (mapBlocks) => {
         createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createHouseWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
         
-        // Ensure pad is NOT added to physical walls/props so you can walk right into it!
         const padGeo = new THREE.BoxGeometry(4, 0.1, 4);
         const padMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
         const pad = new THREE.Mesh(padGeo, padMat);
@@ -1038,7 +1043,7 @@ socket.on('initMap', (mapBlocks) => {
         const cGeo = new THREE.PlaneGeometry(4, 1);
         const cMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cCanvas), transparent: true, depthWrite: false });
         const cMesh = new THREE.Mesh(cGeo, cMat);
-        cMesh.position.set(0, -1.5, -18.9); // Pulled completely clear of the back wall
+        cMesh.position.set(0, -1.5, -18.9); 
         scene.add(cMesh);
 
         customizationZone = new THREE.Vector3(0, -5, -18);
@@ -1154,9 +1159,10 @@ socket.on('decoyPopped', (decoyId) => {
 });
 
 socket.on('spawnHairball', (data) => {
-    const hbGeo = new THREE.SphereGeometry(0.2, 8, 8);
+    const hbGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
     const hbMat = new THREE.MeshLambertMaterial({color: 0x6B4226}); 
     const hbMesh = new THREE.Mesh(hbGeo, hbMat);
+    hbMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(hbGeo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
     hbMesh.position.set(data.x, data.y, data.z);
     scene.add(hbMesh);
     activeHairballs.push({ mesh: hbMesh, dirX: data.dirX, dirZ: data.dirZ, id: data.id, ownerId: data.ownerId });
@@ -1561,14 +1567,13 @@ function animate() {
             velocityY += gravity; 
             myPlayerObject.position.y += velocityY;
             
-            // Fixed jump bounce off ceilings! 
             if (checkCollision(myPlayerObject.position)) {
                 myPlayerObject.position.y = oldY; 
                 if (velocityY > 0) {
-                    velocityY = 0; // Bonked head
+                    velocityY = 0; 
                     isGrounded = false; 
                 } else {
-                    velocityY = 0; // Landed perfectly
+                    velocityY = 0; 
                     isGrounded = true; 
                 }
             } else { 
@@ -1588,7 +1593,6 @@ function animate() {
                 new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
                 new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
             );
-            // Tightened up the tagging box massively so you have to be actually touching them
             seekerBox.expandByScalar(0.2);
 
             Object.keys(otherPlayers).forEach(id => {
