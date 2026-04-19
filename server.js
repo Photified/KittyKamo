@@ -60,9 +60,10 @@ function startLobby() {
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
-        players[id].x = (Math.random() * 30) - 15;
+        // Spawn players in the smaller 20x20 lobby area (-10 to 10)
+        players[id].x = (Math.random() * 16) - 8;
         players[id].y = 20; 
-        players[id].z = (Math.random() * 30) - 15;
+        players[id].z = (Math.random() * 16) - 8;
         players[id].score = 0; 
         players[id].decoyUsed = false; 
         players[id].hairballs = 3; 
@@ -145,7 +146,6 @@ function startRound() {
     timeRemaining = 10; 
     activeDecoys = {};
 
-    // Generate the actual maze for the round
     generateMap();
     io.emit('initMap', mapBlocks);
 
@@ -180,11 +180,14 @@ io.on('connection', (socket) => {
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
+    // Keep spawn tight if joining an active lobby
     players[socket.id] = {
         id: socket.id,
         name: 'Cat-' + socket.id.substring(0, 4),
         score: 0,
-        x: (Math.random() * 30) - 15, y: 20, z: (Math.random() * 30) - 15, 
+        x: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 16) - 8 : (Math.random() * 30) - 15,
+        y: 20, 
+        z: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 16) - 8 : (Math.random() * 30) - 15,
         rY: 0, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
         decoyUsed: false, hairballs: 3, stunned: false, emote: 0, face: 'normal'
     };
@@ -273,7 +276,6 @@ io.on('connection', (socket) => {
                 io.emit('spawnHairball', { id: hbId, ownerId: socket.id, x: data.x, y: data.y, z: data.z, dirX: data.dirX, dirZ: data.dirZ });
                 socket.emit('inventoryUpdate', { decoys: players[socket.id].decoyUsed ? 0 : 1, hairballs: players[socket.id].hairballs });
             } else if (gameState === 'LOBBY' || gameState === 'WAITING') {
-                // Unlimited hairballs in lobby, no decrement!
                 const hbId = 'hb_' + (nextHairballId++);
                 io.emit('spawnHairball', { id: hbId, ownerId: socket.id, x: data.x, y: data.y, z: data.z, dirX: data.dirX, dirZ: data.dirZ });
             }
@@ -281,7 +283,6 @@ io.on('connection', (socket) => {
     });
 
     socket.on('hairballHit', (targetId) => {
-        // PREVENT STUNS IN LOBBY
         if (gameState !== 'SEEKING') return; 
 
         if (players[targetId] && players[targetId].role === 'seeker' && !players[targetId].stunned) {
