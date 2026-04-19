@@ -21,9 +21,9 @@ function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
 
-    // --- 60x60 MAP (-30 to 30) ---
-    for (let x = -30; x <= 30; x++) {
-        for (let z = -30; z <= 30; z++) {
+    // --- 40x40 MAP (-20 to 20) ---
+    for (let x = -20; x <= 20; x++) {
+        for (let z = -20; z <= 20; z++) {
             let y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
             
             mapBlocks.push({ x: x, y: y + 0.5, z: z, color: 0x556B2F });
@@ -58,10 +58,10 @@ function startRound() {
     ids.forEach(id => {
         players[id].role = (id === seekerId) ? 'seeker' : 'hider';
         players[id].color = (id === seekerId) ? 0xFF0000 : 0xFFFFFF;
-        // --- UPDATED SPAWN AREA TO FIT 60x60 MAP ---
-        players[id].x = (Math.random() * 50) - 25;
+        // --- UPDATED SPAWN AREA TO FIT 40x40 MAP ---
+        players[id].x = (Math.random() * 30) - 15;
         players[id].y = 20; 
-        players[id].z = (Math.random() * 50) - 25;
+        players[id].z = (Math.random() * 30) - 15;
         players[id].score = 0; // Reset score (survival time)
         players[id].decoyUsed = false; // Reset decoy usage
     });
@@ -123,8 +123,8 @@ io.on('connection', (socket) => {
         id: socket.id,
         name: 'Cat-' + socket.id.substring(0, 4),
         score: 0,
-        // --- UPDATED SPAWN AREA TO FIT 60x60 MAP ---
-        x: (Math.random() * 50) - 25, y: 20, z: (Math.random() * 50) - 25, 
+        // --- UPDATED SPAWN AREA TO FIT 40x40 MAP ---
+        x: (Math.random() * 30) - 15, y: 20, z: (Math.random() * 30) - 15, 
         rY: 0, moving: false, role: joinRole, color: 0xFFFFFF,
         decoyUsed: false
     };
