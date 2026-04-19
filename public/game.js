@@ -149,7 +149,7 @@ const bgmAudio = new THREE.Audio(listener);
 audioLoader.load('sounds/bgm.wav', (buffer) => {
     bgmAudio.setBuffer(buffer);
     bgmAudio.setLoop(true);
-    bgmAudio.setVolume(0.15); // Default High Volume
+    bgmAudio.setVolume(0.05); // Default Low Volume
 });
 
 // --- GLOBAL MUSIC TOGGLE FUNCTION ---
