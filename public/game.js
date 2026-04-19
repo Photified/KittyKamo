@@ -18,7 +18,7 @@ const colorSunset = new THREE.Color(0xFF7E47);
 const colorNight = new THREE.Color(0x020211); 
 
 // --- 3-STATE VOLUME LOGIC ---
-let volumeState = 2; // 2 = High, 1 = Low, 0 = Mute
+let volumeState = 1; // 2 = High, 1 = Low, 0 = Mute
 const VOL_EMOJIS = { 2: '🔊', 1: '🔉', 0: '🔇' };
 
 // --- INDEPENDENT MUSIC TOGGLE ---
