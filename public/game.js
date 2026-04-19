@@ -462,10 +462,11 @@ scene.add(previewLight);
 // --- CUSTOM NAME ENTRY SCREEN ---
 const startScreen = document.createElement('div');
 startScreen.id = 'startScreen';
-startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; font-family:"Segoe UI", sans-serif; z-index:999;';
+// Use flex-end with padding to push the UI to the bottom, exposing the 3D cat above it perfectly!
+startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom: 10vh; font-family:"Segoe UI", sans-serif; z-index:999; box-sizing:border-box;';
 
 const uiContainer = document.createElement('div');
-uiContainer.style.cssText = 'margin-top: 45vh; display:flex; flex-direction:column; align-items:center;';
+uiContainer.style.cssText = 'display:flex; flex-direction:column; align-items:center; width:100%;';
 
 const logo = document.createElement('h1');
 logo.innerHTML = 'KITTY KAMO';
@@ -483,10 +484,14 @@ uiContainer.appendChild(nameInput);
 
 const colorPalette = document.createElement('div');
 colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
+// Completely refined 12 color options (No Reds, Greens, or Browns)
 const colors = [
     {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, 
-    {n:'Blue', h:0x4169E1}, {n:'Pink', h:0xFF69B4}, {n:'Purple', h:0x800080},
-    {n:'Yellow', h:0xFFD700}, {n:'Cyan', h:0x00FFFF}, {n:'Orange', h:0xFFA500}
+    {n:'Blue', h:0x4169E1}, {n:'Pink', h:0xFF69B4}, 
+    {n:'Purple', h:0x800080}, {n:'Yellow', h:0xFFD700}, 
+    {n:'Cyan', h:0x00FFFF}, {n:'Orange', h:0xFFA500},
+    {n:'Teal', h:0x008080}, {n:'Magenta', h:0xFF00FF}, 
+    {n:'Peach', h:0xFFDAB9}, {n:'Navy', h:0x000080}
 ];
 colors.forEach(c => {
     let btn = document.createElement('button');
@@ -730,6 +735,9 @@ socket.on('initMap', (mapBlocks) => {
 
     activeHairballs.forEach(hb => scene.remove(hb.mesh));
     activeHairballs.length = 0;
+
+    // --- The highly crucial, mysteriously vanished code from last update! ---
+    mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
 
     if (mapBlocks.length > 0) {
         const minX = Math.min(...mapBlocks.map(b => b.x));
@@ -1057,8 +1065,9 @@ function animate() {
 
     if (document.getElementById('startScreen').style.display !== 'none') {
         previewCat.group.visible = true;
-        camera.position.set(0, 101.5, 4);
-        camera.lookAt(0, 100.5, 0);
+        // Position camera to elegantly frame the cat in the higher portion of the screen
+        camera.position.set(0, 100.5, 4);
+        camera.lookAt(0, 100, 0);
         previewCat.group.rotation.y += 0.015;
         renderer.render(scene, camera);
         return; 
@@ -1103,7 +1112,6 @@ function animate() {
         if (p.scale.x < 0.01) { scene.remove(p); particles.splice(i, 1); }
     }
 
-    // --- HAIRBALL PROCESSING ---
     for (let i = activeHairballs.length - 1; i >= 0; i--) {
         let hb = activeHairballs[i];
         hb.mesh.position.x += hb.dirX * 0.3;
