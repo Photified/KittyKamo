@@ -46,6 +46,8 @@ function startLobby() {
     if (ids.length < 2) {
         gameState = 'WAITING';
         timeRemaining = 0;
+        mapBlocks = [];
+        io.emit('initMap', mapBlocks);
         io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [] });
         return;
     }
@@ -53,17 +55,15 @@ function startLobby() {
     gameState = 'LOBBY';
     timeRemaining = 60; 
     
-    // Clear map for a flat lobby arena
     mapBlocks = [];
     io.emit('initMap', mapBlocks);
 
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
-        // Tighter spawn near center to avoid spawning inside the Customization House
-        players[id].x = (Math.random() * 10) - 5;
+        players[id].x = (Math.random() * 30) - 15;
         players[id].y = 20; 
-        players[id].z = (Math.random() * 10) - 5;
+        players[id].z = (Math.random() * 30) - 15;
         players[id].score = 0; 
         players[id].decoyUsed = false; 
         players[id].hairballs = 3; 
@@ -184,9 +184,9 @@ io.on('connection', (socket) => {
         id: socket.id,
         name: 'Cat-' + socket.id.substring(0, 4),
         score: 0,
-        x: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 10) - 5 : (Math.random() * 30) - 15,
+        x: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 30) - 15 : (Math.random() * 30) - 15,
         y: 20, 
-        z: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 10) - 5 : (Math.random() * 30) - 15,
+        z: (gameState === 'LOBBY' || gameState === 'WAITING') ? (Math.random() * 30) - 15 : (Math.random() * 30) - 15,
         rY: 0, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
         decoyUsed: false, hairballs: 3, stunned: false, emote: 0, face: 'normal'
     };
@@ -321,8 +321,16 @@ io.on('connection', (socket) => {
         activePlayers = activePlayers.filter(id => id !== socket.id);
 
         if (gameState !== 'WAITING' && gameState !== 'LOBBY' && activePlayers.length < 2) {
-            startLobby();
+            // Drop to waiting and send out the lobby environment
+            gameState = 'WAITING';
+            timeRemaining = 0;
+            mapBlocks = [];
+            io.emit('initMap', mapBlocks);
+            if (gameTimer) clearInterval(gameTimer);
+            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [] });
         } else if (gameState === 'WAITING' && Object.keys(players).length < 2) {
+            mapBlocks = [];
+            io.emit('initMap', mapBlocks);
             if (gameTimer) clearInterval(gameTimer);
             io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [] });
         }
