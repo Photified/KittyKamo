@@ -376,12 +376,24 @@ const myPlayerObject = new THREE.Object3D();
 scene.add(myPlayerObject);
 
 // --- LOBBY BEAM VISUAL ---
+// Bright White/Blue spotlight material with additive blending to look holographic/glowy
 const beamGeo = new THREE.CylinderGeometry(6, 6, 100, 32, 1, true); 
-const beamMat = new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide });
+const beamMat = new THREE.MeshBasicMaterial({ 
+    color: 0x88CCFF, 
+    transparent: true, 
+    opacity: 0.6, 
+    depthWrite: false, 
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending 
+});
 const beamMesh = new THREE.Mesh(beamGeo, beamMat);
 beamMesh.position.set(0, 45, 0); 
 scene.add(beamMesh);
 
+// Center spotlight for the beam
+const beamLight = new THREE.PointLight(0x88CCFF, 2, 30);
+beamLight.position.set(0, 2, 0);
+scene.add(beamLight);
 
 let qPressTime = 0;
 let isQPressed = false;
@@ -604,7 +616,6 @@ topBar.appendChild(rightBox);
 const helpModal = document.createElement('div');
 helpModal.id = 'helpModal';
 helpModal.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:#222; border:4px solid #555; border-radius:12px; padding:20px; color:white; z-index:150; display:none; width:90%; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.8); flex-direction:column;';
-// Added Hairball Hit reward to the Help Page UI
 helpModal.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
         <h2 style="margin: 0; font-size: 20px; font-weight:900; text-align: center; color: gold;">HOW TO PLAY</h2>
@@ -1110,9 +1121,11 @@ function animate() {
     let cycleProgress = 0;
     if (serverGameState === 'SEEKING') {
         cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
-    } else if (serverGameState === 'WAITING' || serverGameState === 'LOBBY' || serverGameState === 'GAME_OVER' || serverGameState === 'BEAMING') {
+    } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         let timeLoop = (Date.now() % 60000) / 60000; 
         cycleProgress = Math.abs(timeLoop * 2 - 1); 
+    } else if (serverGameState === 'LOBBY' || serverGameState === 'BEAMING') {
+        cycleProgress = 1; // Force night time during Lobby!
     } else {
         cycleProgress = 0; 
     }
@@ -1136,9 +1149,11 @@ function animate() {
     sunLight.intensity = 0.8 * dimFactor;
     ambientLight.intensity = 0.4 * dimFactor;
 
+    // Toggle Beam & SpotLight Visibility
     beamMesh.visible = (serverGameState === 'LOBBY' || serverGameState === 'BEAMING');
+    beamLight.visible = beamMesh.visible;
     if (beamMesh.visible) {
-        beamMat.opacity = 0.2 + Math.sin(performance.now() / 150) * 0.15;
+        beamMat.opacity = 0.4 + Math.sin(performance.now() / 150) * 0.2; // Pulsing glow effect
         beamMesh.rotation.y += 0.01;
     }
 
@@ -1260,7 +1275,7 @@ function animate() {
             velocityY = 0.2; 
             myPlayerObject.position.y += velocityY;
             isGrounded = false;
-            moved = true; // Updates animation
+            moved = true; 
         } else {
             const oldY = myPlayerObject.position.y;
             velocityY += gravity; myPlayerObject.position.y += velocityY;
@@ -1354,7 +1369,7 @@ function animate() {
         
         let globalTime = performance.now() / 150; 
         myCatData.stunned = amIStunned; 
-        animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime); // Use stretching emote while beaming
+        animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
 
         let finalScaleY = 1; let finalScaleXZ = 1;
         if (!isGrounded && !isBeaming) {
