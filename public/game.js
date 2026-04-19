@@ -111,20 +111,13 @@ function playCatMeow(catData) {
     catData.pAudio.play();
 }
 
-const faceTextures = {};
-function getFaceTexture(type) {
-    if (faceTextures[type]) return faceTextures[type];
-    const canvas = document.createElement('canvas');
-    canvas.width = 128; canvas.height = 128;
-    const ctx = canvas.getContext('2d');
+function drawFaceOnCanvas(ctx, type) {
     ctx.clearRect(0, 0, 128, 128);
-
     ctx.strokeStyle = '#000';
     ctx.fillStyle = '#000';
     ctx.lineWidth = 10;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-
     ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
     ctx.shadowBlur = 6;
 
@@ -159,6 +152,15 @@ function getFaceTexture(type) {
         ctx.fillRect(32, 45, 16, 16); ctx.fillRect(80, 45, 16, 16);
         ctx.beginPath(); ctx.moveTo(56, 85); ctx.lineTo(64, 95); ctx.lineTo(72, 85); ctx.stroke();
     }
+}
+
+const faceTextures = {};
+function getFaceTexture(type) {
+    if (faceTextures[type]) return faceTextures[type];
+    const canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    drawFaceOnCanvas(ctx, type);
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.magFilter = THREE.NearestFilter; 
@@ -666,15 +668,24 @@ uiContainer.appendChild(colorPalette);
 const facePalette = document.createElement('div');
 facePalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 400px;';
 const faces = [
-    { id: 'normal', emoji: '🙂' }, { id: 'happy', emoji: '😄' }, 
-    { id: 'mad', emoji: '😠' }, { id: 'surprised', emoji: '😲' }, 
-    { id: 'meh', emoji: '😑' }, { id: 'crying', emoji: '😭' }
+    { id: 'normal'}, { id: 'happy'}, 
+    { id: 'mad'}, { id: 'surprised'}, 
+    { id: 'meh'}, { id: 'crying'}
 ];
+
+const faceCanvas = document.createElement('canvas');
+faceCanvas.width = 128; faceCanvas.height = 128;
+const fCtx = faceCanvas.getContext('2d');
 
 faces.forEach(f => {
     let btn = document.createElement('button');
-    btn.innerHTML = f.emoji;
-    btn.style.cssText = `width:40px; height:40px; border-radius:8px; background:#333; color:white; font-size:20px; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s; display:flex; align-items:center; justify-content:center; padding:0;`;
+    
+    // Draw the specific face onto our temporary canvas and convert to an image URL
+    drawFaceOnCanvas(fCtx, f.id);
+    let dataURL = faceCanvas.toDataURL();
+
+    btn.style.cssText = `width:40px; height:40px; border-radius:8px; background-color:#DDD; background-image:url(${dataURL}); background-size:80%; background-position:center; background-repeat:no-repeat; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s;`;
+    
     btn.onclick = () => { 
         window.myFace = f.id; 
         previewCat.faceMesh.material.map = getFaceTexture(f.id);
@@ -709,8 +720,14 @@ startBtn.onclick = () => {
     startScreen.style.display = 'none';
     isCustomizing = false;
 
-    if (customizationZone && myPlayerObject.position.distanceTo(customizationZone) < 3) {
-        myPlayerObject.position.z += 4;
+    // Pop the player safely back outside the Customization House so they don't get trapped
+    if (customizationZone && myPlayerObject.position.distanceTo(customizationZone) < 4) {
+        myPlayerObject.position.set(0, -4, -12); 
+        socket.emit('playerMovement', { 
+            x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z,
+            rY: myPlayerObject.rotation.y, moving: false, color: window.myBaseColor, role: myRole,
+            emote: myEmote
+        });
     }
 
     let mUI = document.getElementById('mobileUI');
@@ -1001,12 +1018,12 @@ socket.on('initMap', (mapBlocks) => {
         createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createHouseWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
         
+        // Ensure pad is NOT added to physical walls/props so you can walk right into it!
         const padGeo = new THREE.BoxGeometry(4, 0.1, 4);
         const padMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
         const pad = new THREE.Mesh(padGeo, padMat);
         pad.position.set(0, -4.95, -18);
         scene.add(pad);
-        lobbyProps.push(pad);
         
         const cCanvas = document.createElement('canvas');
         cCanvas.width = 512; cCanvas.height = 128;
@@ -1021,9 +1038,8 @@ socket.on('initMap', (mapBlocks) => {
         const cGeo = new THREE.PlaneGeometry(4, 1);
         const cMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cCanvas), transparent: true, depthWrite: false });
         const cMesh = new THREE.Mesh(cGeo, cMat);
-        cMesh.position.set(0, -1.5, -19.49); 
+        cMesh.position.set(0, -1.5, -18.9); // Pulled completely clear of the back wall
         scene.add(cMesh);
-        lobbyProps.push(cMesh);
 
         customizationZone = new THREE.Vector3(0, -5, -18);
     }
@@ -1191,7 +1207,6 @@ function checkCollision(pos) {
         if (pBox.intersectsBox(propBox)) return true;
     }
 
-    // Completely removed physical collision against other players!
     return false;
 }
 
@@ -1546,14 +1561,14 @@ function animate() {
             velocityY += gravity; 
             myPlayerObject.position.y += velocityY;
             
-            // Fixed jump bouncing logic
+            // Fixed jump bounce off ceilings! 
             if (checkCollision(myPlayerObject.position)) {
                 myPlayerObject.position.y = oldY; 
                 if (velocityY > 0) {
-                    velocityY = 0; 
+                    velocityY = 0; // Bonked head
                     isGrounded = false; 
                 } else {
-                    velocityY = 0; 
+                    velocityY = 0; // Landed perfectly
                     isGrounded = true; 
                 }
             } else { 
@@ -1573,7 +1588,7 @@ function animate() {
                 new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
                 new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
             );
-            // Reduced massively to avoid bluetooth tagging
+            // Tightened up the tagging box massively so you have to be actually touching them
             seekerBox.expandByScalar(0.2);
 
             Object.keys(otherPlayers).forEach(id => {
