@@ -329,7 +329,14 @@ function createCatSculpt(startColor = 0xFFFFFF, startFace = 'normal') {
     const crown = createCrown();
     head.add(crown); 
 
-    return { group: containerGroup, body: catBody, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat, faceMesh: faceMesh };
+    // --- DROP BEAM ADDED ---
+    const dBeamGeo = new THREE.CylinderGeometry(0.8, 0.8, 60, 16, 1, true);
+    const dBeamMat = new THREE.MeshBasicMaterial({ color: 0xFFFFAA, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+    const dBeam = new THREE.Mesh(dBeamGeo, dBeamMat);
+    dBeam.position.y = 30; // Starts from high above the cat
+    containerGroup.add(dBeam);
+
+    return { group: containerGroup, body: catBody, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat, faceMesh: faceMesh, dBeamMat: dBeamMat };
 }
 
 function setNameLabel(catData, name) {
@@ -486,6 +493,13 @@ const beamGroundMesh = new THREE.Mesh(beamGroundGeo, beamGroundMat);
 beamGroundMesh.rotation.x = -Math.PI / 2;
 beamGroundMesh.position.set(0, -4.9, 0); 
 scene.add(beamGroundMesh);
+
+// --- MVP PODIUM VISUAL ---
+const mvpPodium = new THREE.Mesh(new THREE.CylinderGeometry(2, 2.5, 1, 16), new THREE.MeshLambertMaterial({color: 0x4CAF50}));
+mvpPodium.position.set(0, 99.5, 0);
+mvpPodium.add(new THREE.LineSegments(new THREE.EdgesGeometry(mvpPodium.geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+scene.add(mvpPodium);
+mvpPodium.visible = false;
 
 function createCatBed(x, z, color) {
     const bedGroup = new THREE.Group();
@@ -1099,22 +1113,30 @@ socket.on('initMap', (mapBlocks) => {
         const maxX = Math.max(...mapBlocks.map(b => b.x));
         const minZ = Math.min(...mapBlocks.map(b => b.z));
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
+        
+        // Find highest map block so walls are just tall enough
+        const maxY = Math.max(...mapBlocks.map(b => b.y)); 
 
         const widthX = (maxX - minX) + 5; 
         
-        // Massive ground to cover the horizon
-        ground.scale.set(100, 100, 1);
+        // Massive ground so map edge void isn't visible
+        ground.scale.set(150, 150, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Walls shifted inward by 0.5 to overlap the outermost blocks seamlessly!
-        createWall(widthX, 40, 2, (minX + maxX) / 2, 10, minZ - 0.5);
-        createWall(widthX, 40, 2, (minX + maxX) / 2, 10, maxZ + 0.5);
+        // Walls adjusted dynamically so they don't block the sky
+        const visWallH = maxY + 7;
+        const visWallY = -5 + (visWallH / 2);
+
+        // Walls shifted inward by 0.5 to overlap the outermost blocks perfectly!
+        createWall(widthX, visWallH, 2, (minX + maxX) / 2, visWallY, minZ - 0.5);
+        createWall(widthX, visWallH, 2, (minX + maxX) / 2, visWallY, maxZ + 0.5);
         
         const wallDepthZ = (maxZ - minZ) + 4;
-        createWall(2, 40, wallDepthZ, minX - 0.5, 10, (minZ + maxZ) / 2);
-        createWall(2, 40, wallDepthZ, maxX + 0.5, 10, (minZ + maxZ) / 2);
+        createWall(2, visWallH, wallDepthZ, minX - 0.5, visWallY, (minZ + maxZ) / 2);
+        createWall(2, visWallH, wallDepthZ, maxX + 0.5, visWallY, (minZ + maxZ) / 2);
         
+        // Invisible collision still shoots high into the sky
         createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 25, minZ - 0.5);
         createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
         createInvisibleWall(2, 100, wallDepthZ, minX - 0.5, 25, (minZ + maxZ) / 2);
@@ -1210,6 +1232,7 @@ socket.on('currentPlayers', (players) => {
 
             myCatData.material.color.setHex(players[id].color);
             myCatData.faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
+            myCatData.faceStr = players[id].face || 'normal'; // track for MVP screen
             
             let cColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
             myCatData.crownMat.color.setHex(cColor);
@@ -1236,6 +1259,7 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].stunned = players[id].stunned;
                 otherPlayers[id].baseColor = players[id].baseColor;
                 otherPlayers[id].faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
+                otherPlayers[id].faceStr = players[id].face || 'normal'; // track for MVP screen
                 
                 let oColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
                 otherPlayers[id].crownMat.color.setHex(oColor);
@@ -1326,6 +1350,7 @@ function addOtherPlayer(id, playerInfo) {
     catData.emote = playerInfo.emote || 0;
     catData.stunned = playerInfo.stunned || false;
     catData.baseColor = playerInfo.baseColor || 0xFFFFFF; 
+    catData.faceStr = playerInfo.face || 'normal';
 
     setNameLabel(catData, playerInfo.name); 
     catData.crown.visible = (id === serverWinnerId);
@@ -1480,16 +1505,13 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[3].position.set(-0.15, 0.1, -0.3);
         cat.legs[3].rotation.z = Math.PI / 2;
     } else if (emote === 2) { 
-        // HANDSTAND
         cat.body.position.y = 0.4;
-        cat.body.rotation.x = -Math.PI / 2.5; // Pitch forward
-        cat.head.rotation.x = -Math.PI / 6; // Look up
+        cat.body.rotation.x = -Math.PI / 2.5; 
+        cat.head.rotation.x = Math.PI / 2.5; 
         
-        // Front legs touch ground
         cat.legs[2].rotation.x = Math.PI / 2.5;
         cat.legs[3].rotation.x = Math.PI / 2.5;
         
-        // Back legs wave
         cat.legs[0].rotation.x = Math.PI / 6 + Math.sin(walkTime * 4) * 0.4;
         cat.legs[1].rotation.x = Math.PI / 6 + Math.sin(walkTime * 4 + Math.PI) * 0.4;
         cat.tail.rotation.x = Math.PI / 4;
@@ -1508,18 +1530,15 @@ function animateCat(cat, emote, walkTime) {
         cat.body.position.y = 0.1;
         cat.body.rotation.x = -Math.PI / 8;
     } else if (emote === 5) { 
-        // STANDING ON BACK LEGS, SCRATCHING
         cat.body.position.y = 0.3; 
-        cat.body.rotation.x = Math.PI / 3; // Pitch backward
-        cat.head.rotation.x = Math.PI / 6; // Look forward
+        cat.body.rotation.x = Math.PI / 3; 
+        cat.head.rotation.x = -Math.PI / 4; 
         
-        // Back legs touch ground
         cat.legs[0].rotation.x = -Math.PI / 3; 
         cat.legs[1].rotation.x = -Math.PI / 3;
         
-        // Front legs scratch
-        cat.legs[2].rotation.x = -Math.PI / 4 + Math.sin(walkTime * 6) * 0.4; 
-        cat.legs[3].rotation.x = -Math.PI / 4 + Math.sin(walkTime * 6 + Math.PI) * 0.4;
+        cat.legs[2].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 1.5) * 0.3; 
+        cat.legs[3].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 1.5 + Math.PI) * 0.3;
         cat.tail.rotation.x = -Math.PI / 4;
     } else { 
         if (cat.moving || walkTime > 0) {
@@ -1538,15 +1557,50 @@ function animate() {
     if (now - lastRenderTime < fpsInterval) return; 
     lastRenderTime = now - (now % fpsInterval);
 
-    if (document.getElementById('startScreen').style.display !== 'none') {
+    // --- MVP OR START SCREEN OVERRIDE ---
+    if (document.getElementById('startScreen').style.display !== 'none' || serverGameState === 'GAME_OVER') {
         previewCat.group.visible = true;
-        camera.position.set(0, 100.5, 4);
-        camera.lookAt(0, 100, 0);
+        mvpPodium.visible = true;
+        
+        if (serverGameState === 'GAME_OVER' && serverWinnerId) {
+            let winColor = 0xFFFFFF;
+            let winFace = 'happy';
+            let winName = 'MVP';
+            if (serverWinnerId === socket.id) {
+                winColor = window.myBaseColor;
+                winFace = window.myFace;
+                winName = myName;
+            } else if (otherPlayers[serverWinnerId]) {
+                winColor = otherPlayers[serverWinnerId].baseColor;
+                winFace = otherPlayers[serverWinnerId].faceStr || 'happy';
+                winName = otherPlayers[serverWinnerId].currentName;
+            }
+            previewCat.material.color.setHex(winColor);
+            previewCat.faceMesh.material.map = getFaceTexture(winFace);
+            previewCat.crown.visible = true;
+            let cColor = (winColor === 0xFFFFFF || winColor === 0xFF0000) ? 0xFFD700 : winColor;
+            previewCat.crownMat.color.setHex(cColor);
+            
+            setNameLabel(previewCat, winName);
+            if(previewCat.nameSprite) {
+                previewCat.nameSprite.visible = true;
+                previewCat.nameSprite.position.y = 2.0; 
+            }
+        } else {
+            previewCat.material.color.setHex(window.myBaseColor);
+            previewCat.faceMesh.material.map = getFaceTexture(window.myFace);
+            previewCat.crown.visible = false;
+            if(previewCat.nameSprite) previewCat.nameSprite.visible = false;
+        }
+
+        camera.position.set(0, 101.5, 6);
+        camera.lookAt(0, 100.5, 0);
         previewCat.group.rotation.y += 0.015;
         renderer.render(scene, camera);
         return; 
     } else {
         previewCat.group.visible = false;
+        mvpPodium.visible = false;
     }
 
     myPlayerObject.rotation.x = 0;
@@ -1555,7 +1609,7 @@ function animate() {
     let cycleProgress = 0;
     if (serverGameState === 'SEEKING') {
         cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
-    } else if (serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
+    } else if (serverGameState === 'WAITING') {
         let timeLoop = (Date.now() % 60000) / 60000; 
         cycleProgress = Math.abs(timeLoop * 2 - 1); 
     } else {
@@ -1712,7 +1766,7 @@ function animate() {
         });
     }
 
-    if (myRole === 'spectator' || serverGameState === 'GAME_OVER') {
+    if (myRole === 'spectator') {
         myCatData.group.visible = false;
         if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
         if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
@@ -1873,6 +1927,10 @@ function animate() {
         myCatData.stunned = amIStunned; 
         animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
 
+        let isDropping = (serverGameState === 'HIDING' && serverTime >= 8);
+        let targetOp = isDropping ? 0.6 : 0;
+        myCatData.dBeamMat.opacity += (targetOp - myCatData.dBeamMat.opacity) * 0.1;
+
         let finalScaleY = 1; let finalScaleXZ = 1;
         if (!isGrounded && !isBeaming) {
             if (velocityY > 0) { let stretch = 1 + (velocityY * 0.8); finalScaleY *= stretch; finalScaleXZ *= (1 / stretch); }
@@ -1893,7 +1951,7 @@ function animate() {
 
     let globalTime = performance.now() / 136; 
     Object.values(otherPlayers).forEach(p => {
-        if (p.role === 'spectator' || (serverGameState === 'GAME_OVER' && p.id !== serverWinnerId)) { 
+        if (p.role === 'spectator') { 
             p.group.visible = false; return; 
         } else { 
             p.group.visible = true; 
@@ -1918,15 +1976,16 @@ function animate() {
 
         let isOtherBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(p.id));
         animateCat(p, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
+
+        let isOtherDropping = (serverGameState === 'HIDING' && serverTime >= 8);
+        let targetOtherOp = isOtherDropping ? 0.6 : 0;
+        p.dBeamMat.opacity += (targetOtherOp - p.dBeamMat.opacity) * 0.1;
     });
 
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
 
     let focusObject = myPlayerObject;
-    if (serverGameState === 'GAME_OVER' && serverWinnerId) {
-        focusObject = (serverWinnerId === socket.id) ? myPlayerObject : (otherPlayers[serverWinnerId] ? otherPlayers[serverWinnerId].group : myPlayerObject);
-        focusObject.rotation.y += 0.02; 
-    } else if (myRole === 'spectator') {
+    if (myRole === 'spectator') {
         let seekerId = Object.keys(otherPlayers).find(id => otherPlayers[id].role === 'seeker');
         if (seekerId && otherPlayers[seekerId]) focusObject = otherPlayers[seekerId].group;
     }
@@ -1934,10 +1993,7 @@ function animate() {
     focusObject.updateMatrixWorld(); 
     
     let idealOffset = new THREE.Vector3(0, 1.5, 3);
-    
-    if (serverGameState === 'GAME_OVER') {
-        idealOffset.set(0, 20, 20); 
-    } else if (isMobile && window.innerHeight > window.innerWidth) {
+    if (isMobile && window.innerHeight > window.innerWidth) {
         idealOffset.set(0, 2.5, 4); 
     }
 
@@ -1945,10 +2001,6 @@ function animate() {
     camera.position.lerp(cameraTargetPos, 0.15);
     
     let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
-    
-    if (serverGameState === 'GAME_OVER') {
-        lookAtTarget = focusObject.position.clone(); 
-    }
     camera.lookAt(lookAtTarget);
 
     walls.forEach(w => {
