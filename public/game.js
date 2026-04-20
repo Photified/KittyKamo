@@ -407,6 +407,18 @@ function createHouseWall(w, h, d, x, y, z, color) {
     walls.push(mesh); 
 }
 
+const wallMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
+function createWall(w, h, d, x, y, z) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = wallMat.clone();
+    mat.transparent = true; 
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    walls.push(mesh);
+}
+
 const invisibleWalls = [];
 const invisibleMat = new THREE.MeshBasicMaterial({ visible: false });
 function createInvisibleWall(w, h, d, x, y, z) {
@@ -415,24 +427,6 @@ function createInvisibleWall(w, h, d, x, y, z) {
     mesh.position.set(x, y, z);
     scene.add(mesh);
     invisibleWalls.push(mesh);
-}
-
-// --- DISTANT VOXEL MOUNTAINS ---
-const mountainObjects = [];
-function createDistantMountains() {
-    mountainObjects.forEach(m => scene.remove(m)); mountainObjects.length = 0;
-    const colors = [0x5C4033, 0x4B3621, 0x228B22, 0x1B4D3E, 0x556B2F];
-    for (let i = 0; i < 60; i++) {
-        const h = Math.random() * 30 + 10;
-        const w = Math.random() * 15 + 15;
-        const geo = new THREE.BoxGeometry(w, h, w);
-        const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: colors[Math.floor(Math.random() * colors.length)] }));
-        const angle = (i / 60) * Math.PI * 2;
-        const dist = 60 + Math.random() * 20;
-        mesh.position.set(Math.cos(angle) * dist, -5 + (h / 2), Math.sin(angle) * dist);
-        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
-        scene.add(mesh); mountainObjects.push(mesh);
-    }
 }
 
 const mapObjects = [];
@@ -715,11 +709,8 @@ blindfoldBg.position.z = -5;
 blindfoldBg.renderOrder = 999; 
 blindfoldStage.add(blindfoldBg);
 
-const blindfoldLight = new THREE.PointLight(0xffffff, 1, 20);
-blindfoldLight.position.set(0, 0, -2);
-blindfoldStage.add(blindfoldLight);
-
-const blindfoldAmbient = new THREE.AmbientLight(0xffffff, 0.6);
+// Removed PointLight so there is no spotlight on the ground
+const blindfoldAmbient = new THREE.AmbientLight(0xffffff, 1.2);
 blindfoldStage.add(blindfoldAmbient);
 
 const loadingCats = [];
@@ -1145,25 +1136,27 @@ socket.on('initMap', (mapBlocks) => {
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
 
         const widthX = (maxX - minX) + 5; 
-        const wallDepthZ = (maxZ - minZ) + 4;
+        const depthZ = (maxZ - minZ) + 5;
         
-        // Massive ground so map edge void isn't visible
-        ground.scale.set(150, 150, 1);
+        // Ground perfectly sized to the map to look like a floating island
+        ground.scale.set(widthX, depthZ, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Invisible walls only, allowing you to see the distant mountains!
-        createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 45, minZ - 0.5);
-        createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 45, maxZ + 0.5);
-        createInvisibleWall(2, 100, wallDepthZ, minX - 0.5, 45, (minZ + maxZ) / 2);
-        createInvisibleWall(2, 100, wallDepthZ, maxX + 0.5, 45, (minZ + maxZ) / 2);
-
-        createDistantMountains();
+        // Visible border walls exactly 1 block high above the floor
+        createWall(widthX, 2, 2, (minX + maxX) / 2, -4, minZ - 1.5);
+        createWall(widthX, 2, 2, (minX + maxX) / 2, -4, maxZ + 1.5);
+        createWall(2, 2, depthZ, minX - 1.5, -4, (minZ + maxZ) / 2);
+        createWall(2, 2, depthZ, maxX + 1.5, -4, (minZ + maxZ) / 2);
+        
+        // Invisible collision still shoots high into the sky to prevent falling off
+        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 17, minZ - 1.5);
+        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 17, maxZ + 1.5);
+        createInvisibleWall(2, 40, depthZ, minX - 1.5, 17, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 40, depthZ, maxX + 1.5, 17, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        mountainObjects.forEach(m => scene.remove(m)); mountainObjects.length = 0;
-        
-        ground.scale.set(100, 100, 1);
+        ground.scale.set(40, 40, 1);
         ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
         
@@ -1583,15 +1576,15 @@ function animate() {
     // --- MVP OR START SCREEN OVERRIDE ---
     if (document.getElementById('startScreen').style.display !== 'none' || serverGameState === 'GAME_OVER') {
         previewCat.group.visible = true;
-        mvpPodiumGroup.visible = true;
-        
-        // Force daytime lighting for MVP screen
-        scene.background.copy(colorDay);
-        sunLight.intensity = 0.8;
-        ambientLight.intensity = 0.4;
-        if(starMat) starMat.opacity = 0;
         
         if (serverGameState === 'GAME_OVER' && serverWinnerId) {
+            // MVP SCREEN 
+            mvpPodiumGroup.visible = true;
+            scene.background.copy(colorDay);
+            sunLight.intensity = 0.8;
+            ambientLight.intensity = 0.4;
+            if(starMat) starMat.opacity = 0;
+
             let winColor = 0xFFFFFF;
             let winFace = 'happy';
             let winName = 'MVP';
@@ -1623,17 +1616,29 @@ function animate() {
             }
             animateCat(previewCat, currentMvpEmote, now / 200);
 
+            // Sync rotation of cat and podium
+            previewCat.group.rotation.y += 0.015;
+            mvpPodiumGroup.rotation.y = previewCat.group.rotation.y;
+
+            camera.position.set(0, 103, 8); 
+            camera.lookAt(0, 100.5, 0);
+
         } else {
+            // START SCREEN
+            mvpPodiumGroup.visible = false;
             previewCat.material.color.setHex(window.myBaseColor);
             previewCat.faceMesh.material.map = getFaceTexture(window.myFace);
             previewCat.crown.visible = false;
             if(previewCat.nameSprite) previewCat.nameSprite.visible = false;
+            
             animateCat(previewCat, 0, 0); // Reset animation
+            
+            previewCat.group.rotation.y += 0.015;
+
+            camera.position.set(0, 100.5, 4); 
+            camera.lookAt(0, 100, 0);
         }
 
-        camera.position.set(0, 101.5, 6);
-        camera.lookAt(0, 100.5, 0);
-        previewCat.group.rotation.y += 0.015;
         renderer.render(scene, camera);
         return; 
     } else {
