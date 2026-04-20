@@ -284,7 +284,8 @@ io.on('connection', (socket) => {
         y: startY, 
         z: startZ,
         rY: startRY, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
-        decoys: 3, hairballs: 10, stunned: false, emote: 0, face: 'normal'
+        decoys: 3, hairballs: 10, stunned: false, emote: 0, face: 'normal',
+        wardrobe: [null, null, null]
     };
 
     socket.emit('currentPlayers', players);
@@ -303,6 +304,7 @@ io.on('connection', (socket) => {
             }
             players[socket.id].baseColor = data.color;
             players[socket.id].face = data.face || 'normal';
+            players[socket.id].wardrobe = data.wardrobe || [null, null, null];
             if (players[socket.id].role !== 'seeker') {
                 players[socket.id].color = data.color;
             }
