@@ -329,12 +329,11 @@ function createCatSculpt(startColor = 0xFFFFFF, startFace = 'normal') {
     const crown = createCrown();
     head.add(crown); 
 
-    // --- DROP BEAM ADDED WITH NAME FLAG ---
     const dBeamGeo = new THREE.CylinderGeometry(0.8, 0.8, 60, 16, 1, true);
     const dBeamMat = new THREE.MeshBasicMaterial({ color: 0xFFFFAA, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
     const dBeam = new THREE.Mesh(dBeamGeo, dBeamMat);
-    dBeam.name = 'dBeam'; // Identifying tag so we can hide it on loading cats!
-    dBeam.position.y = 30; // Starts from high above the cat
+    dBeam.name = 'dBeam'; 
+    dBeam.position.y = 30; 
     containerGroup.add(dBeam);
 
     return { group: containerGroup, body: catBody, head: head, legs: legs, tail: tailPivot, material: uniqueMat, pAudio: pAudio, crown: crown, crownMat: crown.crownMat, faceMesh: faceMesh, dBeamMat: dBeamMat };
@@ -499,8 +498,8 @@ scene.add(beamGroundMesh);
 const mvpPodiumGroup = new THREE.Group();
 function createVoxelMVPBed() {
     mvpPodiumGroup.clear();
-    const baseMat = new THREE.MeshLambertMaterial({color: 0xFFD700}); // Gold base
-    const rimMat = new THREE.MeshLambertMaterial({color: 0xFFFFFF}); // White fluffy rim
+    const baseMat = new THREE.MeshLambertMaterial({color: 0xFFD700}); 
+    const rimMat = new THREE.MeshLambertMaterial({color: 0xFFFFFF}); 
     
     function addP(geo, mat, px, py, pz) {
         const m = new THREE.Mesh(geo, mat);
@@ -709,7 +708,6 @@ blindfoldBg.position.z = -5;
 blindfoldBg.renderOrder = 999; 
 blindfoldStage.add(blindfoldBg);
 
-// Removed PointLight so there is no spotlight on the ground
 const blindfoldAmbient = new THREE.AmbientLight(0xffffff, 1.2);
 blindfoldStage.add(blindfoldAmbient);
 
@@ -718,7 +716,6 @@ for(let i=0; i<3; i++) {
     let cat = createCatSculpt(0xFFFFFF);
     cat.group.position.set((Math.random() * 10) - 5, -0.5 - (i * 1.0), -4);
     cat.group.traverse((child) => {
-        // PREVENT DROP BEAM ON LOADING CATS
         if (child.name === 'dBeam') {
             child.visible = false; 
             return;
@@ -1143,20 +1140,23 @@ socket.on('initMap', (mapBlocks) => {
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Visible border walls exactly 1 block high above the floor
-        createWall(widthX, 2, 2, (minX + maxX) / 2, -4, minZ - 1.5);
-        createWall(widthX, 2, 2, (minX + maxX) / 2, -4, maxZ + 1.5);
-        createWall(2, 2, depthZ, minX - 1.5, -4, (minZ + maxZ) / 2);
-        createWall(2, 2, depthZ, maxX + 1.5, -4, (minZ + maxZ) / 2);
+        // Restore original wall height (10) and position (y=0) so there is no gap/ledge to fall into
+        createWall(widthX, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5);
+        createWall(widthX, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5);
         
-        // Invisible collision still shoots high into the sky to prevent falling off
-        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 17, minZ - 1.5);
-        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 17, maxZ + 1.5);
-        createInvisibleWall(2, 40, depthZ, minX - 1.5, 17, (minZ + maxZ) / 2);
-        createInvisibleWall(2, 40, depthZ, maxX + 1.5, 17, (minZ + maxZ) / 2);
+        const wallDepthZ = (maxZ - minZ) + 1;
+        createWall(2, 10, wallDepthZ, minX - 1.5, 0, (minZ + maxZ) / 2);
+        createWall(2, 10, wallDepthZ, maxX + 1.5, 0, (minZ + maxZ) / 2);
+        
+        // Invisible collision still shoots high into the sky to prevent falling over the walls
+        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, minZ - 1.5);
+        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, maxZ + 1.5);
+        createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
+
     } else {
         // FLAT LOBBY
-        ground.scale.set(40, 40, 1);
+        ground.scale.set(100, 100, 1);
         ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
         
