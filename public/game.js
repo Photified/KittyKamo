@@ -718,9 +718,9 @@ function createCraftingTable(x, z) {
     addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, -1.3, -4.6, 0.4, true);
     addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, 1.3, -4.6, 0.4, true);
 
-    // --- NEW SHELVES ---
-    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.6), matWood, 0, -2.8, -0.8, true); // Bottom Shelf
-    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.6), matWood, 0, -1.6, -0.8, true); // Top Shelf
+    // --- NEW SHELVES (Moved forward to Z: -0.4 so they don't clip into the wall!) ---
+    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.4), matWood, 0, -2.8, -0.4, true); // Bottom Shelf
+    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.4), matWood, 0, -1.6, -0.4, true); // Top Shelf
 
     // Lowered Papers
     addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, -0.5, -4.08, 0);
@@ -743,88 +743,86 @@ function createCraftingTable(x, z) {
 
     // --- ADD WARDROBE PROPS (DESK) ---
     const hatProp = buildAccessory('topHat', 0x222222).meshGroup;
-    hatProp.position.set(-1.0, -4.29, 0.1); 
+    hatProp.position.set(-1.0, -4.295, 0.1); 
     hatProp.rotation.y = 0.4;
     tableGroup.add(hatProp);
 
     const glassesProp = buildAccessory('glasses', 0x00FFFF).meshGroup;
-    glassesProp.position.set(0.1, -4.07, 0.3);
+    glassesProp.position.set(0.1, -4.1, 0.3);
     glassesProp.rotation.y = -0.3;
     tableGroup.add(glassesProp);
 
     const boot1 = buildAccessory('boots', 0x333333).meshGroup;
-    boot1.position.set(1.1, -3.95, 0.1);
+    boot1.position.set(1.1, -3.945, 0.1);
     boot1.rotation.y = -0.6;
     tableGroup.add(boot1);
 
     const boot2 = buildAccessory('boots', 0x333333).meshGroup;
-    boot2.position.set(1.3, -3.95, 0.3);
+    boot2.position.set(1.3, -3.945, 0.3);
     boot2.rotation.y = -0.2;
     tableGroup.add(boot2);
 
-
-    // --- ADD WARDROBE PROPS (BOTTOM SHELF) ---
-    const partyHat1 = buildAccessory('partyHat', 0xFF1493).meshGroup; // Deep pink
-    partyHat1.position.set(-1.2, -2.95, -0.85);
+    // --- ADD WARDROBE PROPS (BOTTOM SHELF: Y = -2.75) ---
+    const partyHat1 = buildAccessory('partyHat', 0xFF1493).meshGroup; 
+    partyHat1.position.set(-1.2, -2.95, -0.4);
     partyHat1.rotation.y = 0.2;
     tableGroup.add(partyHat1);
 
-    const partyHat2 = buildAccessory('partyHat', 0x00FFFF).meshGroup; // Cyan
-    partyHat2.position.set(-0.7, -2.95, -0.85);
-    partyHat2.rotation.y = -0.1;
-    tableGroup.add(partyHat2);
+    const bowTie1 = buildAccessory('bowTie', 0x00FFFF).meshGroup; 
+    bowTie1.position.set(-0.7, -3.25, 0.02); // 0.02 counteracts the internal chest anchor
+    bowTie1.rotation.y = -0.1;
+    tableGroup.add(bowTie1);
 
-    const monocle1 = buildAccessory('monocle', 0xFFD700).meshGroup; // Gold
-    monocle1.position.set(-0.2, -2.7, -0.64);
+    const monocle1 = buildAccessory('monocle', 0xFFD700).meshGroup; 
+    monocle1.position.set(-0.2, -2.6, -0.19); // counteracts the face anchor
     monocle1.rotation.y = 0.3;
     tableGroup.add(monocle1);
 
-    const bowTie1 = buildAccessory('bowTie', 0xFF0000).meshGroup; // Red
-    bowTie1.position.set(0.3, -3.25, -0.43);
-    bowTie1.rotation.y = -0.2;
-    tableGroup.add(bowTie1);
+    const glasses2 = buildAccessory('glasses', 0xFFFFFF).meshGroup; 
+    glasses2.position.set(0.3, -2.75, -0.19);
+    glasses2.rotation.y = -0.2;
+    tableGroup.add(glasses2);
 
-    const bowTie2 = buildAccessory('bowTie', 0x0000FF).meshGroup; // Blue
-    bowTie2.position.set(0.8, -3.25, -0.43); 
+    const bowTie2 = buildAccessory('bowTie', 0xFF0000).meshGroup; 
+    bowTie2.position.set(0.8, -3.25, 0.02); 
     bowTie2.rotation.y = 0.1;
     tableGroup.add(bowTie2);
 
-    const glasses2 = buildAccessory('glasses', 0xFFFFFF).meshGroup; // White
-    glasses2.position.set(1.3, -2.7, -0.64);
-    glasses2.rotation.y = -0.4;
-    tableGroup.add(glasses2);
+    const partyHat2 = buildAccessory('partyHat', 0x00BFFF).meshGroup; 
+    partyHat2.position.set(1.3, -2.95, -0.4);
+    partyHat2.rotation.y = -0.3;
+    tableGroup.add(partyHat2);
 
-
-    // --- ADD WARDROBE PROPS (TOP SHELF) ---
-    const beanie1 = buildAccessory('beanie', 0x32CD32).meshGroup; // Lime
-    beanie1.position.set(-1.2, -1.67, -0.85);
+    // --- ADD WARDROBE PROPS (TOP SHELF: Y = -1.55) ---
+    const beanie1 = buildAccessory('beanie', 0x32CD32).meshGroup; 
+    beanie1.position.set(-1.2, -1.675, -0.4);
     beanie1.rotation.y = -0.4;
     tableGroup.add(beanie1);
 
-    const beanie2 = buildAccessory('beanie', 0xFF8C00).meshGroup; // Orange
-    beanie2.position.set(-0.7, -1.67, -0.85);
-    beanie2.rotation.y = 0.2;
-    tableGroup.add(beanie2);
-
-    const topHat1 = buildAccessory('topHat', 0xFF0000).meshGroup; // Red
-    topHat1.position.set(-0.2, -1.74, -0.85);
-    topHat1.rotation.y = 0.5;
+    const topHat1 = buildAccessory('topHat', 0xFF0000).meshGroup; 
+    topHat1.position.set(-0.7, -1.745, -0.4);
+    topHat1.rotation.y = 0.2;
     tableGroup.add(topHat1);
 
-    const topHat2 = buildAccessory('topHat', 0x8A2BE2).meshGroup; // Purple
-    topHat2.position.set(0.3, -1.74, -0.85);
-    topHat2.rotation.y = -0.3;
-    tableGroup.add(topHat2);
+    const head1 = buildAccessory('headband', 0xFFFF00).meshGroup; 
+    head1.position.set(-0.2, -1.61, -0.4);
+    head1.rotation.y = 0.1;
+    tableGroup.add(head1);
 
-    const scarf1 = buildAccessory('scarf', 0xFF69B4).meshGroup; // Pink
-    scarf1.position.set(0.8, -1.85, -0.55); 
+    const scarf1 = buildAccessory('scarf', 0xFF69B4).meshGroup; 
+    scarf1.position.set(0.3, -1.85, -0.05); 
     scarf1.rotation.y = 0.1;
     tableGroup.add(scarf1);
 
-    const head1 = buildAccessory('headband', 0xFFFF00).meshGroup; // Yellow
-    head1.position.set(1.3, -1.61, -0.85);
-    head1.rotation.y = -0.2;
-    tableGroup.add(head1);
+    const topHat2 = buildAccessory('topHat', 0x8A2BE2).meshGroup; 
+    topHat2.position.set(0.8, -1.745, -0.4);
+    topHat2.rotation.y = -0.3;
+    tableGroup.add(topHat2);
+
+    const beanie2 = buildAccessory('beanie', 0xFF8C00).meshGroup; 
+    beanie2.position.set(1.3, -1.675, -0.4);
+    beanie2.rotation.y = 0.2;
+    tableGroup.add(beanie2);
 
     tableGroup.position.set(x, 0, z);
     scene.add(tableGroup);
