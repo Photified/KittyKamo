@@ -1594,7 +1594,7 @@ function animate() {
     if (now - lastRenderTime < fpsInterval) return; 
     lastRenderTime = now - (now % fpsInterval);
 
-    if (document.getElementById('startScreen').style.display !== 'none') {
+   if (document.getElementById('startScreen').style.display !== 'none') {
         previewCat.group.visible = true;
 
         previewCat.material.color.setHex(window.myBaseColor);
@@ -1604,16 +1604,18 @@ function animate() {
         
         animateCat(previewCat, 0, 0); 
         
+        // Keep the cat at y=100
         previewCat.group.position.set(0, 100, 0);
         previewCat.group.rotation.y += 0.015;
 
-        // Shift the camera down and angle it slightly up to push the cat to the top of the UI
-        camera.position.set(0, 99.2, 4); 
-        camera.lookAt(0, 100.5, 0);
+        // Move the camera significantly lower (y=98) and look slightly up (y=99)
+        // This forces the cat (at y=100) to appear much higher in the viewport
+        camera.position.set(0, 98.0, 4.5); 
+        camera.lookAt(0, 99.0, 0);
         
         renderer.render(scene, camera);
         return; 
-    } 
+    }
 
     let isGameOver = serverGameState === 'GAME_OVER';
     let isMVPGameOver = (isGameOver && serverWinnerId === socket.id);
