@@ -378,7 +378,7 @@ function createCatSculpt(startColor = 0xFFFFFF, startFace = 'normal') {
     const crown = createCrown();
     head.add(crown); 
 
-    const dBeamGeo = new THREE.CylinderGeometry(0.8, 0.8, 60, 16, 1, true);
+    const dBeamGeo = new THREE.CylinderGeometry(1.4, 1.4, 60, 16, 1, true);
     const dBeamMat = new THREE.MeshBasicMaterial({ color: 0xFFFFAA, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
     const dBeam = new THREE.Mesh(dBeamGeo, dBeamMat);
     dBeam.name = 'dBeam'; 
