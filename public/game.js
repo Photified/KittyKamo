@@ -1905,11 +1905,12 @@ function animate() {
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
 
-   // --- MIRROR LOGIC ---
+  // --- MIRROR LOGIC ---
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(myPlayerObject.position.x) < 4.0) {
+        // Added the roof fix back in: && myPlayerObject.position.y < -1
+        if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(myPlayerObject.position.x) < 4.0 && myPlayerObject.position.y < -1) {
             mirrorCat.group.visible = true;
             
             mirrorCat.group.position.x = myPlayerObject.position.x;
