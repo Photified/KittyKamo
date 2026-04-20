@@ -872,7 +872,7 @@ myPlayerObject.add(myCatData.group);
 const mirrorCat = createCatSculpt();
 scene.add(mirrorCat.group);
 mirrorCat.group.visible = false;
-const mirrorZ = 19.5;
+const mirrorZ = 18.99; // Updated perfectly for the glass pane
 // -------------------------------
 
 window.myBaseColor = 0xFFFFFF; 
@@ -1394,24 +1394,20 @@ socket.on('initMap', (mapBlocks) => {
         // Front wall
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); 
         
-        // --- NEW MIRROR WALL RECESS ---
-        createWall(18.5, 2, 2, -12.25, -4, 20.5, 0x8B4513); // Left back wall
-        createWall(18.5, 2, 2, 12.25, -4, 20.5, 0x8B4513);  // Right back wall
+        // Back wall (restored solid wall)
+        createWall(43, 2, 2, 0, -4, 20.5, 0x8B4513);  
+
+        // --- MIRROR HOUSE ---
+        createWall(6, 4, 1, 0, -3, 19.5, 0x8B4513); // Back wall of mirror house
+        createWall(1, 4, 4, -2.5, -3, 18, 0x8B4513); // Left wall
+        createWall(1, 4, 4, 2.5, -3, 18, 0x8B4513); // Right wall
+        createWall(7, 1, 6, 0, -0.5, 18.5, 0xAA4A44); // Roof
         
-        // Dark recess box
-        createWall(6, 4, 1, 0, -3, 25.5, 0x111111); // Dark back wall
-        createWall(1, 4, 5, -3.5, -3, 22.5, 0x111111); // Left dark wall
-        createWall(1, 4, 5, 3.5, -3, 22.5, 0x111111); // Right dark wall
-        createWall(8, 1, 5, 0, -5.5, 22.5, 0x111111); // Floor
-        createWall(8, 1, 5, 0, -0.5, 22.5, 0x111111); // Roof
-        
-        createWall(6.5, 4.5, 0.4, 0, -3, 19.7, 0x5C4033); // Mirror Frame
-        createInvisibleWall(6, 10, 1, 0, 0, 19.5); // Invisible wall to block players from walking through mirror
-        
-        const glassGeo = new THREE.PlaneGeometry(5.5, 3.5);
-        const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25 });
+        const glassGeo = new THREE.PlaneGeometry(4, 3);
+        const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 19.49);
+        glass.position.set(0, -3, 18.99); // Sit just in front of the back wall
+        glass.rotation.y = Math.PI; // Face the center
         scene.add(glass);
         lobbyVisuals.push(glass);
 
@@ -1420,7 +1416,7 @@ socket.on('initMap', (mapBlocks) => {
         const mCtx = mCanvas.getContext('2d');
         mCtx.fillStyle = 'transparent'; mCtx.fillRect(0, 0, 256, 64);
         mCtx.font = '900 40px "Segoe UI", Arial, sans-serif'; 
-        mCtx.fillStyle = '#AAAAAA';
+        mCtx.fillStyle = '#FFFFFF';
         mCtx.textAlign = 'center'; mCtx.textBaseline = 'middle'; 
         mCtx.shadowColor = '#000000'; mCtx.shadowBlur = 4; mCtx.shadowOffsetX = 2; mCtx.shadowOffsetY = 2;
         mCtx.fillText("MIRROR", 128, 32);
@@ -1428,10 +1424,11 @@ socket.on('initMap', (mapBlocks) => {
         const mGeo = new THREE.PlaneGeometry(2.5, 0.6);
         const mMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(mCanvas), transparent: true, depthWrite: false });
         const mMesh = new THREE.Mesh(mGeo, mMat);
-        mMesh.position.set(0, -0.2, 19.49); 
+        mMesh.position.set(0, -1.2, 18.98); // Hang above mirror
+        mMesh.rotation.y = Math.PI;
         scene.add(mMesh);
         lobbyVisuals.push(mMesh);
-        // ------------------------------
+        // --------------------
 
         createWall(2, 2, 39, -20.5, -4, 0, 0x8B4513); // Left Side Wall
         createWall(2, 2, 39, 20.5, -4, 0, 0x8B4513);  // Right Side Wall
@@ -2220,6 +2217,8 @@ function animate() {
                 const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                 
                 if (seekerBox.intersectsBox(hiderBox)) {
+                    // Tag requires the seeker to jump ONTO the hider (Y > Hider Y + 0.5)
+                    // limit the height to max 1.4 blocks so they don't get tagged by a high-flyer
                     let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
                     if (heightDiff > 0.5 && heightDiff <= 1.4) {
                         otherPlayers[id].role = 'seeker'; 
