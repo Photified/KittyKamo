@@ -1394,40 +1394,33 @@ socket.on('initMap', (mapBlocks) => {
         // Front wall
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); 
         
-        // Back wall (restored solid wall)
-        createWall(43, 2, 2, 0, -4, 20.5, 0x8B4513);  
+        // Back wall with gap cut out for the Mirror Room
+        createWall(18.5, 2, 2, -12.25, -4, 20.5, 0x8B4513); // Left side
+        createWall(18.5, 2, 2, 12.25, -4, 20.5, 0x8B4513);  // Right side
 
         // --- MIRROR HOUSE ---
-        createWall(6, 4, 1, 0, -3, 19.5, 0x8B4513); // Back wall of mirror house
         createWall(1, 4, 4, -2.5, -3, 18, 0x8B4513); // Left wall
         createWall(1, 4, 4, 2.5, -3, 18, 0x8B4513); // Right wall
         createWall(7, 1, 6, 0, -0.5, 18.5, 0xAA4A44); // Roof
         
+        // Invisible collision to stop player walking into the mirror glass
+        createInvisibleWall(6, 10, 1, 0, 0, 19.5); 
+        
+        // Deep dark room hidden behind the mirror for the reflection to live in
+        createWall(8, 6, 1, 0, -2, 25.5, 0x111111); // Dark back wall
+        createWall(1, 6, 6, -3.5, -2, 22.5, 0x111111); // Left dark wall
+        createWall(1, 6, 6, 3.5, -2, 22.5, 0x111111); // Right dark wall
+        createWall(8, 1, 6, 0, -5.5, 22.5, 0x111111); // Dark floor
+        createWall(8, 1, 6, 0, 0.5, 22.5, 0x111111); // Dark ceiling
+
+        // Mirror Glass
         const glassGeo = new THREE.PlaneGeometry(4, 3);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 18.99); // Sit just in front of the back wall
+        glass.position.set(0, -3, 18.99); // Sit just in front of the cut-out
         glass.rotation.y = Math.PI; // Face the center
         scene.add(glass);
         lobbyVisuals.push(glass);
-
-        const mCanvas = document.createElement('canvas');
-        mCanvas.width = 256; mCanvas.height = 64;
-        const mCtx = mCanvas.getContext('2d');
-        mCtx.fillStyle = 'transparent'; mCtx.fillRect(0, 0, 256, 64);
-        mCtx.font = '900 40px "Segoe UI", Arial, sans-serif'; 
-        mCtx.fillStyle = '#FFFFFF';
-        mCtx.textAlign = 'center'; mCtx.textBaseline = 'middle'; 
-        mCtx.shadowColor = '#000000'; mCtx.shadowBlur = 4; mCtx.shadowOffsetX = 2; mCtx.shadowOffsetY = 2;
-        mCtx.fillText("MIRROR", 128, 32);
-        
-        const mGeo = new THREE.PlaneGeometry(2.5, 0.6);
-        const mMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(mCanvas), transparent: true, depthWrite: false });
-        const mMesh = new THREE.Mesh(mGeo, mMat);
-        mMesh.position.set(0, -1.2, 18.98); // Hang above mirror
-        mMesh.rotation.y = Math.PI;
-        scene.add(mMesh);
-        lobbyVisuals.push(mMesh);
         // --------------------
 
         createWall(2, 2, 39, -20.5, -4, 0, 0x8B4513); // Left Side Wall
@@ -1907,13 +1900,12 @@ function animate() {
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        // Render if player is in front of the mirror, within 4.5 blocks, and facing roughly towards it
-        if (distToMirror > 0 && distToMirror <= 4.5 && Math.abs(myPlayerObject.position.x) < 3.5) {
+        if (distToMirror > 0 && distToMirror <= 5.5 && Math.abs(myPlayerObject.position.x) < 4.0) {
             mirrorCat.group.visible = true;
             
             mirrorCat.group.position.x = myPlayerObject.position.x;
             mirrorCat.group.position.y = myPlayerObject.position.y;
-            mirrorCat.group.position.z = mirrorZ + distToMirror; // Mirror opposite Z
+            mirrorCat.group.position.z = mirrorZ + distToMirror; 
             
             mirrorCat.group.rotation.y = Math.PI - myPlayerObject.rotation.y;
             
@@ -1924,8 +1916,7 @@ function animate() {
             
             animateCat(mirrorCat, myEmote, myWalkTime);
             
-            // Calculate Opacity (Fade in closer you get)
-            let op = 1.0 - ((distToMirror - 1) / 3) * 0.75;
+            let op = 1.0 - ((distToMirror - 1) / 4.5) * 0.75;
             op = Math.max(0.05, Math.min(1, op)); 
             
             mirrorCat.group.traverse((child) => {
@@ -1935,7 +1926,7 @@ function animate() {
                 }
                 if (child.isLineSegments && child.material) {
                     child.material.transparent = true;
-                    child.material.opacity = op * 0.3; // keep outlines slightly faded
+                    child.material.opacity = op * 0.3; 
                 }
             });
         } else {
@@ -2217,8 +2208,6 @@ function animate() {
                 const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                 
                 if (seekerBox.intersectsBox(hiderBox)) {
-                    // Tag requires the seeker to jump ONTO the hider (Y > Hider Y + 0.5)
-                    // limit the height to max 1.4 blocks so they don't get tagged by a high-flyer
                     let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
                     if (heightDiff > 0.5 && heightDiff <= 1.4) {
                         otherPlayers[id].role = 'seeker'; 
