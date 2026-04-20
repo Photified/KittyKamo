@@ -1899,11 +1899,12 @@ function animate() {
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
 
-    // --- MIRROR LOGIC ---
+  // --- MIRROR LOGIC ---
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(myPlayerObject.position.x) < 4.0) {
+        // Added: myPlayerObject.position.y < -1 so it doesn't show on the roof!
+        if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(myPlayerObject.position.x) < 4.0 && myPlayerObject.position.y < -1) {
             mirrorCat.group.visible = true;
             
             mirrorCat.group.position.x = myPlayerObject.position.x;
@@ -1922,7 +1923,16 @@ function animate() {
             if (mBeam) mBeam.visible = false; 
             mirrorCat.dBeamMat.opacity = 0;
 
-            animateCat(mirrorCat, myEmote, myWalkTime);
+            // --- ANIMATION FIXES ---
+            let globalTime = performance.now() / 136;
+            let isBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(socket.id));
+            
+            // Pass globalTime for emotes, walkTime for walking
+            animateCat(mirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
+            
+            // Invert the tail math so it reflects your tail perfectly
+            mirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
+            // -----------------------
             
             // Smooth continuous fade exactly as requested (Solid at 1, gone by 5)
             let op = 1.0 - ((distToMirror - 1.0) / 4.0);
@@ -1949,6 +1959,7 @@ function animate() {
         mirrorCat.group.visible = false;
     }
     // --------------------
+  
 
     // Update Confetti Physics
     for (let i = confettiParticles.length - 1; i >= 0; i--) {
