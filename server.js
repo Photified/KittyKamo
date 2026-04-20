@@ -132,7 +132,7 @@ function startLobby() {
             players[id].x = bed.x + (Math.random() > 0.5 ? 0.6 : -0.6);
             players[id].y = -4; 
             players[id].z = bed.z + (Math.random() > 0.5 ? 0.6 : -0.6);
-            players[id].rY = Math.atan2(-players[id].x, -players[id].z); // Face the center cat tree
+            players[id].rY = Math.atan2(players[id].x, players[id].z); // Fixed: Face the center cat tree
             
             // Force the client to physically move to the bed!
             io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
@@ -292,7 +292,7 @@ io.on('connection', (socket) => {
     let bed = catBeds[Math.floor(Math.random() * catBeds.length)];
     let startX = isLobbyPhase ? bed.x + (Math.random() > 0.5 ? 0.6 : -0.6) : (Math.random() * 30) - 15;
     let startZ = isLobbyPhase ? bed.z + (Math.random() > 0.5 ? 0.6 : -0.6) : (Math.random() * 30) - 15;
-    let startRY = isLobbyPhase ? Math.atan2(-startX, -startZ) : 0;
+    let startRY = isLobbyPhase ? Math.atan2(startX, startZ) : 0; // Fixed: Face the center cat tree
     let startY = isLobbyPhase ? -4 : 20;
 
     players[socket.id] = {
