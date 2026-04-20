@@ -1489,9 +1489,9 @@ socket.on('initMap', (mapBlocks) => {
         scene.add(cMesh);
         lobbyVisuals.push(cMesh);
 
-        createClosedBox(1.5, 1.5, 1.5, -2.5, -4.25, 0, Math.PI/6);
+        createClosedBox(1.5, 1.5, 1.5, -4.5, -4.25, 0, Math.PI/6); 
         createClosedBox(1.5, 1.5, 1.5, 11.5, -4.25, 14, -Math.PI/8);
-        createClosedBox(1.5, 1.5, 1.5, -11.5, -4.25, -14, Math.PI/4);
+        createClosedBox(1.5, 1.5, 1.5, -10.5, -4.25, -11.5, Math.PI/4);
         
         createOpenBox(3.5, 1.5, 3.5, -8, -4.25, -4, 0); 
         createOpenBox(3.5, 1.5, 3.5, 10, -4.25, -6, 0);
