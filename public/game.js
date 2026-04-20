@@ -869,14 +869,17 @@ const myCatData = createCatSculpt();
 myPlayerObject.add(myCatData.group);
 
 // --- ADD MIRROR CAT GLOBALLY ---
-const mirrorCat = createCatSculpt();
-scene.add(mirrorCat.group);
-mirrorCat.group.visible = false;
+const myMirrorCat = createCatSculpt();
+scene.add(myMirrorCat.group);
+myMirrorCat.group.visible = false;
 const mirrorZ = 19.5; // The actual mirror glass Z-position
 
 // Guarantee NO spotlight/beam on the mirror cat
-let mBeam = mirrorCat.group.getObjectByName('dBeam');
+let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
+
+// Store mirror cats for other players
+const otherMirrorCats = {};
 // -------------------------------
 
 window.myBaseColor = 0xFFFFFF; 
@@ -961,7 +964,7 @@ colors.forEach(c => {
     btn.onclick = () => { 
         window.myBaseColor = c.h; 
         previewCat.material.color.setHex(c.h);
-        mirrorCat.material.color.setHex(c.h); // MIRROR SYNC
+        myMirrorCat.material.color.setHex(c.h); // MIRROR SYNC
         Array.from(colorPalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -995,7 +998,7 @@ faces.forEach(f => {
     btn.onclick = () => { 
         window.myFace = f.id; 
         previewCat.faceMesh.material.map = getFaceTexture(f.id);
-        mirrorCat.faceMesh.material.map = getFaceTexture(f.id); // MIRROR SYNC
+        myMirrorCat.faceMesh.material.map = getFaceTexture(f.id); // MIRROR SYNC
         Array.from(facePalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -1043,7 +1046,7 @@ items.forEach(item => {
         window.myWardrobe[window.activeSlot] = { id: item.id, color: currentItemColor };
         slots[window.activeSlot].innerHTML = item.icon;
         applyWardrobeToCat(previewCat, window.myWardrobe);
-        applyWardrobeToCat(mirrorCat, window.myWardrobe); // MIRROR SYNC
+        applyWardrobeToCat(myMirrorCat, window.myWardrobe); // MIRROR SYNC
     };
     itemRow.appendChild(btn);
 });
@@ -1055,7 +1058,7 @@ clearBtn.onclick = () => {
     window.myWardrobe[window.activeSlot] = null;
     slots[window.activeSlot].innerHTML = '+';
     applyWardrobeToCat(previewCat, window.myWardrobe);
-    applyWardrobeToCat(mirrorCat, window.myWardrobe); // MIRROR SYNC
+    applyWardrobeToCat(myMirrorCat, window.myWardrobe); // MIRROR SYNC
 };
 itemRow.appendChild(clearBtn);
 wardrobeTab.appendChild(itemRow);
@@ -1071,7 +1074,7 @@ colors.forEach(c => {
         if (window.myWardrobe[window.activeSlot]) {
             window.myWardrobe[window.activeSlot].color = currentItemColor;
             applyWardrobeToCat(previewCat, window.myWardrobe);
-            applyWardrobeToCat(mirrorCat, window.myWardrobe); // MIRROR SYNC
+            applyWardrobeToCat(myMirrorCat, window.myWardrobe); // MIRROR SYNC
         }
     };
     itemColorRow.appendChild(btn);
@@ -1552,6 +1555,7 @@ socket.on('currentPlayers', (players) => {
                 
                 // WARDROBE APPLY FOR OTHER PLAYERS
                 applyWardrobeToCat(otherPlayers[id], players[id].wardrobe);
+                if(otherMirrorCats[id]) applyWardrobeToCat(otherMirrorCats[id], players[id].wardrobe);
 
             } else { addOtherPlayer(id, players[id]); }
         }
@@ -1582,7 +1586,16 @@ socket.on('playerMoved', (data) => {
     }
 });
 
-socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) { scene.remove(otherPlayers[id].group); delete otherPlayers[id]; } });
+socket.on('playerDisconnected', (id) => { 
+    if (otherPlayers[id]) { 
+        scene.remove(otherPlayers[id].group); 
+        delete otherPlayers[id]; 
+    } 
+    if (otherMirrorCats[id]) { 
+        scene.remove(otherMirrorCats[id].group); 
+        delete otherMirrorCats[id]; 
+    }
+});
 
 socket.on('playerStunned', (id) => {
     if (id === socket.id) amIStunned = true;
@@ -1629,6 +1642,8 @@ socket.on('spawnHairball', (data) => {
 
 function addOtherPlayer(id, playerInfo) {
     if (otherPlayers[id]) scene.remove(otherPlayers[id].group);
+    if (otherMirrorCats[id]) scene.remove(otherMirrorCats[id].group); // clean up existing mirror if needed
+
     const catData = createCatSculpt(playerInfo.color, playerInfo.face || 'normal');
     catData.group.position.set(playerInfo.x, playerInfo.y, playerInfo.z);
     catData.group.rotation.y = playerInfo.rY;
@@ -1644,11 +1659,19 @@ function addOtherPlayer(id, playerInfo) {
     let oColor = (playerInfo.color === 0xFFFFFF || playerInfo.color === 0xFF0000) ? 0xFFD700 : playerInfo.color;
     catData.crownMat.color.setHex(oColor);
 
-    // WARDROBE APPLY FOR NEW PLAYER JOINING
     applyWardrobeToCat(catData, playerInfo.wardrobe);
 
     scene.add(catData.group);
     otherPlayers[id] = catData;
+
+    // Generate specific mirror cat for this player
+    const mCat = createCatSculpt(playerInfo.color, playerInfo.face || 'normal');
+    mCat.group.visible = false;
+    let omBeam = mCat.group.getObjectByName('dBeam');
+    if (omBeam) omBeam.visible = false;
+    applyWardrobeToCat(mCat, playerInfo.wardrobe);
+    scene.add(mCat.group);
+    otherMirrorCats[id] = mCat;
 }
 
 function checkCollision(pos) {
@@ -1804,7 +1827,6 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[1].position.set(-0.15, 0.15, 0.3);
         cat.legs[1].rotation.x = -Math.PI / 8;
         
-        // Emote 1 Fix: Removed sideways Z rotation, replaced with forward X stretch
         cat.legs[2].position.set(0.15, 0.15, -0.35); 
         cat.legs[2].rotation.z = 0;
         cat.legs[2].rotation.x = Math.PI / 2.2; 
@@ -1846,7 +1868,6 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[0].rotation.x = -Math.PI / 3; 
         cat.legs[1].rotation.x = -Math.PI / 3;
         
-        // Emote 5 Fix: Changed negative rotation to positive so boots stay on the bottom!
         cat.legs[2].rotation.x = Math.PI / 2.5 + Math.sin(walkTime * 1.5) * 0.3; 
         cat.legs[3].rotation.x = Math.PI / 2.5 + Math.sin(walkTime * 1.5 + Math.PI) * 0.3;
         cat.tail.rotation.x = -Math.PI / 4;
@@ -1905,46 +1926,38 @@ function animate() {
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
 
-  // --- MIRROR LOGIC ---
+    // --- MIRROR LOGIC (LOCAL PLAYER) ---
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        // Added the roof fix back in: && myPlayerObject.position.y < -1
         if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(myPlayerObject.position.x) < 4.0 && myPlayerObject.position.y < -1) {
-            mirrorCat.group.visible = true;
+            myMirrorCat.group.visible = true;
             
-            mirrorCat.group.position.x = myPlayerObject.position.x;
-            mirrorCat.group.position.y = myPlayerObject.position.y;
-            mirrorCat.group.position.z = mirrorZ + distToMirror; 
+            myMirrorCat.group.position.x = myPlayerObject.position.x;
+            myMirrorCat.group.position.y = myPlayerObject.position.y;
+            myMirrorCat.group.position.z = mirrorZ + distToMirror; 
             
-            mirrorCat.group.rotation.y = Math.PI - myPlayerObject.rotation.y;
+            myMirrorCat.group.rotation.y = Math.PI - myPlayerObject.rotation.y;
             
-            mirrorCat.material.color.setHex(myCatData.material.color.getHex());
-            mirrorCat.faceMesh.material.map = myCatData.faceMesh.material.map;
-            mirrorCat.body.scale.copy(myCatData.body.scale);
-            if (mirrorCat.nameSprite) mirrorCat.nameSprite.visible = false;
+            myMirrorCat.material.color.setHex(myCatData.material.color.getHex());
+            myMirrorCat.faceMesh.material.map = myCatData.faceMesh.material.map;
+            myMirrorCat.body.scale.copy(myCatData.body.scale);
+            if (myMirrorCat.nameSprite) myMirrorCat.nameSprite.visible = false;
             
-            // Ensure no spotlights or text are rendering on the reflection
-            let mBeam = mirrorCat.group.getObjectByName('dBeam');
+            let mBeam = myMirrorCat.group.getObjectByName('dBeam');
             if (mBeam) mBeam.visible = false; 
-            mirrorCat.dBeamMat.opacity = 0;
+            myMirrorCat.dBeamMat.opacity = 0;
 
-            // --- ANIMATION FIXES ---
             let globalTime = performance.now() / 136;
             let isBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(socket.id));
             
-            // Pass globalTime for emotes, walkTime for walking
-            animateCat(mirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
+            animateCat(myMirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
+            myMirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
             
-            // Invert the tail math so it reflects your tail perfectly
-            mirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
-            // -----------------------
-            
-            // Smooth continuous fade exactly as requested (Solid at 1, gone by 5)
             let op = 1.0 - ((distToMirror - 1.0) / 4.0);
             op = Math.max(0.0, Math.min(1.0, op)); 
             
-            mirrorCat.group.traverse((child) => {
+            myMirrorCat.group.traverse((child) => {
                 if (child.isMesh && child.material) {
                     child.material.transparent = true;
                     child.material.opacity = op;
@@ -1955,17 +1968,15 @@ function animate() {
                 }
             });
             
-            // Fully invisible if opacity is 0
-            if (op <= 0) mirrorCat.group.visible = false;
+            if (op <= 0) myMirrorCat.group.visible = false;
             
         } else {
-            mirrorCat.group.visible = false;
+            myMirrorCat.group.visible = false;
         }
     } else {
-        mirrorCat.group.visible = false;
+        myMirrorCat.group.visible = false;
     }
     // --------------------
-  
 
     // Update Confetti Physics
     for (let i = confettiParticles.length - 1; i >= 0; i--) {
@@ -2329,10 +2340,12 @@ function animate() {
     myCatData.body.scale.set(finalScaleXZ, finalScaleY, finalScaleXZ);
     wasGroundedLastFrame = isGrounded; 
 
-    // Update Other Players visually
-    Object.values(otherPlayers).forEach(p => {
+    // Update Other Players visually AND THEIR MIRRORS!
+    Object.entries(otherPlayers).forEach(([id, p]) => {
         if (p.role === 'spectator') { 
-            p.group.visible = false; return; 
+            p.group.visible = false; 
+            if(otherMirrorCats[id]) otherMirrorCats[id].group.visible = false;
+            return; 
         } else { 
             p.group.visible = true; 
         }
@@ -2354,12 +2367,62 @@ function animate() {
             p.walkTime = (p.walkTime || 0) + 0.44; 
         }
 
-        let isOtherBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(p.id));
+        let isOtherBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(id));
         animateCat(p, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
 
         let isOtherDropping = (serverGameState === 'HIDING' && serverTime >= 8);
         let targetOtherOp = isOtherDropping ? 0.6 : 0;
         p.dBeamMat.opacity += (targetOtherOp - p.dBeamMat.opacity) * 0.1;
+
+        // --- MIRROR LOGIC (OTHER PLAYERS) ---
+        let oMirror = otherMirrorCats[id];
+        if (oMirror) {
+            if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
+                let distToMirror = mirrorZ - p.group.position.z;
+                if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(p.group.position.x) < 4.0 && p.group.position.y < -1) {
+                    oMirror.group.visible = true;
+                    
+                    oMirror.group.position.x = p.group.position.x;
+                    oMirror.group.position.y = p.group.position.y;
+                    oMirror.group.position.z = mirrorZ + distToMirror; 
+                    
+                    oMirror.group.rotation.y = Math.PI - p.group.rotation.y;
+                    
+                    oMirror.material.color.setHex(p.material.color.getHex());
+                    oMirror.faceMesh.material.map = p.faceMesh.material.map;
+                    oMirror.body.scale.copy(p.body.scale);
+                    if (oMirror.nameSprite) oMirror.nameSprite.visible = false;
+                    
+                    let omBeam = oMirror.group.getObjectByName('dBeam');
+                    if (omBeam) omBeam.visible = false; 
+                    oMirror.dBeamMat.opacity = 0;
+
+                    animateCat(oMirror, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
+                    oMirror.tail.rotation.y = -Math.sin(p.tailTime) * 0.3; 
+                    
+                    let op = 1.0 - ((distToMirror - 1.0) / 4.0);
+                    op = Math.max(0.0, Math.min(1.0, op)); 
+                    
+                    oMirror.group.traverse((child) => {
+                        if (child.isMesh && child.material) {
+                            child.material.transparent = true;
+                            child.material.opacity = op;
+                        }
+                        if (child.isLineSegments && child.material) {
+                            child.material.transparent = true;
+                            child.material.opacity = op * 0.3; 
+                        }
+                    });
+                    
+                    if (op <= 0) oMirror.group.visible = false;
+                    
+                } else {
+                    oMirror.group.visible = false;
+                }
+            } else {
+                oMirror.group.visible = false;
+            }
+        }
     });
 
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
