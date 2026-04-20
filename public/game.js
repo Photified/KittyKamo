@@ -182,7 +182,6 @@ function getFaceTexture(type) {
     return tex;
 }
 
-
 const style = document.createElement('style');
 style.innerHTML = `
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
@@ -261,7 +260,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Vibrant lighting parameters to fix wash-out
+// Vibrant lighting parameters
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.75); 
 scene.add(ambientLight);
 const sunLight = new THREE.DirectionalLight(0xffffff, 0.35);
@@ -413,7 +412,6 @@ function createBlock(x, y, z, color) {
 
 const walls = [];
 
-// ONE Unified createWall function
 function createWall(w, h, d, x, y, z, color = 0x8B4513) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mat = new THREE.MeshLambertMaterial({ color: color, transparent: true });
@@ -784,10 +782,10 @@ const colors = [
     {n:'Bright Purple', h:0x9932CC}, {n:'Bright Yellow', h:0xFFFF00}, 
     {n:'Cyan', h:0x00FFFF}, {n:'Bright Orange', h:0xFF8C00},
     {n:'Magenta', h:0xFF00FF}, {n:'Violet', h:0x8A2BE2}, 
-    {n:'Deep Sky Blue', h:0x00BFFF}, {n:'Light Pink', h:0xFFB6C1},
+    {n:'Deep Sky Blue', h:0x00BFFF}, {n:'Hot Pink', h:0xFF3399},
     {n:'Lime', h:0x32CD32}, {n:'Crimson', h:0xDC143C},
     {n:'Teal', h:0x008080}, {n:'Gold', h:0xFFD700},
-    {n:'Silver', h:0xC0C0C0}, {n:'Peach', h:0xFFDAB9}
+    {n:'Grey', h:0x999999}, {n:'Coral', h:0xFF7F50}
 ];
 
 colors.forEach(c => {
@@ -1091,6 +1089,12 @@ socket.on('beamingPlayers', (ids) => {
     beamingPlayerIds = ids;
 });
 
+socket.on('forceTeleport', (data) => {
+    myPlayerObject.position.set(data.x, data.y, data.z);
+    myPlayerObject.rotation.y = data.rY;
+    velocityY = 0;
+});
+
 socket.on('initMap', (mapBlocks) => {
     mapObjects.forEach(mesh => scene.remove(mesh)); mapObjects.length = 0;
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
@@ -1174,6 +1178,9 @@ socket.on('initMap', (mapBlocks) => {
         createWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
 
+        // MVP Podium
+        createWall(4, 2, 4, 0, -4, -10, 0xFFD700);
+
         createCraftingTable(0, -18.4);
         
         const padGeo = new THREE.BoxGeometry(4, 0.1, 4);
@@ -1237,13 +1244,6 @@ socket.on('currentPlayers', (players) => {
             myCatData.crownMat.color.setHex(cColor);
 
             setNameLabel(myCatData, myName); 
-
-            if (Date.now() > ignoreServerPositionUntil) {
-                if (serverGameState === 'WAITING' || serverGameState === 'LOBBY' || serverGameState === 'GAME_OVER' || myRole !== 'spectator') {
-                    myPlayerObject.position.set(players[id].x, players[id].y, players[id].z);
-                    myPlayerObject.rotation.y = players[id].rY || myPlayerObject.rotation.y;
-                }
-            }
 
             myCatData.crown.visible = (id === serverWinnerId);
             updateRightBox(null);
@@ -1433,30 +1433,12 @@ document.addEventListener('keydown', (e) => {
     if(e.key.toLowerCase() === 'r') {
         if (myRole === 'hider' || serverGameState === 'GAME_OVER') {
             let canShoot = false;
-            
-            // Allow local overrides in game over
-            if (serverGameState === 'GAME_OVER') {
-                let dirX = -Math.sin(myPlayerObject.rotation.y);
-                let dirZ = -Math.cos(myPlayerObject.rotation.y);
-                
-                // Local Bypass for Game Over fun
-                const hbId = 'local_hb_' + Math.random();
-                const hbGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2); 
-                const hbMat = new THREE.MeshLambertMaterial({color: 0x6B4226}); 
-                const hbMesh = new THREE.Mesh(hbGeo, hbMat);
-                hbMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(hbGeo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
-                hbMesh.position.set(myPlayerObject.position.x, myPlayerObject.position.y + 0.5, myPlayerObject.position.z);
-                scene.add(hbMesh);
-                activeHairballs.push({ mesh: hbMesh, dirX: dirX, dirZ: dirZ, id: hbId, ownerId: socket.id, distance: 0 });
-                playSound('spit');
-                return;
-            }
 
             if (serverGameState === 'SEEKING' && myHairballs > 0) {
                 myHairballs--;
                 updateRightBox(null);
                 canShoot = true;
-            } else if (serverGameState === 'LOBBY' || serverGameState === 'WAITING') {
+            } else if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
                 canShoot = true; 
             }
 
@@ -1600,6 +1582,7 @@ function animate() {
     } 
 
     let isGameOver = serverGameState === 'GAME_OVER';
+    let isMVPGameOver = (isGameOver && serverWinnerId === socket.id);
 
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
@@ -1616,12 +1599,12 @@ function animate() {
     }
 
     if (isGameOver) {
-        // Rain Confetti around the customization house for the MVP!
+        // Rain Confetti around the podium!
         for (let i = 0; i < 3; i++) {
             const geo = new THREE.PlaneGeometry(0.3, 0.3);
             const mat = new THREE.MeshBasicMaterial({ color: confettiColors[Math.floor(Math.random() * confettiColors.length)], side: THREE.DoubleSide });
             const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set((Math.random() - 0.5) * 15, 10 + Math.random() * 5, -18.5 + (Math.random() - 0.5) * 10);
+            mesh.position.set((Math.random() - 0.5) * 10, 5 + Math.random() * 5, -10 + (Math.random() - 0.5) * 10);
             mesh.rotation.set(Math.random(), Math.random(), Math.random());
             mesh.vel = new THREE.Vector3((Math.random() - 0.5) * 0.1, -0.1 - Math.random() * 0.1, (Math.random() - 0.5) * 0.1);
             mesh.rotVel = new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
@@ -1629,8 +1612,8 @@ function animate() {
             confettiParticles.push(mesh);
         }
 
-        // Make the MVP automatically spam random emotes if they aren't manually moving
-        if (serverWinnerId === socket.id && !keys.w && !keys.a && !keys.s && !keys.d && !keys.ArrowUp && !keys.ArrowDown && !keys.ArrowLeft && !keys.ArrowRight) {
+        // MVP forced emotes
+        if (isMVPGameOver) {
             if (now > mvpEmoteTimer) {
                 currentMvpEmote = Math.floor(Math.random() * 5) + 1;
                 mvpEmoteTimer = now + 1500;
@@ -1762,7 +1745,7 @@ function animate() {
     let targetColor = myRole === 'seeker' ? 0xFF0000 : window.myBaseColor; 
     let isBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(socket.id));
 
-    if (isQPressed && !amIStunned && myRole !== 'spectator' && !isBeaming) {
+    if (isQPressed && !amIStunned && myRole !== 'spectator' && !isBeaming && !isMVPGameOver) {
         qPressTime += fpsInterval; 
         unstuckUI.style.display = 'block';
         unstuckFill.style.width = Math.min(100, (qPressTime / 3000) * 100) + '%';
@@ -1789,7 +1772,7 @@ function animate() {
     }
 
     if (!isBeaming && !isCustomizing) {
-        if (!amIStunned) {
+        if (!amIStunned && !isMVPGameOver) {
             if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
             if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
             
@@ -1829,7 +1812,12 @@ function animate() {
         myEmote = 0;
     }
 
-    if (isBeaming) {
+    if (isMVPGameOver) {
+        // Lock the MVP directly onto the podium and rotate
+        myPlayerObject.position.set(0, -2.5, -10);
+        myPlayerObject.rotation.y += 0.05;
+        moved = true;
+    } else if (isBeaming) {
         velocityY = 0.2; 
         myPlayerObject.position.y += velocityY;
         isGrounded = false;
@@ -1921,7 +1909,7 @@ function animate() {
     if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
     let targetHeadRot = 0;
-    if (!amIStunned && !isBeaming && !isCustomizing) {
+    if (!amIStunned && !isBeaming && !isCustomizing && !isMVPGameOver) {
         if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
         else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
     }
@@ -1930,7 +1918,7 @@ function animate() {
     myTailTime += 0.22; 
     myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
 
-    if (moved && isGrounded && !amIStunned) { 
+    if (moved && isGrounded && !amIStunned && !isMVPGameOver) { 
         myWalkTime += 0.44; 
         if (myWalkTime - lastStepTime > 1.5) { playSound('step'); lastStepTime = myWalkTime; }
     } else { 
@@ -1946,7 +1934,7 @@ function animate() {
     myCatData.dBeamMat.opacity += (targetOp - myCatData.dBeamMat.opacity) * 0.1;
 
     let finalScaleY = 1; let finalScaleXZ = 1;
-    if (!isGrounded && !isBeaming) {
+    if (!isGrounded && !isBeaming && !isMVPGameOver) {
         if (velocityY > 0) { let stretch = 1 + (velocityY * 0.8); finalScaleY *= stretch; finalScaleXZ *= (1 / stretch); }
     } else {
         if (wasGroundedLastFrame === false) { 
