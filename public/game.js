@@ -329,10 +329,11 @@ function createCatSculpt(startColor = 0xFFFFFF, startFace = 'normal') {
     const crown = createCrown();
     head.add(crown); 
 
-    // --- DROP BEAM ADDED ---
+    // --- DROP BEAM ADDED WITH NAME FLAG ---
     const dBeamGeo = new THREE.CylinderGeometry(0.8, 0.8, 60, 16, 1, true);
     const dBeamMat = new THREE.MeshBasicMaterial({ color: 0xFFFFAA, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
     const dBeam = new THREE.Mesh(dBeamGeo, dBeamMat);
+    dBeam.name = 'dBeam'; // Identifying tag so we can hide it on loading cats!
     dBeam.position.y = 30; // Starts from high above the cat
     containerGroup.add(dBeam);
 
@@ -406,18 +407,6 @@ function createHouseWall(w, h, d, x, y, z, color) {
     walls.push(mesh); 
 }
 
-const wallMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
-function createWall(w, h, d, x, y, z) {
-    const geo = new THREE.BoxGeometry(w, h, d);
-    const mat = wallMat.clone();
-    mat.transparent = true; 
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.castShadow = true; mesh.receiveShadow = true;
-    mesh.position.set(x, y, z);
-    scene.add(mesh);
-    walls.push(mesh);
-}
-
 const invisibleWalls = [];
 const invisibleMat = new THREE.MeshBasicMaterial({ visible: false });
 function createInvisibleWall(w, h, d, x, y, z) {
@@ -426,6 +415,24 @@ function createInvisibleWall(w, h, d, x, y, z) {
     mesh.position.set(x, y, z);
     scene.add(mesh);
     invisibleWalls.push(mesh);
+}
+
+// --- DISTANT VOXEL MOUNTAINS ---
+const mountainObjects = [];
+function createDistantMountains() {
+    mountainObjects.forEach(m => scene.remove(m)); mountainObjects.length = 0;
+    const colors = [0x5C4033, 0x4B3621, 0x228B22, 0x1B4D3E, 0x556B2F];
+    for (let i = 0; i < 60; i++) {
+        const h = Math.random() * 30 + 10;
+        const w = Math.random() * 15 + 15;
+        const geo = new THREE.BoxGeometry(w, h, w);
+        const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: colors[Math.floor(Math.random() * colors.length)] }));
+        const angle = (i / 60) * Math.PI * 2;
+        const dist = 60 + Math.random() * 20;
+        mesh.position.set(Math.cos(angle) * dist, -5 + (h / 2), Math.sin(angle) * dist);
+        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+        scene.add(mesh); mountainObjects.push(mesh);
+    }
 }
 
 const mapObjects = [];
@@ -494,12 +501,30 @@ beamGroundMesh.rotation.x = -Math.PI / 2;
 beamGroundMesh.position.set(0, -4.9, 0); 
 scene.add(beamGroundMesh);
 
-// --- MVP PODIUM VISUAL ---
-const mvpPodium = new THREE.Mesh(new THREE.CylinderGeometry(2, 2.5, 1, 16), new THREE.MeshLambertMaterial({color: 0x4CAF50}));
-mvpPodium.position.set(0, 99.5, 0);
-mvpPodium.add(new THREE.LineSegments(new THREE.EdgesGeometry(mvpPodium.geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
-scene.add(mvpPodium);
-mvpPodium.visible = false;
+// --- VOXEL MVP CAT BED PODIUM ---
+const mvpPodiumGroup = new THREE.Group();
+function createVoxelMVPBed() {
+    mvpPodiumGroup.clear();
+    const baseMat = new THREE.MeshLambertMaterial({color: 0xFFD700}); // Gold base
+    const rimMat = new THREE.MeshLambertMaterial({color: 0xFFFFFF}); // White fluffy rim
+    
+    function addP(geo, mat, px, py, pz) {
+        const m = new THREE.Mesh(geo, mat);
+        m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+        m.position.set(px, py, pz);
+        mvpPodiumGroup.add(m);
+    }
+    
+    addP(new THREE.BoxGeometry(4, 0.4, 4), baseMat, 0, 99.7, 0); 
+    addP(new THREE.BoxGeometry(0.4, 0.6, 4.8), rimMat, -2.2, 99.8, 0); 
+    addP(new THREE.BoxGeometry(0.4, 0.6, 4.8), rimMat, 2.2, 99.8, 0);  
+    addP(new THREE.BoxGeometry(4, 0.6, 0.4), rimMat, 0, 99.8, -2.2); 
+    addP(new THREE.BoxGeometry(4, 0.6, 0.4), rimMat, 0, 99.8, 2.2); 
+
+    scene.add(mvpPodiumGroup);
+}
+createVoxelMVPBed();
+mvpPodiumGroup.visible = false;
 
 function createCatBed(x, z, color) {
     const bedGroup = new THREE.Group();
@@ -702,6 +727,11 @@ for(let i=0; i<3; i++) {
     let cat = createCatSculpt(0xFFFFFF);
     cat.group.position.set((Math.random() * 10) - 5, -0.5 - (i * 1.0), -4);
     cat.group.traverse((child) => {
+        // PREVENT DROP BEAM ON LOADING CATS
+        if (child.name === 'dBeam') {
+            child.visible = false; 
+            return;
+        }
         if (child.isMesh || child.isLineSegments) {
             child.material.depthTest = false; 
             child.material.depthWrite = false; 
@@ -1113,36 +1143,26 @@ socket.on('initMap', (mapBlocks) => {
         const maxX = Math.max(...mapBlocks.map(b => b.x));
         const minZ = Math.min(...mapBlocks.map(b => b.z));
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
-        
-        // Find highest map block so walls are just tall enough
-        const maxY = Math.max(...mapBlocks.map(b => b.y)); 
 
         const widthX = (maxX - minX) + 5; 
+        const wallDepthZ = (maxZ - minZ) + 4;
         
         // Massive ground so map edge void isn't visible
         ground.scale.set(150, 150, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Walls adjusted dynamically so they don't block the sky
-        const visWallH = maxY + 7;
-        const visWallY = -5 + (visWallH / 2);
+        // Invisible walls only, allowing you to see the distant mountains!
+        createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 45, minZ - 0.5);
+        createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 45, maxZ + 0.5);
+        createInvisibleWall(2, 100, wallDepthZ, minX - 0.5, 45, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 100, wallDepthZ, maxX + 0.5, 45, (minZ + maxZ) / 2);
 
-        // Walls shifted inward by 0.5 to overlap the outermost blocks perfectly!
-        createWall(widthX, visWallH, 2, (minX + maxX) / 2, visWallY, minZ - 0.5);
-        createWall(widthX, visWallH, 2, (minX + maxX) / 2, visWallY, maxZ + 0.5);
-        
-        const wallDepthZ = (maxZ - minZ) + 4;
-        createWall(2, visWallH, wallDepthZ, minX - 0.5, visWallY, (minZ + maxZ) / 2);
-        createWall(2, visWallH, wallDepthZ, maxX + 0.5, visWallY, (minZ + maxZ) / 2);
-        
-        // Invisible collision still shoots high into the sky
-        createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 25, minZ - 0.5);
-        createInvisibleWall(widthX, 100, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
-        createInvisibleWall(2, 100, wallDepthZ, minX - 0.5, 25, (minZ + maxZ) / 2);
-        createInvisibleWall(2, 100, wallDepthZ, maxX + 0.5, 25, (minZ + maxZ) / 2);
+        createDistantMountains();
     } else {
         // FLAT LOBBY
+        mountainObjects.forEach(m => scene.remove(m)); mountainObjects.length = 0;
+        
         ground.scale.set(100, 100, 1);
         ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
@@ -1232,7 +1252,7 @@ socket.on('currentPlayers', (players) => {
 
             myCatData.material.color.setHex(players[id].color);
             myCatData.faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
-            myCatData.faceStr = players[id].face || 'normal'; // track for MVP screen
+            myCatData.faceStr = players[id].face || 'normal'; 
             
             let cColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
             myCatData.crownMat.color.setHex(cColor);
@@ -1259,7 +1279,7 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].stunned = players[id].stunned;
                 otherPlayers[id].baseColor = players[id].baseColor;
                 otherPlayers[id].faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
-                otherPlayers[id].faceStr = players[id].face || 'normal'; // track for MVP screen
+                otherPlayers[id].faceStr = players[id].face || 'normal'; 
                 
                 let oColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
                 otherPlayers[id].crownMat.color.setHex(oColor);
@@ -1550,6 +1570,9 @@ function animateCat(cat, emote, walkTime) {
     }
 }
 
+let mvpEmoteTimer = 0;
+let currentMvpEmote = 1;
+
 function animate() {
     requestAnimationFrame(animate);
 
@@ -1560,7 +1583,13 @@ function animate() {
     // --- MVP OR START SCREEN OVERRIDE ---
     if (document.getElementById('startScreen').style.display !== 'none' || serverGameState === 'GAME_OVER') {
         previewCat.group.visible = true;
-        mvpPodium.visible = true;
+        mvpPodiumGroup.visible = true;
+        
+        // Force daytime lighting for MVP screen
+        scene.background.copy(colorDay);
+        sunLight.intensity = 0.8;
+        ambientLight.intensity = 0.4;
+        if(starMat) starMat.opacity = 0;
         
         if (serverGameState === 'GAME_OVER' && serverWinnerId) {
             let winColor = 0xFFFFFF;
@@ -1586,11 +1615,20 @@ function animate() {
                 previewCat.nameSprite.visible = true;
                 previewCat.nameSprite.position.y = 2.0; 
             }
+
+            // Cycle Random Emotes
+            if (now > mvpEmoteTimer) {
+                currentMvpEmote = Math.floor(Math.random() * 5) + 1;
+                mvpEmoteTimer = now + 1500;
+            }
+            animateCat(previewCat, currentMvpEmote, now / 200);
+
         } else {
             previewCat.material.color.setHex(window.myBaseColor);
             previewCat.faceMesh.material.map = getFaceTexture(window.myFace);
             previewCat.crown.visible = false;
             if(previewCat.nameSprite) previewCat.nameSprite.visible = false;
+            animateCat(previewCat, 0, 0); // Reset animation
         }
 
         camera.position.set(0, 101.5, 6);
@@ -1600,7 +1638,7 @@ function animate() {
         return; 
     } else {
         previewCat.group.visible = false;
-        mvpPodium.visible = false;
+        mvpPodiumGroup.visible = false;
     }
 
     myPlayerObject.rotation.x = 0;
