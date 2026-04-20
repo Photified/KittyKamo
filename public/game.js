@@ -341,9 +341,9 @@ function buildAccessory(type, colorHex) {
         addPart(new THREE.BoxGeometry(0.12, 0.15, 0.12), 0, -0.08, 0); // base shape for clone
     } else if (type === 'bowTie') {
         targetPart = 'body';
-        addPart(new THREE.BoxGeometry(0.1, 0.1, 0.05), 0, 0.75, -0.42); // mid
-        addPart(new THREE.BoxGeometry(0.15, 0.15, 0.05), -0.12, 0.75, -0.42); // l
-        addPart(new THREE.BoxGeometry(0.15, 0.15, 0.05), 0.12, 0.75, -0.42); // r
+        addPart(new THREE.BoxGeometry(0.1, 0.1, 0.05), 0, 0.55, -0.42); // mid
+        addPart(new THREE.BoxGeometry(0.15, 0.15, 0.05), -0.12, 0.55, -0.42); // l
+        addPart(new THREE.BoxGeometry(0.15, 0.15, 0.05), 0.12, 0.55, -0.42); // r
     } else if (type === 'beanie') {
         targetPart = 'head';
         addPart(new THREE.BoxGeometry(0.42, 0.15, 0.42), 0, 0.2, 0);
@@ -930,7 +930,7 @@ nameInput.onblur = () => nameInput.style.borderColor = '#555';
 catTab.appendChild(nameInput);
 
 const colorPalette = document.createElement('div');
-colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
+colorPalette.style.cssText = 'display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; justify-content:center; max-width: 350px;';
 
 const colors = [
     {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, 
@@ -946,7 +946,7 @@ const colors = [
 
 colors.forEach(c => {
     let btn = document.createElement('button');
-    btn.style.cssText = `width:35px; height:35px; border-radius:50%; background:#${c.h.toString(16).padStart(6,'0')}; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s;`;
+    btn.style.cssText = `width:28px; height:28px; border-radius:50%; background:#${c.h.toString(16).padStart(6,'0')}; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s;`;
     btn.onclick = () => { 
         window.myBaseColor = c.h; 
         previewCat.material.color.setHex(c.h);
@@ -961,7 +961,7 @@ colorPalette.children[0].style.borderColor = 'gold';
 catTab.appendChild(colorPalette);
 
 const facePalette = document.createElement('div');
-facePalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
+facePalette.style.cssText = 'display:flex; gap:6px; margin-bottom:15px; flex-wrap:wrap; justify-content:center; max-width: 350px;';
 const faces = [
     { id: 'normal'}, { id: 'happy'}, { id: 'mad'}, { id: 'surprised'}, { id: 'meh'}, { id: 'crying'},
     { id: 'uwu'}, { id: 'derp'}, { id: 'cool'}, { id: 'derp2'}, { id: 'derp3'}, { id: 'derp4'},
@@ -978,7 +978,7 @@ faces.forEach(f => {
     drawFaceOnCanvas(fCtx, f.id);
     let dataURL = faceCanvas.toDataURL();
 
-    btn.style.cssText = `width:40px; height:40px; border-radius:8px; background-color:#DDD; background-image:url(${dataURL}); background-size:80%; background-position:center; background-repeat:no-repeat; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s;`;
+    btn.style.cssText = `width:32px; height:32px; border-radius:6px; background-color:#DDD; background-image:url(${dataURL}); background-size:80%; background-position:center; background-repeat:no-repeat; border:3px solid #555; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s;`;
     
     btn.onclick = () => { 
         window.myFace = f.id; 
