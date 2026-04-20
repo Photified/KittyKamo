@@ -575,14 +575,14 @@ function createCatTree(x, z, type = 1) {
         lobbyCollision.push(mesh);
     }
 
-    if (type === 1) {
+  if (type === 1) {
         addTreePart(new THREE.BoxGeometry(4, 0.4, 4), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -1, -3.6, 1);
         addTreePart(new THREE.BoxGeometry(2.5, 0.2, 2.5), matBase, -1, -2.5, 1);
         addTreePart(new THREE.BoxGeometry(0.6, 4, 0.6), matPost, 1, -2.6, 0);
         addTreePart(new THREE.BoxGeometry(3, 0.2, 3), matBase, 1, -0.5, 0);
-        addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -0.5, 0.6, -0.5);
-        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, -0.5, 1.7, -0.5);
+        addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, 0, 0.6, -0.5);
+        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.7, -0.5);
     } else if (type === 2) {
         addTreePart(new THREE.BoxGeometry(3, 0.4, 3), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 6, 0.6), matPost, 0, -1.8, 0);
