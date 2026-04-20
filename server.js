@@ -28,48 +28,40 @@ const catBeds = [
 function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
-    let occupiedColumns = new Set(); // Prevents structures from spawning inside each other
+    let occupiedColumns = new Set(); 
 
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
             let y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
             let colKey = `${x},${z}`;
 
-            // --- BASE TERRAIN ---
-            mapBlocks.push({ x: x, y: y + 0.5, z: z, color: 0x556B2F }); // Grass top
-            mapBlocks.push({ x: x, y: y - 0.5, z: z, color: 0x654321 }); // Dirt bottom
+            mapBlocks.push({ x: x, y: y + 0.5, z: z, color: 0x556B2F }); 
+            mapBlocks.push({ x: x, y: y - 0.5, z: z, color: 0x654321 }); 
 
-            // Add Puddles in the lowlands
             if (y < -1 && Math.random() < 0.2) {
-                 mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x1E90FF }); // Blue water block
+                 mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x1E90FF }); 
                  occupiedColumns.add(colKey);
             }
 
-            // --- STRUCTURES & PROPS ---
-            // Only spawn if the column is empty and we hit the 6% random chance
             if (!occupiedColumns.has(colKey) && Math.random() < 0.06) {
                 let type = Math.random();
 
                 if (type < 0.4) {
-                    // 1. BETTER TREES (Oak Style)
-                    // Trunk
                     for(let ty = 1; ty <= 3; ty++) {
                         mapBlocks.push({ x: x, y: y + 0.5 + ty, z: z, color: 0x5C4033 });
                     }
-                    // Leaves (Plus shape)
                     const leafColor = 0x228B22;
                     for(let lx = -1; lx <= 1; lx++) {
                         for(let lz = -1; lz <= 1; lz++) {
-                            if (Math.abs(lx) === 1 && Math.abs(lz) === 1) continue; // Removes corners for a plus shape
+                            if (Math.abs(lx) === 1 && Math.abs(lz) === 1) continue; 
                             mapBlocks.push({ x: x + lx, y: y + 3.5, z: z + lz, color: leafColor });
                             occupiedColumns.add(`${x+lx},${z+lz}`);
                         }
                     }
-                    mapBlocks.push({ x: x, y: y + 4.5, z: z, color: leafColor }); // Top leaf
+                    mapBlocks.push({ x: x, y: y + 4.5, z: z, color: leafColor }); 
 
                 } else if (type < 0.6) {
-                    // 2. GIANT YARN BALLS (2x2x2 bright color cluster)
-                    const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; // Pink, Cyan, Orange, Purple
+                    const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; 
                     const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
                     for(let yx = 0; yx <= 1; yx++) {
                         for(let yz = 0; yz <= 1; yz++) {
@@ -81,24 +73,21 @@ function generateMap() {
                     }
 
                 } else if (type < 0.8) {
-                    // 3. TALL FLOWERS
-                    const flowerColors = [0xFFFF00, 0xFF69B4, 0xFFFFFF]; // Yellow, Pink, White
+                    const flowerColors = [0xFFFF00, 0xFF69B4, 0xFFFFFF]; 
                     const fColor = flowerColors[Math.floor(Math.random() * flowerColors.length)];
-                    mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x32CD32 }); // Bright green stem
-                    mapBlocks.push({ x: x, y: y + 2.5, z: z, color: fColor }); // Flower head
+                    mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x32CD32 }); 
+                    mapBlocks.push({ x: x, y: y + 2.5, z: z, color: fColor }); 
                     occupiedColumns.add(colKey);
 
                 } else {
-                    // 4. CARDBOARD BOXES (Hollow 3x3x2 structures)
                     const boxColor = 0xC19A6B;
                     for(let bx = -1; bx <= 1; bx++) {
                         for(let bz = -1; bz <= 1; bz++) {
-                            // Leave one side open for the cat to enter, and keep the middle hollow
                             if (bx === 0 && bz === 1) continue; 
                             if (bx === 0 && bz === 0) continue; 
                             
-                            mapBlocks.push({ x: x + bx, y: y + 1.5, z: z + bz, color: boxColor }); // Bottom wall
-                            mapBlocks.push({ x: x + bx, y: y + 2.5, z: z + bz, color: boxColor }); // Top wall
+                            mapBlocks.push({ x: x + bx, y: y + 1.5, z: z + bz, color: boxColor }); 
+                            mapBlocks.push({ x: x + bx, y: y + 2.5, z: z + bz, color: boxColor }); 
                             occupiedColumns.add(`${x+bx},${z+bz}`);
                         }
                     }
@@ -121,8 +110,6 @@ function startLobby() {
     gameState = 'LOBBY';
     timeRemaining = 60; 
     
-    // Only clear and reposition if coming from WAITING. 
-    // If coming from GAME_OVER, players are already hanging out in the lobby map seamlessly!
     if (!wasGameOver) {
         mapBlocks = [];
         io.emit('initMap', mapBlocks);
@@ -132,9 +119,8 @@ function startLobby() {
             players[id].x = bed.x + (Math.random() > 0.5 ? 0.6 : -0.6);
             players[id].y = -4; 
             players[id].z = bed.z + (Math.random() > 0.5 ? 0.6 : -0.6);
-            players[id].rY = Math.atan2(players[id].x, players[id].z); // Fixed: Face the center cat tree
+            players[id].rY = Math.atan2(players[id].x, players[id].z); 
             
-            // Force the client to physically move to the bed!
             io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
         });
     }
@@ -143,10 +129,11 @@ function startLobby() {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
         players[id].score = 0; 
-        players[id].decoyUsed = false; 
-        players[id].hairballs = 3; 
+        players[id].decoys = 3; 
+        players[id].hairballs = 10; 
         players[id].stunned = false;
         players[id].emote = 0; 
+        players[id].tagProgress = 0; 
     });
     
     io.emit('currentPlayers', players); 
@@ -194,13 +181,12 @@ function startLobby() {
 
             if (!hidersLeft || timeRemaining <= 0) {
                 gameState = 'GAME_OVER';
-                timeRemaining = 5; // 5 Seconds of MVP celebration
+                timeRemaining = 5; 
                 winReason = hidersLeft ? 'HIDERS SURVIVE!' : 'SEEKERS WIN!';
                 
                 let sortedIds = activePlayers.filter(id => players[id]).sort((a,b) => players[b].score - players[a].score);
                 currentWinnerId = sortedIds.length > 0 ? sortedIds[0] : null;
 
-                // Move everyone to the lobby immediately for the MVP celebration
                 mapBlocks = [];
                 io.emit('initMap', mapBlocks);
                 
@@ -208,20 +194,19 @@ function startLobby() {
                     players[id].role = 'hider';
                     players[id].color = players[id].baseColor;
                     players[id].stunned = false;
+                    players[id].tagProgress = 0; 
                     
                     if (id === currentWinnerId) {
                         players[id].x = 17.5;
-                        players[id].y = -2.8; // Top of the 2-block podium
+                        players[id].y = -2.8; 
                         players[id].z = -17.5;
-                        players[id].rY = Math.PI * 0.75; // MVP faces the crowd
+                        players[id].rY = Math.PI * 0.75; 
                     } else {
-                        // Crowd clusters together, looking directly at the corner podium
                         players[id].x = 13 + (Math.random() * 3); 
                         players[id].y = -4; 
                         players[id].z = -13 - (Math.random() * 3);
-                        players[id].rY = -Math.PI / 4; // Crowd faces the MVP
+                        players[id].rY = -Math.PI / 4; 
                     }
-                    // Force the client to teleport seamlessly
                     io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
                 });
                 io.emit('currentPlayers', players);
@@ -267,10 +252,11 @@ function startRound() {
             players[id].role = 'spectator';
             players[id].color = players[id].baseColor;
         }
-        players[id].decoyUsed = false; 
-        players[id].hairballs = 3; 
+        players[id].decoys = 3; 
+        players[id].hairballs = 10; 
         players[id].stunned = false;
         players[id].emote = 0; 
+        players[id].tagProgress = 0;
         
         io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
     });
@@ -279,7 +265,6 @@ function startRound() {
 }
 
 io.on('connection', (socket) => {
-    // Only generate a new map if no one is playing (prevents reconnect bugs overwriting the lobby map during GAME_OVER)
     if (mapBlocks.length === 0 && (gameState === 'HIDING' || gameState === 'SEEKING')) {
         generateMap();
     }
@@ -287,12 +272,11 @@ io.on('connection', (socket) => {
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
-    // Calculate a safe lobby spawn in a cat bed, facing the middle tree
     let isLobbyPhase = (gameState === 'LOBBY' || gameState === 'WAITING');
     let bed = catBeds[Math.floor(Math.random() * catBeds.length)];
     let startX = isLobbyPhase ? bed.x + (Math.random() > 0.5 ? 0.6 : -0.6) : (Math.random() * 30) - 15;
     let startZ = isLobbyPhase ? bed.z + (Math.random() > 0.5 ? 0.6 : -0.6) : (Math.random() * 30) - 15;
-    let startRY = isLobbyPhase ? Math.atan2(startX, startZ) : 0; // Fixed: Face the center cat tree
+    let startRY = isLobbyPhase ? Math.atan2(startX, startZ) : 0; 
     let startY = isLobbyPhase ? -4 : 20;
 
     players[socket.id] = {
@@ -303,12 +287,11 @@ io.on('connection', (socket) => {
         y: startY, 
         z: startZ,
         rY: startRY, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
-        decoyUsed: false, hairballs: 3, stunned: false, emote: 0, face: 'normal'
+        decoys: 3, hairballs: 10, stunned: false, emote: 0, face: 'normal', tagProgress: 0
     };
 
     socket.emit('currentPlayers', players);
     
-    // Force the joining player to teleport to their bed immediately!
     socket.emit('forceTeleport', { x: startX, y: startY, z: startZ, rY: startRY });
 
     socket.broadcast.emit('newPlayer', { id: socket.id, player: players[socket.id] });
@@ -332,15 +315,23 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('tagPlayer', (targetId) => {
-        if (players[targetId] && players[targetId].role === 'hider') {
-            if (players[socket.id] && players[socket.id].role === 'seeker' && !players[socket.id].stunned) {
-                players[targetId].role = 'seeker';
-                players[targetId].color = 0xFF0000;
-                
-                players[socket.id].score += 15;
-                
+    // Tag tick receiver to track progress instead of instant tags
+    socket.on('tagTick', (data) => {
+        let target = players[data.targetId];
+        let seeker = players[socket.id];
+        
+        if (target && target.role === 'hider' && seeker && seeker.role === 'seeker' && !seeker.stunned) {
+            target.tagProgress = (target.tagProgress || 0) + data.delta;
+            
+            if (target.tagProgress >= 1.0) {
+                target.role = 'seeker';
+                target.color = 0xFF0000;
+                target.tagProgress = 0; 
+                seeker.score += 15;
                 io.emit('currentPlayers', players); 
+            } else {
+                io.to(data.targetId).emit('tagProgressUpdate', target.tagProgress);
+                io.to(socket.id).emit('tagProgressUpdate', target.tagProgress);
             }
         }
     });
@@ -366,12 +357,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('dropDecoy', (data) => {
-        if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING' && !players[socket.id].decoyUsed) {
-            players[socket.id].decoyUsed = true; 
+        if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING' && players[socket.id].decoys > 0) {
+            players[socket.id].decoys--; 
             const decoyId = 'decoy_' + (nextDecoyId++);
             activeDecoys[decoyId] = socket.id; 
             io.emit('spawnDecoy', { id: decoyId, x: data.x, y: data.y, z: data.z, rY: data.rY, color: data.color, face: players[socket.id].face });
-            socket.emit('inventoryUpdate', { decoys: 0, hairballs: players[socket.id].hairballs });
+            socket.emit('inventoryUpdate', { decoys: players[socket.id].decoys, hairballs: players[socket.id].hairballs });
         }
     });
 
@@ -392,7 +383,7 @@ io.on('connection', (socket) => {
                 players[socket.id].hairballs--;
                 const hbId = 'hb_' + (nextHairballId++);
                 io.emit('spawnHairball', { id: hbId, ownerId: socket.id, x: data.x, y: data.y, z: data.z, dirX: data.dirX, dirZ: data.dirZ });
-                socket.emit('inventoryUpdate', { decoys: players[socket.id].decoyUsed ? 0 : 1, hairballs: players[socket.id].hairballs });
+                socket.emit('inventoryUpdate', { decoys: players[socket.id].decoys, hairballs: players[socket.id].hairballs });
             } else if (gameState === 'LOBBY' || gameState === 'WAITING' || gameState === 'GAME_OVER') {
                 const hbId = 'hb_' + (nextHairballId++);
                 io.emit('spawnHairball', { id: hbId, ownerId: socket.id, x: data.x, y: data.y, z: data.z, dirX: data.dirX, dirZ: data.dirZ });
