@@ -201,16 +201,16 @@ function startLobby() {
                     players[id].stunned = false;
                     
                     if (id === currentWinnerId) {
-                        players[id].x = 0;
+                        players[id].x = 12;
                         players[id].y = -2.8; // Top of the 2-block podium
-                        players[id].z = -10;
-                        players[id].rY = Math.PI; // Faces the crowd (+Z)
+                        players[id].z = -18;
+                        players[id].rY = -Math.PI / 2; // Face the crowd (-X direction)
                     } else {
-                        // Spawn randomly in front of the podium looking at it
-                        players[id].x = (Math.random() - 0.5) * 12;
+                        // Spawn crowd looking at the podium
+                        players[id].x = 4 + (Math.random() * 4); // X between 4 and 8
                         players[id].y = -4; 
-                        players[id].z = -5 + (Math.random() * 3);
-                        players[id].rY = 0; // Faces the podium (-Z)
+                        players[id].z = -18 + ((Math.random() - 0.5) * 6); // Spread along Z
+                        players[id].rY = Math.PI / 2; // Faces the podium (+X direction)
                     }
                     // Force the client to teleport seamlessly
                     io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
