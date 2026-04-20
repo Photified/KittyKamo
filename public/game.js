@@ -1211,8 +1211,8 @@ socket.on('initMap', (mapBlocks) => {
         createWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
 
-        // MVP Podium - Moved to the left of the customization house
-        createWall(4, 2, 4, 12, -4, -18, 0xFFD700);
+        // MVP Podium - Tucked into the back right corner (no clipping)
+        createWall(4, 2, 4, 17.5, -4, -17.5, 0xFFD700);
 
         createCraftingTable(0, -18.4);
         
@@ -1607,8 +1607,9 @@ function animate() {
         previewCat.group.position.set(0, 100, 0);
         previewCat.group.rotation.y += 0.015;
 
-        camera.position.set(0, 100.5, 4); 
-        camera.lookAt(0, 100, 0);
+        // Shift the camera down and angle it slightly up to push the cat to the top of the UI
+        camera.position.set(0, 99.2, 4); 
+        camera.lookAt(0, 100.5, 0);
         
         renderer.render(scene, camera);
         return; 
@@ -1646,7 +1647,8 @@ function animate() {
             const geo = new THREE.PlaneGeometry(0.3, 0.3);
             const mat = new THREE.MeshBasicMaterial({ color: confettiColors[Math.floor(Math.random() * confettiColors.length)], side: THREE.DoubleSide });
             const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(12 + (Math.random() - 0.5) * 10, 5 + Math.random() * 5, -18 + (Math.random() - 0.5) * 10);
+            // Center the confetti over the new podium corner (17.5, -17.5)
+            mesh.position.set(17.5 + (Math.random() - 0.5) * 10, 5 + Math.random() * 5, -17.5 + (Math.random() - 0.5) * 10);
             mesh.rotation.set(Math.random(), Math.random(), Math.random());
             mesh.vel = new THREE.Vector3((Math.random() - 0.5) * 0.1, -0.1 - Math.random() * 0.1, (Math.random() - 0.5) * 0.1);
             mesh.rotVel = new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
@@ -1856,7 +1858,7 @@ function animate() {
 
     if (isMVPGameOver) {
         // Lock the MVP directly onto the podium and rotate
-        myPlayerObject.position.set(12, -2.8, -18);
+        myPlayerObject.position.set(17.5, -2.8, -17.5);
         myPlayerObject.rotation.y += 0.05;
         moved = true;
     } else if (isBeaming) {
