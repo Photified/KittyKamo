@@ -148,6 +148,20 @@ function drawFaceOnCanvas(ctx, type) {
         ctx.fillStyle = '#000';
         ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
         ctx.beginPath(); ctx.arc(64, 105, 12, Math.PI, 0); ctx.stroke();
+    } else if (type === 'uwu') {
+        ctx.beginPath(); ctx.moveTo(24, 45); ctx.lineTo(40, 55); ctx.lineTo(56, 45); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(72, 45); ctx.lineTo(88, 55); ctx.lineTo(104, 45); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(48, 80); ctx.lineTo(56, 90); ctx.lineTo(64, 85); ctx.lineTo(72, 90); ctx.lineTo(80, 80); ctx.stroke();
+    } else if (type === 'derp') {
+        ctx.fillRect(32, 40, 16, 16); 
+        ctx.fillRect(84, 50, 12, 12); 
+        ctx.beginPath(); ctx.arc(64, 90, 10, 0, Math.PI, false); ctx.stroke(); 
+        ctx.fillStyle = '#FF69B4'; ctx.fill(); 
+    } else if (type === 'cool') {
+        ctx.fillRect(24, 40, 32, 16); 
+        ctx.fillRect(72, 40, 32, 16); 
+        ctx.beginPath(); ctx.moveTo(56, 45); ctx.lineTo(72, 45); ctx.stroke(); 
+        ctx.beginPath(); ctx.moveTo(56, 90); ctx.lineTo(72, 90); ctx.stroke(); 
     } else { // normal
         ctx.fillRect(32, 45, 16, 16); ctx.fillRect(80, 45, 16, 16);
         ctx.beginPath(); ctx.moveTo(56, 85); ctx.lineTo(64, 95); ctx.lineTo(72, 85); ctx.stroke();
@@ -363,6 +377,9 @@ function setNameLabel(catData, name) {
 }
 
 const particles = [];
+const confettiParticles = [];
+const confettiColors = [0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF];
+
 function explodeParticles(pos, isRed) {
     const color = isRed ? 0xFF0000 : 0xFFFFFF;
     for (let i = 0; i < 20; i++) {
@@ -395,7 +412,7 @@ function createBlock(x, y, z, color) {
 
 const walls = [];
 
-// ONE Unified createWall function!
+// ONE Unified createWall function
 function createWall(w, h, d, x, y, z, color = 0x8B4513) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mat = new THREE.MeshLambertMaterial({ color: color, transparent: true });
@@ -503,7 +520,7 @@ function createVoxelMVPBed() {
     addP(new THREE.BoxGeometry(4, 0.6, 0.4), rimMat, 0, 99.8, -2.2); 
     addP(new THREE.BoxGeometry(4, 0.6, 0.4), rimMat, 0, 99.8, 2.2); 
 
-    // Moves it far away into the sky void
+    // Move to isolated sky stage
     mvpPodiumGroup.position.set(1000, 1000, 1000);
     scene.add(mvpPodiumGroup);
 }
@@ -563,7 +580,6 @@ function createCatTree(x, z, type = 1) {
         addTreePart(new THREE.BoxGeometry(3, 0.4, 3), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 6, 0.6), matPost, 0, -1.8, 0);
         addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.3, 0);
-        // Corrected side platforms to perfectly touch the center pole!
         addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, 0.9, -1, 0);
         addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, -0.9, -3, 0);
     } else if (type === 3) {
@@ -793,7 +809,10 @@ const colors = [
     {n:'Bright Purple', h:0x9932CC}, {n:'Bright Yellow', h:0xFFFF00}, 
     {n:'Cyan', h:0x00FFFF}, {n:'Bright Orange', h:0xFF8C00},
     {n:'Magenta', h:0xFF00FF}, {n:'Violet', h:0x8A2BE2}, 
-    {n:'Deep Sky Blue', h:0x00BFFF}, {n:'Light Pink', h:0xFFB6C1}
+    {n:'Deep Sky Blue', h:0x00BFFF}, {n:'Light Pink', h:0xFFB6C1},
+    {n:'Lime', h:0x32CD32}, {n:'Crimson', h:0xDC143C},
+    {n:'Teal', h:0x008080}, {n:'Gold', h:0xFFD700},
+    {n:'Silver', h:0xC0C0C0}, {n:'Peach', h:0xFFDAB9}
 ];
 
 colors.forEach(c => {
@@ -817,7 +836,9 @@ facePalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wr
 const faces = [
     { id: 'normal'}, { id: 'happy'}, 
     { id: 'mad'}, { id: 'surprised'}, 
-    { id: 'meh'}, { id: 'crying'}
+    { id: 'meh'}, { id: 'crying'},
+    { id: 'uwu'}, { id: 'derp'},
+    { id: 'cool'}
 ];
 
 const faceCanvas = document.createElement('canvas');
@@ -1071,11 +1092,18 @@ function updateRightBox(leaderboardData) {
 }
 
 socket.on('gameStateUpdate', (data) => {
+    let wasNotGameOver = serverGameState !== 'GAME_OVER';
     serverGameState = data.state;
     serverTime = data.time;
     serverWinnerId = data.winnerId;
     serverWinReason = data.winReason;
     updateUI();
+
+    if (serverGameState === 'GAME_OVER' && wasNotGameOver && serverWinnerId !== socket.id) {
+        // Teleport to MVP foreground!
+        myPlayerObject.position.set(1000 + (Math.random()*6 - 3), 1000, 1006 + (Math.random()*3));
+        myPlayerObject.rotation.y = 0; 
+    }
 
     if (serverGameState === 'SEEKING' && serverTime <= 10 && serverTime > 0 && serverTime !== lastTickTime) {
         playSound('tick'); lastTickTime = serverTime;
@@ -1115,29 +1143,31 @@ socket.on('initMap', (mapBlocks) => {
     activeHairballs.length = 0;
 
     mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
+
+    // Setup MVP Invisible Stage
+    createInvisibleWall(30, 2, 30, 1000, 998.5, 1000); // Floor
+    createInvisibleWall(30, 40, 2, 1000, 1010, 985); // Back
+    createInvisibleWall(30, 40, 2, 1000, 1010, 1015); // Front
+    createInvisibleWall(2, 40, 30, 985, 1010, 1000); // Left
+    createInvisibleWall(2, 40, 30, 1015, 1010, 1000); // Right
+    createInvisibleWall(4.5, 1.5, 4.5, 1000, 999.5, 1000); // Block podium center
     
     scene.updateMatrixWorld(true);
 
     if (mapBlocks.length > 0) {
-        // Find outer boundaries of the actual blocks
         const minX = Math.min(...mapBlocks.map(b => b.x));
         const maxX = Math.max(...mapBlocks.map(b => b.x));
         const minZ = Math.min(...mapBlocks.map(b => b.z));
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
 
-        // The blocks have width/depth of 1. So they expand from (minX - 0.5) to (maxX + 0.5)
-        // To seamlessly wrap them with a wall of thickness 2, we place the wall center at minX - 0.5.
-        // This makes the inner edge perfectly touch minX - 0.5, creating a solid corner.
+        const wX = (maxX - minX) + 3; 
+        const wZ = (maxZ - minZ) + 3; 
         
-        const wX = (maxX - minX) + 3; // 43
-        const wZ = (maxZ - minZ) + 3; // 43
-        
-        // Ground perfectly sized to the framed map to look like a floating island
         ground.scale.set(wX, wZ, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Visible border walls wrapping the outermost blocks completely
+        // Flush boundary walls 10 blocks high!
         createWall(wX, 10, 2, (minX + maxX) / 2, 0, minZ - 0.5, 0x8B4513);
         createWall(wX, 10, 2, (minX + maxX) / 2, 0, maxZ + 0.5, 0x8B4513);
         
@@ -1145,7 +1175,6 @@ socket.on('initMap', (mapBlocks) => {
         createWall(2, 10, sideDepth, minX - 0.5, 0, (minZ + maxZ) / 2, 0x8B4513);
         createWall(2, 10, sideDepth, maxX + 0.5, 0, (minZ + maxZ) / 2, 0x8B4513);
         
-        // Invisible collision still shoots high into the sky
         createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, minZ - 0.5);
         createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
         createInvisibleWall(2, 40, sideDepth, minX - 0.5, 25, (minZ + maxZ) / 2);
@@ -1248,7 +1277,7 @@ socket.on('currentPlayers', (players) => {
 
             setNameLabel(myCatData, myName); 
 
-            if (Date.now() > ignoreServerPositionUntil) {
+            if (Date.now() > ignoreServerPositionUntil && serverGameState !== 'GAME_OVER') {
                 if (serverGameState === 'WAITING' || serverGameState === 'LOBBY' || myRole !== 'spectator') {
                     myPlayerObject.position.set(players[id].x, players[id].y, players[id].z);
                 }
@@ -1291,7 +1320,10 @@ socket.on('inventoryUpdate', (data) => {
 socket.on('newPlayer', (data) => addOtherPlayer(data.id, data.player));
 socket.on('playerMoved', (data) => {
     if (otherPlayers[data.id]) {
-        otherPlayers[data.id].group.position.set(data.x, data.y, data.z);
+        // If we are in GAME OVER, we don't snap other players to their old map spots
+        if (serverGameState !== 'GAME_OVER') {
+            otherPlayers[data.id].group.position.set(data.x, data.y, data.z);
+        }
         otherPlayers[data.id].group.rotation.y = data.rY;
         otherPlayers[data.id].moving = data.moving;
         otherPlayers[data.id].material.color.setHex(data.color); 
@@ -1440,8 +1472,27 @@ document.addEventListener('keydown', (e) => {
     }
 
     if(e.key.toLowerCase() === 'r') {
-        if (myRole === 'hider') {
+        if (myRole === 'hider' || serverGameState === 'GAME_OVER') {
             let canShoot = false;
+            
+            // Allow local overrides in game over
+            if (serverGameState === 'GAME_OVER') {
+                let dirX = -Math.sin(myPlayerObject.rotation.y);
+                let dirZ = -Math.cos(myPlayerObject.rotation.y);
+                
+                // Local Bypass for Game Over fun
+                const hbId = 'local_hb_' + Math.random();
+                const hbGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2); 
+                const hbMat = new THREE.MeshLambertMaterial({color: 0x6B4226}); 
+                const hbMesh = new THREE.Mesh(hbGeo, hbMat);
+                hbMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(hbGeo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+                hbMesh.position.set(myPlayerObject.position.x, myPlayerObject.position.y + 0.5, myPlayerObject.position.z);
+                scene.add(hbMesh);
+                activeHairballs.push({ mesh: hbMesh, dirX: dirX, dirZ: dirZ, id: hbId, ownerId: socket.id, distance: 0 });
+                playSound('spit');
+                return;
+            }
+
             if (serverGameState === 'SEEKING' && myHairballs > 0) {
                 myHairballs--;
                 updateRightBox(null);
@@ -1569,81 +1620,113 @@ function animate() {
     if (now - lastRenderTime < fpsInterval) return; 
     lastRenderTime = now - (now % fpsInterval);
 
-    // --- MVP OR START SCREEN OVERRIDE ---
-    if (document.getElementById('startScreen').style.display !== 'none' || serverGameState === 'GAME_OVER') {
+    if (document.getElementById('startScreen').style.display !== 'none') {
         previewCat.group.visible = true;
+        mvpPodiumGroup.visible = false;
+
+        previewCat.material.color.setHex(window.myBaseColor);
+        previewCat.faceMesh.material.map = getFaceTexture(window.myFace);
+        previewCat.crown.visible = false;
+        if(previewCat.nameSprite) previewCat.nameSprite.visible = false;
         
-        // Force daytime lighting for menus
+        animateCat(previewCat, 0, 0); 
+        
+        previewCat.group.position.set(0, 100, 0);
+        previewCat.group.rotation.y += 0.015;
+
+        camera.position.set(0, 100.5, 4); 
+        camera.lookAt(0, 100, 0);
+        
+        renderer.render(scene, camera);
+        return; 
+    } 
+
+    let isGameOver = serverGameState === 'GAME_OVER';
+
+    if (isGameOver) {
         scene.background.copy(colorDay);
         sunLight.intensity = 0.8;
         ambientLight.intensity = 0.4;
         if(starMat) starMat.opacity = 0;
+
+        mvpPodiumGroup.visible = true;
+        previewCat.group.visible = true;
+
+        let winColor = 0xFFFFFF;
+        let winFace = 'happy';
+        let winName = 'MVP';
+        if (serverWinnerId === socket.id) {
+            winColor = window.myBaseColor;
+            winFace = window.myFace;
+            winName = myName;
+        } else if (otherPlayers[serverWinnerId]) {
+            winColor = otherPlayers[serverWinnerId].baseColor;
+            winFace = otherPlayers[serverWinnerId].faceStr || 'happy';
+            winName = otherPlayers[serverWinnerId].currentName;
+        }
+        previewCat.material.color.setHex(winColor);
+        previewCat.faceMesh.material.map = getFaceTexture(winFace);
+        previewCat.crown.visible = true;
+        let cColor = (winColor === 0xFFFFFF || winColor === 0xFF0000) ? 0xFFD700 : winColor;
+        previewCat.crownMat.color.setHex(cColor);
         
-        if (serverGameState === 'GAME_OVER' && serverWinnerId) {
-            // MVP SCREEN - Far away isolated stage
-            mvpPodiumGroup.visible = true;
-
-            let winColor = 0xFFFFFF;
-            let winFace = 'happy';
-            let winName = 'MVP';
-            if (serverWinnerId === socket.id) {
-                winColor = window.myBaseColor;
-                winFace = window.myFace;
-                winName = myName;
-            } else if (otherPlayers[serverWinnerId]) {
-                winColor = otherPlayers[serverWinnerId].baseColor;
-                winFace = otherPlayers[serverWinnerId].faceStr || 'happy';
-                winName = otherPlayers[serverWinnerId].currentName;
-            }
-            previewCat.material.color.setHex(winColor);
-            previewCat.faceMesh.material.map = getFaceTexture(winFace);
-            previewCat.crown.visible = true;
-            let cColor = (winColor === 0xFFFFFF || winColor === 0xFF0000) ? 0xFFD700 : winColor;
-            previewCat.crownMat.color.setHex(cColor);
-            
-            setNameLabel(previewCat, winName);
-            if(previewCat.nameSprite) {
-                previewCat.nameSprite.visible = true;
-                previewCat.nameSprite.position.y = 2.0; 
-            }
-
-            // Cycle Random Emotes
-            if (now > mvpEmoteTimer) {
-                currentMvpEmote = Math.floor(Math.random() * 5) + 1;
-                mvpEmoteTimer = now + 1500;
-            }
-            animateCat(previewCat, currentMvpEmote, now / 200);
-
-            // Sync rotation of cat and podium
-            previewCat.group.position.set(1000, 1000.5, 1000);
-            previewCat.group.rotation.y += 0.015;
-            mvpPodiumGroup.rotation.y = previewCat.group.rotation.y;
-
-            camera.position.set(1000, 1003, 1008); 
-            camera.lookAt(1000, 1000.5, 1000);
-
-        } else {
-            // START SCREEN - Normal close up, no podium
-            mvpPodiumGroup.visible = false;
-            previewCat.material.color.setHex(window.myBaseColor);
-            previewCat.faceMesh.material.map = getFaceTexture(window.myFace);
-            previewCat.crown.visible = false;
-            if(previewCat.nameSprite) previewCat.nameSprite.visible = false;
-            
-            animateCat(previewCat, 0, 0); 
-            
-            previewCat.group.position.set(0, 100, 0);
-            previewCat.group.rotation.y += 0.015;
-
-            camera.position.set(0, 100.5, 4); 
-            camera.lookAt(0, 100, 0);
+        setNameLabel(previewCat, winName);
+        if(previewCat.nameSprite) {
+            previewCat.nameSprite.visible = true;
+            previewCat.nameSprite.position.y = 2.0; 
         }
 
-        renderer.render(scene, camera);
-        return; 
+        // Cycle Random Emotes
+        if (now > mvpEmoteTimer) {
+            currentMvpEmote = Math.floor(Math.random() * 5) + 1;
+            mvpEmoteTimer = now + 1500;
+        }
+        animateCat(previewCat, currentMvpEmote, now / 200);
+
+        // Sync rotation of cat and podium
+        previewCat.group.position.set(1000, 1000.1, 1000);
+        previewCat.group.rotation.y += 0.015;
+        mvpPodiumGroup.rotation.y = previewCat.group.rotation.y;
+
+        // Hide the winner's actual physical player body
+        if (serverWinnerId === socket.id) myCatData.group.visible = false;
+        else myCatData.group.visible = true;
+
+        Object.values(otherPlayers).forEach(p => {
+            if (p.id === serverWinnerId) p.group.visible = false;
+            else p.group.visible = false; // Hide other non-winners to keep it clean (they are there physically but invisible)
+        });
+
+        // Rain Confetti!
+        for (let i = 0; i < 3; i++) {
+            const geo = new THREE.PlaneGeometry(0.3, 0.3);
+            const mat = new THREE.MeshBasicMaterial({ color: confettiColors[Math.floor(Math.random() * confettiColors.length)], side: THREE.DoubleSide });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(1000 + (Math.random() - 0.5) * 15, 1015 + Math.random() * 5, 1000 + (Math.random() - 0.5) * 15);
+            mesh.rotation.set(Math.random(), Math.random(), Math.random());
+            mesh.vel = new THREE.Vector3((Math.random() - 0.5) * 0.1, -0.1 - Math.random() * 0.1, (Math.random() - 0.5) * 0.1);
+            mesh.rotVel = new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
+            scene.add(mesh);
+            confettiParticles.push(mesh);
+        }
+
+        camera.position.set(1000, 1002, 1009); 
+        camera.lookAt(1000, 1000.5, 1000);
     } else {
         previewCat.group.visible = false;
         mvpPodiumGroup.visible = false;
+        myCatData.group.visible = myRole !== 'spectator';
+    }
+
+    // Update Confetti Physics
+    for (let i = confettiParticles.length - 1; i >= 0; i--) {
+        let p = confettiParticles[i];
+        p.position.add(p.vel);
+        p.rotation.x += p.rotVel.x; p.rotation.y += p.rotVel.y; p.rotation.z += p.rotVel.z;
+        if (p.position.y < 999.5 || !isGameOver) {
+            scene.remove(p);
+            confettiParticles.splice(i, 1);
+        }
     }
 
     myPlayerObject.rotation.x = 0;
@@ -1660,23 +1743,23 @@ function animate() {
     }
 
     let sunX = 40 - (80 * cycleProgress); 
-    sunLight.position.set(sunX, 40, 20);  
-
-    if (cycleProgress < 0.7) {
-        let p = cycleProgress / 0.7;
-        scene.background.lerpColors(colorDay, colorSunset, p);
-        starMat.opacity = 0; 
-    } else {
-        let p = (cycleProgress - 0.7) / 0.3;
-        scene.background.lerpColors(colorSunset, colorNight, p);
-        starMat.opacity = p; 
+    if (!isGameOver) {
+        sunLight.position.set(sunX, 40, 20);  
+        if (cycleProgress < 0.7) {
+            let p = cycleProgress / 0.7;
+            scene.background.lerpColors(colorDay, colorSunset, p);
+            starMat.opacity = 0; 
+        } else {
+            let p = (cycleProgress - 0.7) / 0.3;
+            scene.background.lerpColors(colorSunset, colorNight, p);
+            starMat.opacity = p; 
+        }
+        let dimFactor = 1 - (0.15 * cycleProgress); 
+        sunLight.intensity = 0.8 * dimFactor;
+        ambientLight.intensity = 0.4 * dimFactor;
     }
 
     stars.rotation.y += 0.0003; 
-
-    let dimFactor = 1 - (0.15 * cycleProgress); 
-    sunLight.intensity = 0.8 * dimFactor;
-    ambientLight.intensity = 0.4 * dimFactor;
 
     beamMesh.visible = (serverGameState === 'LOBBY' || serverGameState === 'BEAMING');
     beamLight.visible = beamMesh.visible;
@@ -1685,15 +1768,6 @@ function animate() {
         let glowOsc = 0.4 + Math.sin(performance.now() / 150) * 0.2;
         beamMat.opacity = glowOsc; 
         beamMesh.rotation.y += 0.01;
-    }
-
-    if (customizationZone && (serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
-        if (myPlayerObject.position.distanceTo(customizationZone) < 2.5 && !isCustomizing) {
-            isCustomizing = true;
-            document.getElementById('startScreen').style.display = 'flex';
-            document.getElementById('playBtn').innerHTML = 'SAVE & EXIT';
-            document.getElementById('nameInput').value = myName === 'Connecting...' ? '' : myName;
-        }
     }
 
     for (let i = particles.length - 1; i >= 0; i--) {
@@ -1717,17 +1791,19 @@ function animate() {
         let hitWall = false;
         let hitSeekerId = null;
 
-        if (hb.mesh.position.y <= -4.8) {
-            hitWall = true;
-        }
-
-        if (Math.abs(hb.mesh.position.x) > 30 || Math.abs(hb.mesh.position.z) > 30) {
-            hitWall = true;
+        // Custom pop bounds for GAME_OVER vs normal map
+        if (isGameOver) {
+            if (hb.mesh.position.y <= 999.5) hitWall = true;
+            // Pop if it hits the podium
+            if (hb.mesh.position.z <= 1002 && hb.mesh.position.y <= 1000.5 && Math.abs(hb.mesh.position.x - 1000) < 3) hitWall = true;
+        } else {
+            if (hb.mesh.position.y <= -4.8) hitWall = true;
+            if (Math.abs(hb.mesh.position.x) > 30 || Math.abs(hb.mesh.position.z) > 30) hitWall = true;
         }
 
         const hbBox = new THREE.Box3().setFromObject(hb.mesh);
 
-        if (!hitWall) {
+        if (!hitWall && !isGameOver) {
             for(let j=0; j<mapObjects.length; j++){
                if(hbBox.intersectsBox(new THREE.Box3().setFromObject(mapObjects[j]))) { hitWall = true; break; }
             }
@@ -1738,7 +1814,7 @@ function animate() {
             }
         }
 
-        if (!hitWall) {
+        if (!hitWall && !isGameOver) {
             if (hb.ownerId !== socket.id) {
                 let myBox = new THREE.Box3();
                 const currentScaleY = myCatData.body.scale.y; 
@@ -1783,7 +1859,7 @@ function animate() {
     let targetColor = myRole === 'seeker' ? 0xFF0000 : window.myBaseColor; 
     let isBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(socket.id));
 
-    if (isQPressed && !amIStunned && myRole !== 'spectator' && !isBeaming) {
+    if (isQPressed && !amIStunned && myRole !== 'spectator' && !isBeaming && !isGameOver) {
         qPressTime += fpsInterval; 
         unstuckUI.style.display = 'block';
         unstuckFill.style.width = Math.min(100, (qPressTime / 3000) * 100) + '%';
@@ -1809,64 +1885,64 @@ function animate() {
         });
     }
 
-    if (myRole === 'spectator') {
-        myCatData.group.visible = false;
-        if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
-        if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
-    } else {
-        myCatData.group.visible = true;
-
-        if (!(myRole === 'seeker' && serverGameState === 'HIDING') && !isBeaming && !isCustomizing) {
-            if (!amIStunned) {
-                if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
-                if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
+    if (!isBeaming && !isCustomizing) {
+        if (!amIStunned) {
+            if (keys.ArrowLeft || keys.a) myPlayerObject.rotation.y += turnSpeed;
+            if (keys.ArrowRight || keys.d) myPlayerObject.rotation.y -= turnSpeed;
+            
+            const oldX = myPlayerObject.position.x; 
+            const oldZ = myPlayerObject.position.z;
+            
+            if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
+            if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
+            
+            if (moved && !isGameOver) {
+                let proposedX = myPlayerObject.position.x;
+                let proposedZ = myPlayerObject.position.z;
                 
-                const oldX = myPlayerObject.position.x; 
-                const oldZ = myPlayerObject.position.z;
-                
-                if (keys.w || keys.ArrowUp) { myPlayerObject.translateZ(-moveSpeed); moved = true; }
-                if (keys.s || keys.ArrowDown) { myPlayerObject.translateZ(moveSpeed); moved = true; }
-                
-                if (moved) {
-                    let proposedX = myPlayerObject.position.x;
-                    let proposedZ = myPlayerObject.position.z;
-                    
-                    if (checkCollision(myPlayerObject.position)) { 
-                        myPlayerObject.position.x = oldX; 
+                if (checkCollision(myPlayerObject.position)) { 
+                    myPlayerObject.position.x = oldX; 
+                    if (checkCollision(myPlayerObject.position)) {
+                        myPlayerObject.position.x = proposedX;
+                        myPlayerObject.position.z = oldZ;
                         if (checkCollision(myPlayerObject.position)) {
-                            myPlayerObject.position.x = proposedX;
-                            myPlayerObject.position.z = oldZ;
-                            if (checkCollision(myPlayerObject.position)) {
-                                myPlayerObject.position.x = oldX;
-                            }
+                            myPlayerObject.position.x = oldX;
                         }
                     }
                 }
-
-                if (keys[" "] && isGrounded) { 
-                    velocityY = jumpStrength; 
-                    isGrounded = false; 
-                    moved = true; 
-                    playSound('jump'); 
+            } else if (moved && isGameOver) {
+                // Keep players in bounds of MVP stage
+                if (myPlayerObject.position.x < 985 || myPlayerObject.position.x > 1015 || myPlayerObject.position.z < 1000 || myPlayerObject.position.z > 1015) {
+                    myPlayerObject.position.x = oldX;
+                    myPlayerObject.position.z = oldZ;
                 }
             }
-        }
-        
-        if (keys.w || keys.a || keys.s || keys.d || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight || keys[" "]) {
-            if (myEmote !== 0) moved = true; 
-            myEmote = 0;
-        }
 
-        if (isBeaming) {
-            velocityY = 0.2; 
-            myPlayerObject.position.y += velocityY;
-            isGrounded = false;
-            moved = true; 
-        } else {
-            const oldY = myPlayerObject.position.y;
-            velocityY += gravity; 
-            myPlayerObject.position.y += velocityY;
-            
+            if (keys[" "] && isGrounded && !isGameOver) { 
+                velocityY = jumpStrength; 
+                isGrounded = false; 
+                moved = true; 
+                playSound('jump'); 
+            }
+        }
+    }
+    
+    if (keys.w || keys.a || keys.s || keys.d || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight || keys[" "]) {
+        if (myEmote !== 0) moved = true; 
+        myEmote = 0;
+    }
+
+    if (isBeaming) {
+        velocityY = 0.2; 
+        myPlayerObject.position.y += velocityY;
+        isGrounded = false;
+        moved = true; 
+    } else {
+        const oldY = myPlayerObject.position.y;
+        velocityY += gravity; 
+        myPlayerObject.position.y += velocityY;
+        
+        if (!isGameOver) {
             if (checkCollision(myPlayerObject.position)) {
                 myPlayerObject.position.y = oldY; 
                 if (velocityY > 0) {
@@ -1879,125 +1955,126 @@ function animate() {
             } else { 
                 isGrounded = false; 
             }
-            
             if (myPlayerObject.position.y <= -5) { myPlayerObject.position.y = -5; velocityY = 0; isGrounded = true; }
-        }
-
-        if (myRole === 'seeker' && serverGameState === 'SEEKING' && !amIStunned) {
-            let closestDist = 999;
-            let closestHider = null;
-
-            const currentScaleY = myCatData.body.scale.y;
-            const seekerBox = new THREE.Box3();
-            seekerBox.setFromCenterAndSize(
-                new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
-                new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
-            );
-            seekerBox.expandByScalar(0.2);
-
-            Object.keys(otherPlayers).forEach(id => {
-                if (otherPlayers[id].role === 'hider') {
-                    let true3DDist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
-                    if (true3DDist < closestDist) { closestDist = true3DDist; closestHider = otherPlayers[id]; }
-
-                    const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
-                    
-                    if (seekerBox.intersectsBox(hiderBox)) {
-                        otherPlayers[id].role = 'seeker'; 
-                        socket.emit('tagPlayer', id);
-                        playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
-                        playSound('tag'); 
-                    }
-                }
-            });
-
-            Object.keys(activeDecoys).forEach(dId => {
-                const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
-                if (seekerBox.intersectsBox(decoyBox)) {
-                    socket.emit('tagDecoy', dId);
-                    explodeParticles(activeDecoys[dId].group.position, false); 
-                    scene.remove(activeDecoys[dId].group); delete activeDecoys[dId]; 
-                }
-            });
-
-            if (closestDist < 5.0 && closestHider && Date.now() - lastRadarTime > 3000) {
-                playCatMeow(closestHider); 
-                lastRadarTime = Date.now();
-            }
-        }
-
-        if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned && serverGameState === 'SEEKING') { 
-            let minDist = 2.0; let closestBlock = null;
-            
-            for (let i = 0; i < mapObjects.length; i++) {
-                let dist = myPlayerObject.position.distanceTo(mapObjects[i].position);
-                if (dist < minDist) { minDist = dist; closestBlock = mapObjects[i]; }
-            }
-            
-            for (let i = 0; i < walls.length; i++) {
-                const wBox = new THREE.Box3().setFromObject(walls[i]);
-                let dist = wBox.distanceToPoint(myPlayerObject.position);
-                if (dist < minDist) { minDist = dist; closestBlock = walls[i]; }
-            }
-            
-            if (closestBlock) { targetColor = closestBlock.material.color.getHex(); }
-        }
-        
-        myCatData.material.color.setHex(targetColor);
-        let cColor = (targetColor === 0xFFFFFF || targetColor === 0xFF0000) ? 0xFFD700 : targetColor;
-        myCatData.crownMat.color.setHex(cColor);
-
-        if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
-
-        let targetHeadRot = 0;
-        if (!amIStunned && !isBeaming && !isCustomizing) {
-            if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
-            else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
-        }
-        myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
-        
-        myTailTime += 0.22; 
-        myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
-
-        if (moved && isGrounded && !amIStunned) { 
-            myWalkTime += 0.44; 
-            if (myWalkTime - lastStepTime > 1.5) { playSound('step'); lastStepTime = myWalkTime; }
-        } else { 
-            myWalkTime = 0; 
-        }
-        
-        let globalTime = performance.now() / 136; 
-        myCatData.stunned = amIStunned; 
-        animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
-
-        let isDropping = (serverGameState === 'HIDING' && serverTime >= 8);
-        let targetOp = isDropping ? 0.6 : 0;
-        myCatData.dBeamMat.opacity += (targetOp - myCatData.dBeamMat.opacity) * 0.1;
-
-        let finalScaleY = 1; let finalScaleXZ = 1;
-        if (!isGrounded && !isBeaming) {
-            if (velocityY > 0) { let stretch = 1 + (velocityY * 0.8); finalScaleY *= stretch; finalScaleXZ *= (1 / stretch); }
         } else {
-            if (wasGroundedLastFrame === false) { 
-                myPlayerObject.squashAnimTime = 0; 
-                playSound('land'); 
-            }
-            if (myPlayerObject.squashAnimTime !== undefined && myPlayerObject.squashAnimTime < 1) {
-                myPlayerObject.squashAnimTime += 0.15;
-                let squashAmt = 0.3 * (1 - (1 - Math.pow(1 - myPlayerObject.squashAnimTime, 3))); 
-                finalScaleY *= (1 - squashAmt); finalScaleXZ *= (1 + squashAmt);
-            }
+            if (myPlayerObject.position.y <= 999.5) { myPlayerObject.position.y = 999.5; velocityY = 0; isGrounded = true; }
         }
-        myCatData.body.scale.set(finalScaleXZ, finalScaleY, finalScaleXZ);
-        wasGroundedLastFrame = isGrounded; 
     }
 
+    if (myRole === 'seeker' && serverGameState === 'SEEKING' && !amIStunned) {
+        let closestDist = 999;
+        let closestHider = null;
+
+        const currentScaleY = myCatData.body.scale.y;
+        const seekerBox = new THREE.Box3();
+        seekerBox.setFromCenterAndSize(
+            new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
+            new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
+        );
+        seekerBox.expandByScalar(0.2);
+
+        Object.keys(otherPlayers).forEach(id => {
+            if (otherPlayers[id].role === 'hider') {
+                let true3DDist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
+                if (true3DDist < closestDist) { closestDist = true3DDist; closestHider = otherPlayers[id]; }
+
+                const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
+                
+                if (seekerBox.intersectsBox(hiderBox)) {
+                    otherPlayers[id].role = 'seeker'; 
+                    socket.emit('tagPlayer', id);
+                    playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
+                    playSound('tag'); 
+                }
+            }
+        });
+
+        Object.keys(activeDecoys).forEach(dId => {
+            const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
+            if (seekerBox.intersectsBox(decoyBox)) {
+                socket.emit('tagDecoy', dId);
+                explodeParticles(activeDecoys[dId].group.position, false); 
+                scene.remove(activeDecoys[dId].group); delete activeDecoys[dId]; 
+            }
+        });
+
+        if (closestDist < 5.0 && closestHider && Date.now() - lastRadarTime > 3000) {
+            playCatMeow(closestHider); 
+            lastRadarTime = Date.now();
+        }
+    }
+
+    if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned && serverGameState === 'SEEKING') { 
+        let minDist = 2.0; let closestBlock = null;
+        
+        for (let i = 0; i < mapObjects.length; i++) {
+            let dist = myPlayerObject.position.distanceTo(mapObjects[i].position);
+            if (dist < minDist) { minDist = dist; closestBlock = mapObjects[i]; }
+        }
+        
+        for (let i = 0; i < walls.length; i++) {
+            const wBox = new THREE.Box3().setFromObject(walls[i]);
+            let dist = wBox.distanceToPoint(myPlayerObject.position);
+            if (dist < minDist) { minDist = dist; closestBlock = walls[i]; }
+        }
+        
+        if (closestBlock) { targetColor = closestBlock.material.color.getHex(); }
+    }
+    
+    myCatData.material.color.setHex(targetColor);
+    let cColor = (targetColor === 0xFFFFFF || targetColor === 0xFF0000) ? 0xFFD700 : targetColor;
+    myCatData.crownMat.color.setHex(cColor);
+
+    if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
+
+    let targetHeadRot = 0;
+    if (!amIStunned && !isBeaming && !isCustomizing) {
+        if (keys.ArrowLeft || keys.a) targetHeadRot = 0.4;
+        else if (keys.ArrowRight || keys.d) targetHeadRot = -0.4;
+    }
+    myCatData.head.rotation.y += (targetHeadRot - myCatData.head.rotation.y) * 0.15;
+    
+    myTailTime += 0.22; 
+    myCatData.tail.rotation.y = Math.sin(myTailTime) * 0.3; 
+
+    if (moved && isGrounded && !amIStunned) { 
+        myWalkTime += 0.44; 
+        if (myWalkTime - lastStepTime > 1.5) { playSound('step'); lastStepTime = myWalkTime; }
+    } else { 
+        myWalkTime = 0; 
+    }
+    
     let globalTime = performance.now() / 136; 
+    myCatData.stunned = amIStunned; 
+    animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
+
+    let isDropping = (serverGameState === 'HIDING' && serverTime >= 8);
+    let targetOp = isDropping ? 0.6 : 0;
+    myCatData.dBeamMat.opacity += (targetOp - myCatData.dBeamMat.opacity) * 0.1;
+
+    let finalScaleY = 1; let finalScaleXZ = 1;
+    if (!isGrounded && !isBeaming) {
+        if (velocityY > 0) { let stretch = 1 + (velocityY * 0.8); finalScaleY *= stretch; finalScaleXZ *= (1 / stretch); }
+    } else {
+        if (wasGroundedLastFrame === false) { 
+            myPlayerObject.squashAnimTime = 0; 
+            playSound('land'); 
+        }
+        if (myPlayerObject.squashAnimTime !== undefined && myPlayerObject.squashAnimTime < 1) {
+            myPlayerObject.squashAnimTime += 0.15;
+            let squashAmt = 0.3 * (1 - (1 - Math.pow(1 - myPlayerObject.squashAnimTime, 3))); 
+            finalScaleY *= (1 - squashAmt); finalScaleXZ *= (1 + squashAmt);
+        }
+    }
+    myCatData.body.scale.set(finalScaleXZ, finalScaleY, finalScaleXZ);
+    wasGroundedLastFrame = isGrounded; 
+
+    // Update Other Players visually
     Object.values(otherPlayers).forEach(p => {
         if (p.role === 'spectator') { 
             p.group.visible = false; return; 
         } else { 
-            p.group.visible = true; 
+            if (!isGameOver) p.group.visible = true; 
         }
         
         p.group.scale.set(1, 1, 1);
@@ -2010,7 +2087,7 @@ function animate() {
         p.head.rotation.y += (otherTargetHeadRot - p.head.rotation.y) * 0.15;
         
         if (p.nameSprite) { 
-            p.nameSprite.visible = !blindfoldStage.visible && (p.role === 'seeker' || p.material.color.getHex() === p.baseColor || serverGameState === 'LOBBY' || serverGameState === 'WAITING'); 
+            p.nameSprite.visible = !blindfoldStage.visible && !isGameOver && (p.role === 'seeker' || p.material.color.getHex() === p.baseColor || serverGameState === 'LOBBY' || serverGameState === 'WAITING'); 
         }
 
         if (p.moving && !p.stunned) {
@@ -2028,7 +2105,7 @@ function animate() {
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
 
     let focusObject = myPlayerObject;
-    if (myRole === 'spectator') {
+    if (myRole === 'spectator' && !isGameOver) {
         let seekerId = Object.keys(otherPlayers).find(id => otherPlayers[id].role === 'seeker');
         if (seekerId && otherPlayers[seekerId]) focusObject = otherPlayers[seekerId].group;
     }
@@ -2040,51 +2117,52 @@ function animate() {
         idealOffset.set(0, 2.5, 4); 
     }
 
-    let cameraTargetPos = idealOffset.applyMatrix4(focusObject.matrixWorld);
-    camera.position.lerp(cameraTargetPos, 0.15);
-    
-    let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
-    camera.lookAt(lookAtTarget);
+    if (!isGameOver) {
+        let cameraTargetPos = idealOffset.applyMatrix4(focusObject.matrixWorld);
+        camera.position.lerp(cameraTargetPos, 0.15);
+        let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
+        camera.lookAt(lookAtTarget);
 
-    walls.forEach(w => {
-        if (w.material.opacity < 1) {
-            w.material.opacity += 0.05;
-            if (w.material.opacity > 1) w.material.opacity = 1;
-        }
-    });
-    mapObjects.forEach(m => {
-        if (m.material.opacity < 1) {
-            m.material.opacity += 0.05;
-            if (m.material.opacity > 1) m.material.opacity = 1;
-        }
-    });
-
-    let obstacles = [...walls, ...mapObjects];
-    let rightDir = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-    let upDir = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
-    
-    let sightTargets = [
-        lookAtTarget,
-        lookAtTarget.clone().add(rightDir.clone().multiplyScalar(0.7)),
-        lookAtTarget.clone().add(rightDir.clone().multiplyScalar(-0.7)),
-        lookAtTarget.clone().add(upDir.clone().multiplyScalar(0.7)),
-        lookAtTarget.clone().add(upDir.clone().multiplyScalar(-0.7))
-    ];
-
-    sightTargets.forEach(t => {
-        let camDist = camera.position.distanceTo(t);
-        let camDir = new THREE.Vector3().subVectors(t, camera.position).normalize();
-        camRaycaster.set(camera.position, camDir);
-        
-        let hits = camRaycaster.intersectObjects(obstacles);
-        hits.forEach(hit => {
-            if (hit.distance < camDist - 0.5) {
-                let blockingObj = hit.object;
-                blockingObj.material.opacity -= 0.15;
-                if (blockingObj.material.opacity < 0.2) blockingObj.material.opacity = 0.2;
+        walls.forEach(w => {
+            if (w.material.opacity < 1) {
+                w.material.opacity += 0.05;
+                if (w.material.opacity > 1) w.material.opacity = 1;
             }
         });
-    });
+        mapObjects.forEach(m => {
+            if (m.material.opacity < 1) {
+                m.material.opacity += 0.05;
+                if (m.material.opacity > 1) m.material.opacity = 1;
+            }
+        });
+
+        let obstacles = [...walls, ...mapObjects];
+        let rightDir = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+        let upDir = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+        
+        let sightTargets = [
+            lookAtTarget,
+            lookAtTarget.clone().add(rightDir.clone().multiplyScalar(0.7)),
+            lookAtTarget.clone().add(rightDir.clone().multiplyScalar(-0.7)),
+            lookAtTarget.clone().add(upDir.clone().multiplyScalar(0.7)),
+            lookAtTarget.clone().add(upDir.clone().multiplyScalar(-0.7))
+        ];
+
+        sightTargets.forEach(t => {
+            let camDist = camera.position.distanceTo(t);
+            let camDir = new THREE.Vector3().subVectors(t, camera.position).normalize();
+            camRaycaster.set(camera.position, camDir);
+            
+            let hits = camRaycaster.intersectObjects(obstacles);
+            hits.forEach(hit => {
+                if (hit.distance < camDist - 0.5) {
+                    let blockingObj = hit.object;
+                    blockingObj.material.opacity -= 0.15;
+                    if (blockingObj.material.opacity < 0.2) blockingObj.material.opacity = 0.2;
+                }
+            });
+        });
+    }
 
     socket.emit('playerMovement', { 
         x: myPlayerObject.position.x, y: myPlayerObject.position.y, z: myPlayerObject.position.z,
