@@ -158,41 +158,41 @@ function drawFaceOnCanvas(ctx, type) {
         ctx.fillRect(24, 40, 32, 16); ctx.fillRect(72, 40, 32, 16); 
         ctx.beginPath(); ctx.moveTo(56, 45); ctx.lineTo(72, 45); ctx.stroke(); 
         ctx.beginPath(); ctx.moveTo(56, 90); ctx.lineTo(72, 90); ctx.stroke(); 
-    } else if (type === 'derp2') { // Cross-eyed
+    } else if (type === 'derp2') { 
         ctx.strokeRect(32, 40, 16, 24); ctx.strokeRect(80, 40, 16, 24); 
         ctx.fillRect(40, 48, 8, 8); ctx.fillRect(80, 48, 8, 8); 
         ctx.beginPath(); ctx.moveTo(48, 85); ctx.lineTo(80, 85); ctx.stroke(); 
-    } else if (type === 'derp3') { // Tongue out wink
+    } else if (type === 'derp3') { 
         ctx.beginPath(); ctx.moveTo(24, 50); ctx.lineTo(56, 50); ctx.stroke(); 
         ctx.fillRect(80, 40, 16, 16); 
         ctx.beginPath(); ctx.arc(64, 85, 12, 0, Math.PI, false); ctx.stroke(); 
         ctx.shadowColor = 'transparent'; ctx.fillStyle = '#FF4444'; ctx.fillRect(60, 85, 8, 16); 
-    } else if (type === 'derp4') { // One huge eye, one tiny
+    } else if (type === 'derp4') { 
         ctx.fillRect(24, 30, 32, 32); 
         ctx.fillRect(88, 50, 8, 8); 
         ctx.beginPath(); ctx.arc(64, 90, 8, 0, Math.PI); ctx.stroke();
-    } else if (type === 'derp5') { // Blank stare
+    } else if (type === 'derp5') { 
         ctx.strokeRect(32, 40, 16, 24); ctx.strokeRect(80, 40, 16, 24);
         ctx.fillRect(56, 85, 16, 4); 
-    } else if (type === 'derp6') { // Squint
+    } else if (type === 'derp6') { 
         ctx.fillRect(32, 50, 16, 4); ctx.fillRect(80, 50, 16, 4); 
         ctx.beginPath(); ctx.moveTo(48, 80); ctx.lineTo(64, 90); ctx.lineTo(80, 80); ctx.stroke(); 
-    } else if (type === 'derp7') { // Dizzy spirals
+    } else if (type === 'derp7') { 
         ctx.lineWidth = 4;
         ctx.beginPath(); ctx.arc(40, 48, 12, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(40, 48, 6, 0, Math.PI*2); ctx.stroke();
         ctx.beginPath(); ctx.arc(88, 48, 12, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(88, 48, 6, 0, Math.PI*2); ctx.stroke();
         ctx.lineWidth = 10;
         ctx.beginPath(); ctx.moveTo(56, 85); ctx.lineTo(72, 85); ctx.stroke();
-    } else if (type === 'derp8') { // Tiny face
+    } else if (type === 'derp8') { 
         ctx.fillRect(52, 60, 6, 6); ctx.fillRect(70, 60, 6, 6);
         ctx.fillRect(58, 75, 12, 4);
-    } else if (type === 'derp9') { // Buck teeth
+    } else if (type === 'derp9') { 
         ctx.fillRect(32, 45, 16, 16); ctx.fillRect(80, 45, 16, 16);
         ctx.beginPath(); ctx.moveTo(40, 85); ctx.lineTo(88, 85); ctx.stroke();
         ctx.shadowColor = 'transparent'; ctx.fillStyle = '#FFF'; 
         ctx.fillRect(56, 85, 16, 12); ctx.strokeRect(56, 85, 16, 12);
         ctx.beginPath(); ctx.moveTo(64, 85); ctx.lineTo(64, 97); ctx.stroke(); 
-    } else if (type === 'derp10') { // Smug
+    } else if (type === 'derp10') { 
         ctx.beginPath(); ctx.moveTo(24, 35); ctx.lineTo(48, 45); ctx.stroke(); 
         ctx.beginPath(); ctx.moveTo(104, 35); ctx.lineTo(80, 45); ctx.stroke(); 
         ctx.fillRect(32, 50, 16, 8); ctx.fillRect(80, 50, 16, 8); 
@@ -308,6 +308,97 @@ sunLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
 scene.add(sunLight);
 
 const camRaycaster = new THREE.Raycaster();
+
+// --- WARDROBE SYSTEM ---
+function buildAccessory(type, colorHex) {
+    const mat = new THREE.MeshLambertMaterial({ color: colorHex });
+    const group = new THREE.Group();
+    let targetPart = 'head'; 
+
+    function addPart(geo, x, y, z) {
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        mesh.position.set(x, y, z);
+        group.add(mesh);
+        return mesh;
+    }
+
+    if (type === 'topHat') {
+        targetPart = 'head';
+        addPart(new THREE.BoxGeometry(0.5, 0.05, 0.5), 0, 0.22, 0); // brim
+        addPart(new THREE.BoxGeometry(0.3, 0.3, 0.3), 0, 0.37, 0); // top
+    } else if (type === 'glasses') {
+        targetPart = 'head';
+        addPart(new THREE.BoxGeometry(0.15, 0.1, 0.05), -0.1, 0.05, -0.21); // left
+        addPart(new THREE.BoxGeometry(0.15, 0.1, 0.05), 0.1, 0.05, -0.21); // right
+        addPart(new THREE.BoxGeometry(0.1, 0.02, 0.05), 0, 0.05, -0.21); // bridge
+    } else if (type === 'sweater') {
+        targetPart = 'body';
+        addPart(new THREE.BoxGeometry(0.52, 0.52, 0.82), 0, 0.5, 0); // body wrapper
+    } else if (type === 'boots') {
+        targetPart = 'legs';
+        addPart(new THREE.BoxGeometry(0.12, 0.15, 0.12), 0, -0.08, 0); // base shape for clone
+    } else if (type === 'bowTie') {
+        targetPart = 'body';
+        addPart(new THREE.BoxGeometry(0.1, 0.1, 0.05), 0, 0.75, -0.42); // mid
+        addPart(new THREE.BoxGeometry(0.15, 0.15, 0.05), -0.12, 0.75, -0.42); // l
+        addPart(new THREE.BoxGeometry(0.15, 0.15, 0.05), 0.12, 0.75, -0.42); // r
+    } else if (type === 'beanie') {
+        targetPart = 'head';
+        addPart(new THREE.BoxGeometry(0.42, 0.15, 0.42), 0, 0.2, 0);
+        addPart(new THREE.BoxGeometry(0.1, 0.1, 0.1), 0, 0.3, 0); // pompom
+    } else if (type === 'headband') {
+        targetPart = 'head';
+        addPart(new THREE.BoxGeometry(0.42, 0.08, 0.42), 0, 0.1, 0);
+    } else if (type === 'monocle') {
+        targetPart = 'head';
+        addPart(new THREE.BoxGeometry(0.15, 0.15, 0.05), 0.1, 0.05, -0.21); 
+        addPart(new THREE.BoxGeometry(0.02, 0.2, 0.02), 0.15, -0.05, -0.21); // chain
+    } else if (type === 'scarf') {
+        targetPart = 'body';
+        addPart(new THREE.BoxGeometry(0.45, 0.15, 0.45), 0, 0.75, -0.3); // around neck
+        addPart(new THREE.BoxGeometry(0.1, 0.4, 0.1), -0.15, 0.5, -0.45); // dangle
+    } else if (type === 'partyHat') {
+        targetPart = 'head';
+        addPart(new THREE.ConeGeometry(0.15, 0.4, 4), 0, 0.4, 0);
+    }
+    
+    return { meshGroup: group, target: targetPart, type: type };
+}
+
+function applyWardrobeToCat(cat, wardrobeArr) {
+    if (cat.equippedAccessories) {
+        cat.equippedAccessories.forEach(acc => {
+            if (acc.target === 'head') cat.head.remove(acc.meshGroup);
+            if (acc.target === 'body') cat.body.remove(acc.meshGroup);
+            if (acc.target === 'legs') {
+                cat.legs.forEach(leg => {
+                    let toRemove = leg.children.find(c => c.userData && c.userData.isBoot);
+                    if (toRemove) leg.remove(toRemove);
+                });
+            }
+        });
+    }
+    cat.equippedAccessories = [];
+
+    if (!wardrobeArr) return;
+    wardrobeArr.forEach(item => {
+        if (!item) return;
+        let acc = buildAccessory(item.id, item.color);
+        if (acc.target === 'head') cat.head.add(acc.meshGroup);
+        if (acc.target === 'body') cat.body.add(acc.meshGroup);
+        if (acc.target === 'legs') {
+            cat.legs.forEach(leg => {
+                let bootClone = acc.meshGroup.children[0].clone();
+                bootClone.userData = { isBoot: true };
+                leg.add(bootClone);
+            });
+        }
+        cat.equippedAccessories.push(acc);
+    });
+}
+// -----------------------
 
 function createCrown() {
     const crownMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 }); 
@@ -575,14 +666,14 @@ function createCatTree(x, z, type = 1) {
         lobbyCollision.push(mesh);
     }
 
-  if (type === 1) {
+    if (type === 1) {
         addTreePart(new THREE.BoxGeometry(4, 0.4, 4), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, -1, -3.6, 1);
         addTreePart(new THREE.BoxGeometry(2.5, 0.2, 2.5), matBase, -1, -2.5, 1);
         addTreePart(new THREE.BoxGeometry(0.6, 4, 0.6), matPost, 1, -2.6, 0);
         addTreePart(new THREE.BoxGeometry(3, 0.2, 3), matBase, 1, -0.5, 0);
-        addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, 0, 0.6, -0.5);
-        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.7, -0.5);
+        addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, 0, 0.6, -0.5); // FIXED
+        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.7, -0.5); // FIXED
     } else if (type === 2) {
         addTreePart(new THREE.BoxGeometry(3, 0.4, 3), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 6, 0.6), matPost, 0, -1.8, 0);
@@ -779,12 +870,17 @@ myPlayerObject.add(myCatData.group);
 
 window.myBaseColor = 0xFFFFFF; 
 window.myFace = 'normal';
+window.myWardrobe = [null, null, null]; // 3 Slots for Customization
+window.activeSlot = 0;
+let currentItemColor = 0xFF0000; // Default Red
+
 const previewCat = createCatSculpt(window.myBaseColor, window.myFace);
 previewCat.group.position.set(0, 100, 0); 
 scene.add(previewCat.group);
 const previewLight = new THREE.AmbientLight(0xffffff, 1.2); 
 scene.add(previewLight);
 
+// --- START SCREEN UI REWRITE ---
 const startScreen = document.createElement('div');
 startScreen.id = 'startScreen';
 startScreen.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom: 10vh; font-family:"Segoe UI", sans-serif; z-index:999; box-sizing:border-box;';
@@ -794,9 +890,35 @@ uiContainer.style.cssText = 'display:flex; flex-direction:column; align-items:ce
 
 const logo = document.createElement('h1');
 logo.innerHTML = 'KITTY KAMO';
-logo.style.cssText = 'font-size: 48px; color: gold; text-shadow: 3px 3px 0 #000; margin: 0 0 20px 0; font-weight: 900; letter-spacing: 2px; text-align: center;';
+logo.style.cssText = 'font-size: 48px; color: gold; text-shadow: 3px 3px 0 #000; margin: 0 0 10px 0; font-weight: 900; letter-spacing: 2px; text-align: center;';
 uiContainer.appendChild(logo);
 
+// TAB BUTTONS
+const tabRow = document.createElement('div');
+tabRow.style.cssText = 'display:flex; gap:10px; margin-bottom:15px;';
+const catTabBtn = document.createElement('button');
+catTabBtn.innerHTML = '🐱 BASE CAT';
+const wardrobeTabBtn = document.createElement('button');
+wardrobeTabBtn.innerHTML = '👕 WARDROBE';
+
+[catTabBtn, wardrobeTabBtn].forEach(btn => {
+    btn.style.cssText = 'padding:8px 16px; font-weight:bold; background:#333; color:white; border:2px solid #555; border-radius:6px; cursor:pointer;';
+});
+catTabBtn.style.borderColor = 'gold';
+tabRow.appendChild(catTabBtn);
+tabRow.appendChild(wardrobeTabBtn);
+uiContainer.appendChild(tabRow);
+
+// TAB CONTAINERS
+const catTab = document.createElement('div');
+catTab.style.cssText = 'display:flex; flex-direction:column; align-items:center;';
+const wardrobeTab = document.createElement('div');
+wardrobeTab.style.cssText = 'display:none; flex-direction:column; align-items:center; width: 100%; max-width: 350px;';
+
+uiContainer.appendChild(catTab);
+uiContainer.appendChild(wardrobeTab);
+
+// 1. CAT TAB CONTENT
 const nameInput = document.createElement('input');
 nameInput.id = 'nameInput';
 nameInput.type = 'text';
@@ -805,7 +927,7 @@ nameInput.maxLength = 12;
 nameInput.style.cssText = 'padding: 12px; font-size: 20px; font-weight: bold; text-align: center; border-radius: 8px; border: 3px solid #555; background: #222; color: white; margin-bottom: 20px; width: 250px; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: border-color 0.2s;';
 nameInput.onfocus = () => nameInput.style.borderColor = 'gold';
 nameInput.onblur = () => nameInput.style.borderColor = '#555';
-uiContainer.appendChild(nameInput);
+catTab.appendChild(nameInput);
 
 const colorPalette = document.createElement('div');
 colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
@@ -836,7 +958,7 @@ colors.forEach(c => {
     colorPalette.appendChild(btn);
 });
 colorPalette.children[0].style.borderColor = 'gold';
-uiContainer.appendChild(colorPalette);
+catTab.appendChild(colorPalette);
 
 const facePalette = document.createElement('div');
 facePalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
@@ -869,12 +991,86 @@ faces.forEach(f => {
     facePalette.appendChild(btn);
 });
 facePalette.children[0].style.borderColor = 'gold';
-uiContainer.appendChild(facePalette);
+catTab.appendChild(facePalette);
+
+
+// 2. WARDROBE TAB CONTENT
+const slotRow = document.createElement('div');
+slotRow.style.cssText = 'display:flex; gap:15px; margin-bottom: 15px;';
+const slots = [];
+for(let i=0; i<3; i++) {
+    let slot = document.createElement('div');
+    slot.style.cssText = 'width:50px; height:50px; border: 3px solid #555; border-radius: 8px; background: rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:24px; color:white; font-weight:bold;';
+    slot.innerHTML = '+';
+    slot.onclick = () => {
+        window.activeSlot = i;
+        slots.forEach(s => s.style.borderColor = '#555');
+        slot.style.borderColor = 'cyan';
+    };
+    slots.push(slot);
+    slotRow.appendChild(slot);
+}
+slots[0].style.borderColor = 'cyan';
+wardrobeTab.appendChild(slotRow);
+
+const itemRow = document.createElement('div');
+itemRow.style.cssText = 'display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; justify-content:center;';
+const items = [
+    {id:'topHat', icon:'🎩'}, {id:'glasses', icon:'👓'}, {id:'sweater', icon:'👕'},
+    {id:'boots', icon:'🥾'}, {id:'bowTie', icon:'🎀'}, {id:'beanie', icon:'🧢'},
+    {id:'headband', icon:'🥽'}, {id:'monocle', icon:'🧐'}, {id:'scarf', icon:'🧣'},
+    {id:'partyHat', icon:'🎉'}
+];
+
+items.forEach(item => {
+    let btn = document.createElement('button');
+    btn.innerHTML = item.icon;
+    btn.style.cssText = 'width:40px; height:40px; border-radius:8px; background:#444; border:2px solid #555; cursor:pointer; font-size:20px;';
+    btn.onclick = () => {
+        window.myWardrobe[window.activeSlot] = { id: item.id, color: currentItemColor };
+        slots[window.activeSlot].innerHTML = item.icon;
+        applyWardrobeToCat(previewCat, window.myWardrobe);
+    };
+    itemRow.appendChild(btn);
+});
+
+const clearBtn = document.createElement('button');
+clearBtn.innerHTML = '❌';
+clearBtn.style.cssText = 'width:40px; height:40px; border-radius:8px; background:#622; border:2px solid #f44; cursor:pointer; font-size:16px;';
+clearBtn.onclick = () => {
+    window.myWardrobe[window.activeSlot] = null;
+    slots[window.activeSlot].innerHTML = '+';
+    applyWardrobeToCat(previewCat, window.myWardrobe);
+};
+itemRow.appendChild(clearBtn);
+wardrobeTab.appendChild(itemRow);
+
+// Item Color Picker
+const itemColorRow = document.createElement('div');
+itemColorRow.style.cssText = 'display:flex; gap:5px; flex-wrap:wrap; justify-content:center; padding-top: 10px; border-top: 1px solid #555; width: 100%;';
+colors.forEach(c => {
+    let btn = document.createElement('button');
+    btn.style.cssText = `width:25px; height:25px; border-radius:50%; background:#${c.h.toString(16).padStart(6,'0')}; border:2px solid #555; cursor:pointer;`;
+    btn.onclick = () => { 
+        currentItemColor = c.h; 
+        if (window.myWardrobe[window.activeSlot]) {
+            window.myWardrobe[window.activeSlot].color = currentItemColor;
+            applyWardrobeToCat(previewCat, window.myWardrobe);
+        }
+    };
+    itemColorRow.appendChild(btn);
+});
+wardrobeTab.appendChild(itemColorRow);
+
+// Tab Toggle Logic
+catTabBtn.onclick = () => { catTab.style.display='flex'; wardrobeTab.style.display='none'; catTabBtn.style.borderColor='gold'; wardrobeTabBtn.style.borderColor='#555'; };
+wardrobeTabBtn.onclick = () => { catTab.style.display='none'; wardrobeTab.style.display='flex'; catTabBtn.style.borderColor='#555'; wardrobeTabBtn.style.borderColor='gold'; };
+
 
 const startBtn = document.createElement('button');
 startBtn.id = 'playBtn';
 startBtn.innerHTML = "PLAY";
-startBtn.style.cssText = 'padding: 12px 50px; font-size: 24px; font-weight:900; background: gold; color: #111; border: none; border-radius: 8px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s;';
+startBtn.style.cssText = 'padding: 12px 50px; font-size: 24px; font-weight:900; background: gold; color: #111; border: none; border-radius: 8px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s; margin-top:10px;';
 startBtn.onmouseover = () => startBtn.style.transform = 'scale(1.05)';
 startBtn.onmouseout = () => startBtn.style.transform = 'scale(1)';
 
@@ -887,7 +1083,8 @@ startBtn.onclick = () => {
     }
     
     let chosenName = nameInput.value.trim();
-    socket.emit('joinGame', { name: chosenName, color: window.myBaseColor, face: window.myFace });
+    // Send Wardrobe data to the server!
+    socket.emit('joinGame', { name: chosenName, color: window.myBaseColor, face: window.myFace, wardrobe: window.myWardrobe });
     
     startScreen.style.display = 'none';
     isCustomizing = false;
@@ -914,6 +1111,7 @@ nameInput.addEventListener('keypress', (e) => {
 
 startScreen.appendChild(uiContainer);
 document.body.appendChild(startScreen);
+// ------------------------------------
 
 const topBar = document.createElement('div');
 topBar.id = 'topBar';
@@ -1281,8 +1479,11 @@ socket.on('currentPlayers', (players) => {
             myCatData.crownMat.color.setHex(cColor);
 
             setNameLabel(myCatData, myName); 
-
             myCatData.crown.visible = (id === serverWinnerId);
+            
+            // WARDROBE APPLY FOR YOU
+            applyWardrobeToCat(myCatData, players[id].wardrobe);
+
             updateRightBox(null);
         } else { 
             if (otherPlayers[id]) {
@@ -1304,6 +1505,10 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].crown.visible = (id === serverWinnerId);
                 
                 setNameLabel(otherPlayers[id], players[id].name);
+                
+                // WARDROBE APPLY FOR OTHER PLAYERS
+                applyWardrobeToCat(otherPlayers[id], players[id].wardrobe);
+
             } else { addOtherPlayer(id, players[id]); }
         }
     });
@@ -1394,6 +1599,9 @@ function addOtherPlayer(id, playerInfo) {
     
     let oColor = (playerInfo.color === 0xFFFFFF || playerInfo.color === 0xFF0000) ? 0xFFD700 : playerInfo.color;
     catData.crownMat.color.setHex(oColor);
+
+    // WARDROBE APPLY FOR NEW PLAYER JOINING
+    applyWardrobeToCat(catData, playerInfo.wardrobe);
 
     scene.add(catData.group);
     otherPlayers[id] = catData;
