@@ -711,29 +711,53 @@ function createCraftingTable(x, z) {
         if (isCollision) lobbyCollision.push(mesh);
     }
 
-    addPart(new THREE.BoxGeometry(3, 0.2, 1.2), matWood, 0, -3.8, 0, true);
-    
-    addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, -1.3, -4.4, -0.4, true);
-    addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, 1.3, -4.4, -0.4, true);
-    addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, -1.3, -4.4, 0.4, true);
-    addPart(new THREE.BoxGeometry(0.2, 1, 0.2), matWood, 1.3, -4.4, 0.4, true);
+    // Lowered Tabletop and Shortened Legs
+    addPart(new THREE.BoxGeometry(3, 0.2, 1.2), matWood, 0, -4.2, 0, true);
+    addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, -1.3, -4.6, -0.4, true);
+    addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, 1.3, -4.6, -0.4, true);
+    addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, -1.3, -4.6, 0.4, true);
+    addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, 1.3, -4.6, 0.4, true);
 
-    addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, -0.5, -3.68, 0);
-    addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, 0.2, -3.68, 0.1);
+    // Lowered Papers
+    addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, -0.5, -4.08, 0);
+    addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, 0.2, -4.08, 0.1);
 
+    // Lowered Crayons
     const cray1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), matCrayonR);
-    cray1.position.set(0.8, -3.65, -0.2); cray1.rotation.y = 0.2; tableGroup.add(cray1);
+    cray1.position.set(0.8, -4.05, -0.2); cray1.rotation.y = 0.2; tableGroup.add(cray1);
     
     const cray2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), matCrayonB);
-    cray2.position.set(0.9, -3.65, 0); cray2.rotation.y = -0.1; tableGroup.add(cray2);
+    cray2.position.set(0.9, -4.05, 0); cray2.rotation.y = -0.1; tableGroup.add(cray2);
     
     const cray3 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), matCrayonG);
-    cray3.position.set(0.7, -3.65, 0.2); cray3.rotation.y = 0.4; tableGroup.add(cray3);
+    cray3.position.set(0.7, -4.05, 0.2); cray3.rotation.y = 0.4; tableGroup.add(cray3);
 
     [cray1, cray2, cray3].forEach(c => {
         c.add(new THREE.LineSegments(new THREE.EdgesGeometry(c.geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
         c.castShadow = true; c.receiveShadow = true;
     });
+
+    // --- ADD WARDROBE PROPS ---
+    const hatProp = buildAccessory('topHat', 0x222222).meshGroup;
+    hatProp.position.set(-1.0, -4.29, 0.1); 
+    hatProp.rotation.y = 0.4;
+    tableGroup.add(hatProp);
+
+    const glassesProp = buildAccessory('glasses', 0x00FFFF).meshGroup;
+    glassesProp.position.set(0.1, -4.1, 0.3);
+    glassesProp.rotation.y = -0.3;
+    tableGroup.add(glassesProp);
+
+    const boot1 = buildAccessory('boots', 0x8B4513).meshGroup;
+    boot1.position.set(1.1, -3.95, 0.1);
+    boot1.rotation.y = -0.6;
+    tableGroup.add(boot1);
+
+    const boot2 = buildAccessory('boots', 0x8B4513).meshGroup;
+    boot2.position.set(1.3, -3.95, 0.3);
+    boot2.rotation.y = -0.2;
+    tableGroup.add(boot2);
+    // --------------------------
 
     tableGroup.position.set(x, 0, z);
     scene.add(tableGroup);
@@ -1471,23 +1495,6 @@ socket.on('initMap', (mapBlocks) => {
         pad.position.set(0, -4.95, -18);
         scene.add(pad);
         lobbyVisuals.push(pad);
-        
-        const cCanvas = document.createElement('canvas');
-        cCanvas.width = 512; cCanvas.height = 128;
-        const cCtx = cCanvas.getContext('2d');
-        cCtx.fillStyle = 'transparent'; cCtx.fillRect(0, 0, 512, 128);
-        cCtx.font = '900 64px "Segoe UI", Arial, sans-serif'; 
-        cCtx.fillStyle = '#FFFFFF';
-        cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle'; 
-        cCtx.shadowColor = '#000000'; cCtx.shadowBlur = 6; cCtx.shadowOffsetX = 3; cCtx.shadowOffsetY = 3;
-        cCtx.fillText("CUSTOMIZE", 256, 64);
-        
-        const cGeo = new THREE.PlaneGeometry(4, 1);
-        const cMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cCanvas), transparent: true, depthWrite: false });
-        const cMesh = new THREE.Mesh(cGeo, cMat);
-        cMesh.position.set(0, -2.6, -18.9); 
-        scene.add(cMesh);
-        lobbyVisuals.push(cMesh);
 
         createClosedBox(1.5, 1.5, 1.5, -4.5, -4.25, 0, Math.PI/6); 
         createClosedBox(1.5, 1.5, 1.5, 11.5, -4.25, 14, -Math.PI/8);
