@@ -142,26 +142,61 @@ function drawFaceOnCanvas(ctx, type) {
         ctx.beginPath(); ctx.moveTo(40, 45); ctx.lineTo(40, 65); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(72, 45); ctx.lineTo(104, 45); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(88, 45); ctx.lineTo(88, 65); ctx.stroke();
-        ctx.shadowColor = 'transparent';
-        ctx.fillStyle = '#00BFFF';
+        ctx.shadowColor = 'transparent'; ctx.fillStyle = '#00BFFF';
         ctx.fillRect(34, 75, 12, 30); ctx.fillRect(82, 75, 12, 30);
-        ctx.fillStyle = '#000';
-        ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+        ctx.fillStyle = '#000'; ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
         ctx.beginPath(); ctx.arc(64, 105, 12, Math.PI, 0); ctx.stroke();
     } else if (type === 'uwu') {
         ctx.beginPath(); ctx.moveTo(24, 45); ctx.lineTo(40, 55); ctx.lineTo(56, 45); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(72, 45); ctx.lineTo(88, 55); ctx.lineTo(104, 45); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(48, 80); ctx.lineTo(56, 90); ctx.lineTo(64, 85); ctx.lineTo(72, 90); ctx.lineTo(80, 80); ctx.stroke();
     } else if (type === 'derp') {
-        ctx.fillRect(32, 40, 16, 16); 
-        ctx.fillRect(84, 50, 12, 12); 
+        ctx.fillRect(32, 40, 16, 16); ctx.fillRect(84, 50, 12, 12); 
         ctx.beginPath(); ctx.arc(64, 90, 10, 0, Math.PI, false); ctx.stroke(); 
         ctx.fillStyle = '#FF69B4'; ctx.fill(); 
     } else if (type === 'cool') {
-        ctx.fillRect(24, 40, 32, 16); 
-        ctx.fillRect(72, 40, 32, 16); 
+        ctx.fillRect(24, 40, 32, 16); ctx.fillRect(72, 40, 32, 16); 
         ctx.beginPath(); ctx.moveTo(56, 45); ctx.lineTo(72, 45); ctx.stroke(); 
         ctx.beginPath(); ctx.moveTo(56, 90); ctx.lineTo(72, 90); ctx.stroke(); 
+    } else if (type === 'derp2') { // Cross-eyed
+        ctx.strokeRect(32, 40, 16, 24); ctx.strokeRect(80, 40, 16, 24); 
+        ctx.fillRect(40, 48, 8, 8); ctx.fillRect(80, 48, 8, 8); 
+        ctx.beginPath(); ctx.moveTo(48, 85); ctx.lineTo(80, 85); ctx.stroke(); 
+    } else if (type === 'derp3') { // Tongue out wink
+        ctx.beginPath(); ctx.moveTo(24, 50); ctx.lineTo(56, 50); ctx.stroke(); 
+        ctx.fillRect(80, 40, 16, 16); 
+        ctx.beginPath(); ctx.arc(64, 85, 12, 0, Math.PI, false); ctx.stroke(); 
+        ctx.shadowColor = 'transparent'; ctx.fillStyle = '#FF4444'; ctx.fillRect(60, 85, 8, 16); 
+    } else if (type === 'derp4') { // One huge eye, one tiny
+        ctx.fillRect(24, 30, 32, 32); 
+        ctx.fillRect(88, 50, 8, 8); 
+        ctx.beginPath(); ctx.arc(64, 90, 8, 0, Math.PI); ctx.stroke();
+    } else if (type === 'derp5') { // Blank stare
+        ctx.strokeRect(32, 40, 16, 24); ctx.strokeRect(80, 40, 16, 24);
+        ctx.fillRect(56, 85, 16, 4); 
+    } else if (type === 'derp6') { // Squint
+        ctx.fillRect(32, 50, 16, 4); ctx.fillRect(80, 50, 16, 4); 
+        ctx.beginPath(); ctx.moveTo(48, 80); ctx.lineTo(64, 90); ctx.lineTo(80, 80); ctx.stroke(); 
+    } else if (type === 'derp7') { // Dizzy spirals
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(40, 48, 12, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(40, 48, 6, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(88, 48, 12, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(88, 48, 6, 0, Math.PI*2); ctx.stroke();
+        ctx.lineWidth = 10;
+        ctx.beginPath(); ctx.moveTo(56, 85); ctx.lineTo(72, 85); ctx.stroke();
+    } else if (type === 'derp8') { // Tiny face
+        ctx.fillRect(52, 60, 6, 6); ctx.fillRect(70, 60, 6, 6);
+        ctx.fillRect(58, 75, 12, 4);
+    } else if (type === 'derp9') { // Buck teeth
+        ctx.fillRect(32, 45, 16, 16); ctx.fillRect(80, 45, 16, 16);
+        ctx.beginPath(); ctx.moveTo(40, 85); ctx.lineTo(88, 85); ctx.stroke();
+        ctx.shadowColor = 'transparent'; ctx.fillStyle = '#FFF'; 
+        ctx.fillRect(56, 85, 16, 12); ctx.strokeRect(56, 85, 16, 12);
+        ctx.beginPath(); ctx.moveTo(64, 85); ctx.lineTo(64, 97); ctx.stroke(); 
+    } else if (type === 'derp10') { // Smug
+        ctx.beginPath(); ctx.moveTo(24, 35); ctx.lineTo(48, 45); ctx.stroke(); 
+        ctx.beginPath(); ctx.moveTo(104, 35); ctx.lineTo(80, 45); ctx.stroke(); 
+        ctx.fillRect(32, 50, 16, 8); ctx.fillRect(80, 50, 16, 8); 
+        ctx.beginPath(); ctx.moveTo(64, 80); ctx.lineTo(88, 70); ctx.stroke(); 
     } else { // normal
         ctx.fillRect(32, 45, 16, 16); ctx.fillRect(80, 45, 16, 16);
         ctx.beginPath(); ctx.moveTo(56, 85); ctx.lineTo(64, 95); ctx.lineTo(72, 85); ctx.stroke();
@@ -805,13 +840,11 @@ colorPalette.children[0].style.borderColor = 'gold';
 uiContainer.appendChild(colorPalette);
 
 const facePalette = document.createElement('div');
-facePalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 400px;';
+facePalette.style.cssText = 'display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; max-width: 300px;';
 const faces = [
-    { id: 'normal'}, { id: 'happy'}, 
-    { id: 'mad'}, { id: 'surprised'}, 
-    { id: 'meh'}, { id: 'crying'},
-    { id: 'uwu'}, { id: 'derp'},
-    { id: 'cool'}
+    { id: 'normal'}, { id: 'happy'}, { id: 'mad'}, { id: 'surprised'}, { id: 'meh'}, { id: 'crying'},
+    { id: 'uwu'}, { id: 'derp'}, { id: 'cool'}, { id: 'derp2'}, { id: 'derp3'}, { id: 'derp4'},
+    { id: 'derp5'}, { id: 'derp6'}, { id: 'derp7'}, { id: 'derp8'}, { id: 'derp9'}, { id: 'derp10'}
 ];
 
 const faceCanvas = document.createElement('canvas');
@@ -1178,8 +1211,8 @@ socket.on('initMap', (mapBlocks) => {
         createWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
 
-        // MVP Podium
-        createWall(4, 2, 4, 0, -4, -10, 0xFFD700);
+        // MVP Podium - Moved to the left of the customization house
+        createWall(4, 2, 4, 12, -4, -18, 0xFFD700);
 
         createCraftingTable(0, -18.4);
         
@@ -1584,6 +1617,15 @@ function animate() {
     let isGameOver = serverGameState === 'GAME_OVER';
     let isMVPGameOver = (isGameOver && serverWinnerId === socket.id);
 
+    if (!isCustomizing && customizationZone && (serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
+        if (myPlayerObject.position.distanceTo(customizationZone) < 2.5) {
+            isCustomizing = true;
+            document.getElementById('startScreen').style.display = 'flex';
+            document.getElementById('playBtn').innerHTML = 'SAVE & EXIT';
+            previewCat.group.rotation.y = 0; 
+        }
+    }
+
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
 
@@ -1604,7 +1646,7 @@ function animate() {
             const geo = new THREE.PlaneGeometry(0.3, 0.3);
             const mat = new THREE.MeshBasicMaterial({ color: confettiColors[Math.floor(Math.random() * confettiColors.length)], side: THREE.DoubleSide });
             const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set((Math.random() - 0.5) * 10, 5 + Math.random() * 5, -10 + (Math.random() - 0.5) * 10);
+            mesh.position.set(12 + (Math.random() - 0.5) * 10, 5 + Math.random() * 5, -18 + (Math.random() - 0.5) * 10);
             mesh.rotation.set(Math.random(), Math.random(), Math.random());
             mesh.vel = new THREE.Vector3((Math.random() - 0.5) * 0.1, -0.1 - Math.random() * 0.1, (Math.random() - 0.5) * 0.1);
             mesh.rotVel = new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
@@ -1814,7 +1856,7 @@ function animate() {
 
     if (isMVPGameOver) {
         // Lock the MVP directly onto the podium and rotate
-        myPlayerObject.position.set(0, -2.8, -10);
+        myPlayerObject.position.set(12, -2.8, -18);
         myPlayerObject.rotation.y += 0.05;
         moved = true;
     } else if (isBeaming) {
