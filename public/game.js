@@ -32,7 +32,7 @@ for (let i = 1; i <= 5; i++) {
     });
 }
 
-function playSound(type, val = 0) {
+function playSound(type) {
     if (volumeState === 0 || audioCtx.state === 'suspended') return; 
     
     const osc = audioCtx.createOscillator();
@@ -98,14 +98,7 @@ function playSound(type, val = 0) {
         gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    } else if (type === 'tagBuild') {
-        osc.type = 'sawtooth';
-        let freq = 300 + (val * 600); // Pitch raises as meter fills
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.05 * v, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    }
+    } 
 }
 
 function playCatMeow(catData) {
@@ -508,8 +501,6 @@ let isCustomizing = true;
 let customizationZone = null;
 let ignoreServerPositionUntil = 0; 
 
-let lastTagSoundTime = 0;
-
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
@@ -542,27 +533,6 @@ beamGroundMesh.rotation.x = -Math.PI / 2;
 beamGroundMesh.position.set(0, -4.9, 0); 
 scene.add(beamGroundMesh);
 
-// --- TAG METER UI ---
-const tagUI = document.createElement('div');
-tagUI.id = 'tagUI';
-tagUI.style.cssText = 'position:absolute; top:15%; left:50%; transform:translateX(-50%); width:250px; height:24px; background:rgba(0,0,0,0.7); border:3px solid #ff4444; border-radius:12px; display:none; z-index:200; overflow:hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events:none;';
-const tagFill = document.createElement('div');
-tagFill.id = 'tagFill';
-tagFill.style.cssText = 'width:0%; height:100%; background:#ff4444; transition:width 0.1s linear;';
-tagUI.appendChild(tagFill);
-const tagText = document.createElement('div');
-tagText.innerHTML = 'TAGGING...';
-tagText.style.cssText = 'position:absolute; width:100%; text-align:center; top:2px; font-size:14px; font-weight:900; color:white; text-shadow:2px 2px 0 #000;';
-tagUI.appendChild(tagText);
-document.body.appendChild(tagUI);
-
-let lastTagUIUpdate = 0;
-socket.on('tagProgressUpdate', (progress) => {
-    lastTagUIUpdate = performance.now();
-    tagUI.style.display = 'block';
-    tagFill.style.width = (progress * 100) + '%';
-    tagText.innerHTML = myRole === 'seeker' ? 'TAGGING...' : 'BEING TAGGED!';
-});
 
 function createCatBed(x, z, color) {
     const bedGroup = new THREE.Group();
@@ -1020,7 +990,7 @@ helpModal.innerHTML = `
 
         <div style="display: grid; grid-template-columns: 1fr; gap: 8px; color: #eee; font-size: 12px; line-height: 1.4;">
             <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color. Shoot hairballs at Seekers to stun them!</p>
-            <p style="margin: 0;"><b>SEEKERS:</b> Touch Hiders to tag them. It takes 1 full second to complete a tag! Listen for Meows!</p>
+            <p style="margin: 0;"><b>SEEKERS:</b> Jump on the top of a Hider's head to tag them! Listen for Meows!</p>
             <p style="margin: 0; color: #ff6666; font-weight: bold;">When a Hider gets tagged, they become a Seeker!</p>
         </div>
 
@@ -1240,8 +1210,16 @@ socket.on('initMap', (mapBlocks) => {
         createWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
 
-        // MVP Podium - Tucked into the back right corner (no clipping)
-        createWall(4, 2, 4, 17.5, -4, -17.5, 0xFFD700);
+        // New Crown MVP Podium structure
+        createWall(4, 1.5, 4, 17.5, -4.25, -17.5, 0xFFD700); // Base
+        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 + 1.6, 0xFFD700); // Corner 1
+        createWall(0.8, 1.2, 0.8, 17.5 - 1.6, -2.9, -17.5 + 1.6, 0xFFD700); // Corner 2
+        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 - 1.6, 0xFFD700); // Corner 3
+        createWall(0.8, 1.2, 0.8, 17.5 - 1.6, -2.9, -17.5 - 1.6, 0xFFD700); // Corner 4
+        createWall(0.8, 0.6, 0.8, 17.5 + 1.6, -3.2, -17.5, 0xFFD700); // Middle 1
+        createWall(0.8, 0.6, 0.8, 17.5 - 1.6, -3.2, -17.5, 0xFFD700); // Middle 2
+        createWall(0.8, 0.6, 0.8, 17.5, -3.2, -17.5 + 1.6, 0xFFD700); // Middle 3
+        createWall(0.8, 0.6, 0.8, 17.5, -3.2, -17.5 - 1.6, 0xFFD700); // Middle 4
 
         createCraftingTable(0, -18.4);
         
@@ -1322,7 +1300,6 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].baseColor = players[id].baseColor;
                 otherPlayers[id].faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
                 otherPlayers[id].faceStr = players[id].face || 'normal'; 
-                otherPlayers[id].tagProgress = players[id].tagProgress || 0; 
                 
                 let oColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
                 otherPlayers[id].crownMat.color.setHex(oColor);
@@ -1414,7 +1391,6 @@ function addOtherPlayer(id, playerInfo) {
     catData.stunned = playerInfo.stunned || false;
     catData.baseColor = playerInfo.baseColor || 0xFFFFFF; 
     catData.faceStr = playerInfo.face || 'normal';
-    catData.tagProgress = playerInfo.tagProgress || 0;
 
     setNameLabel(catData, playerInfo.name); 
     catData.crown.visible = (id === serverWinnerId);
@@ -1656,10 +1632,6 @@ function animate() {
         }
     }
 
-    if (tagUI.style.display === 'block' && now - lastTagUIUpdate > 300) {
-        tagUI.style.display = 'none';
-    }
-
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
 
@@ -1675,12 +1647,10 @@ function animate() {
     }
 
     if (isGameOver) {
-        // Rain Confetti around the podium!
         for (let i = 0; i < 3; i++) {
             const geo = new THREE.PlaneGeometry(0.3, 0.3);
             const mat = new THREE.MeshBasicMaterial({ color: confettiColors[Math.floor(Math.random() * confettiColors.length)], side: THREE.DoubleSide });
             const mesh = new THREE.Mesh(geo, mat);
-            // Center the confetti over the new podium corner (17.5, -17.5)
             mesh.position.set(17.5 + (Math.random() - 0.5) * 10, 5 + Math.random() * 5, -17.5 + (Math.random() - 0.5) * 10);
             mesh.rotation.set(Math.random(), Math.random(), Math.random());
             mesh.vel = new THREE.Vector3((Math.random() - 0.5) * 0.1, -0.1 - Math.random() * 0.1, (Math.random() - 0.5) * 0.1);
@@ -1689,7 +1659,6 @@ function animate() {
             confettiParticles.push(mesh);
         }
 
-        // MVP forced emotes
         if (isMVPGameOver) {
             if (now > mvpEmoteTimer) {
                 currentMvpEmote = Math.floor(Math.random() * 5) + 1;
@@ -1724,7 +1693,6 @@ function animate() {
         starMat.opacity = p; 
     }
     
-    // Adjusted dim factor multipliers for vibrant colors
     let dimFactor = 1 - (0.15 * cycleProgress); 
     sunLight.intensity = 0.35 * dimFactor;
     ambientLight.intensity = 0.75 * dimFactor;
@@ -1890,8 +1858,7 @@ function animate() {
     }
 
     if (isMVPGameOver) {
-        // Lock the MVP directly onto the podium and rotate
-        myPlayerObject.position.set(17.5, -2.8, -17.5);
+        myPlayerObject.position.set(17.5, -3.5, -17.5);
         myPlayerObject.rotation.y += 0.05;
         moved = true;
     } else if (isBeaming) {
@@ -1922,8 +1889,6 @@ function animate() {
     if (myRole === 'seeker' && serverGameState === 'SEEKING' && !amIStunned) {
         let closestDist = 999;
         let closestHider = null;
-        let isTaggingSomeone = false;
-        let highestTagProgress = 0;
 
         const currentScaleY = myCatData.body.scale.y;
         const seekerBox = new THREE.Box3();
@@ -1941,26 +1906,21 @@ function animate() {
                 const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                 
                 if (seekerBox.intersectsBox(hiderBox)) {
-                    isTaggingSomeone = true;
-                    socket.emit('tagTick', { targetId: id, delta: fpsInterval / 1000 });
-                    
-                    let simProg = (otherPlayers[id].tagProgress || 0) + (fpsInterval / 1000);
-                    otherPlayers[id].tagProgress = simProg; 
-                    if (simProg > highestTagProgress) highestTagProgress = simProg;
+                    // Tag requires the seeker to jump onto the hider (Y > Hider Y + 0.5)
+                    if (myPlayerObject.position.y > otherPlayers[id].group.position.y + 0.5) {
+                        otherPlayers[id].role = 'seeker'; 
+                        socket.emit('tagPlayer', id);
+                        playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
+                        playSound('tag'); 
+                    }
                 }
             }
         });
 
-        if (isTaggingSomeone) {
-            if (now - lastTagSoundTime > 100) {
-                playSound('tagBuild', Math.min(1, highestTagProgress));
-                lastTagSoundTime = now;
-            }
-        }
-
         Object.keys(activeDecoys).forEach(dId => {
             const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
             if (seekerBox.intersectsBox(decoyBox)) {
+                // Decoys still pop normally to reward the juke
                 socket.emit('tagDecoy', dId);
                 explodeParticles(activeDecoys[dId].group.position, false); 
                 scene.remove(activeDecoys[dId].group); delete activeDecoys[dId]; 
