@@ -873,6 +873,10 @@ const mirrorCat = createCatSculpt();
 scene.add(mirrorCat.group);
 mirrorCat.group.visible = false;
 const mirrorZ = 18.99; // Updated perfectly for the glass pane
+
+// Guarantee NO spotlight/beam on the mirror cat
+let mBeam = mirrorCat.group.getObjectByName('dBeam');
+if (mBeam) mBeam.visible = false; 
 // -------------------------------
 
 window.myBaseColor = 0xFFFFFF; 
@@ -1407,14 +1411,15 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(6, 10, 1, 0, 0, 19.5); 
         
         // Deep dark room hidden behind the mirror for the reflection to live in
-        createWall(8, 6, 1, 0, -2, 25.5, 0x111111); // Dark back wall
-        createWall(1, 6, 6, -3.5, -2, 22.5, 0x111111); // Left dark wall
-        createWall(1, 6, 6, 3.5, -2, 22.5, 0x111111); // Right dark wall
-        createWall(8, 1, 6, 0, -5.5, 22.5, 0x111111); // Dark floor
-        createWall(8, 1, 6, 0, 0.5, 22.5, 0x111111); // Dark ceiling
+        // Using a BackSide box saves performance and prevents ANY geometry/lines sticking out!
+        const darkMat = new THREE.MeshBasicMaterial({ color: 0x050505, side: THREE.BackSide });
+        const darkRoom = new THREE.Mesh(new THREE.BoxGeometry(5.8, 4.8, 6), darkMat);
+        darkRoom.position.set(0, -2.6, 22.5);
+        scene.add(darkRoom);
+        lobbyVisuals.push(darkRoom);
 
-        // Mirror Glass
-        const glassGeo = new THREE.PlaneGeometry(4, 3);
+        // Floor-to-ceiling Mirror Glass (height 4, centered at y=-3 spans -5 to -1)
+        const glassGeo = new THREE.PlaneGeometry(4, 4);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
         glass.position.set(0, -3, 18.99); // Sit just in front of the cut-out
@@ -1914,6 +1919,11 @@ function animate() {
             mirrorCat.body.scale.copy(myCatData.body.scale);
             if (mirrorCat.nameSprite) mirrorCat.nameSprite.visible = false;
             
+            // Ensure no spotlights or text are rendering on the reflection
+            let mBeam = mirrorCat.group.getObjectByName('dBeam');
+            if (mBeam) mBeam.visible = false; 
+            mirrorCat.dBeamMat.opacity = 0;
+
             animateCat(mirrorCat, myEmote, myWalkTime);
             
             let op = 1.0 - ((distToMirror - 1) / 4.5) * 0.75;
@@ -2208,6 +2218,8 @@ function animate() {
                 const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                 
                 if (seekerBox.intersectsBox(hiderBox)) {
+                    // Tag requires the seeker to jump ONTO the hider (Y > Hider Y + 0.5)
+                    // limit the height to max 1.4 blocks so they don't get tagged by a high-flyer
                     let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
                     if (heightDiff > 0.5 && heightDiff <= 1.4) {
                         otherPlayers[id].role = 'seeker'; 
