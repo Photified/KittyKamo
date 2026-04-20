@@ -718,6 +718,10 @@ function createCraftingTable(x, z) {
     addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, -1.3, -4.6, 0.4, true);
     addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, 1.3, -4.6, 0.4, true);
 
+    // --- NEW SHELVES ---
+    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.6), matWood, 0, -2.8, -0.8, true); // Bottom Shelf
+    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.6), matWood, 0, -1.6, -0.8, true); // Top Shelf
+
     // Lowered Papers
     addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, -0.5, -4.08, 0);
     addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, 0.2, -4.08, 0.1);
@@ -737,7 +741,7 @@ function createCraftingTable(x, z) {
         c.castShadow = true; c.receiveShadow = true;
     });
 
-    // --- ADD WARDROBE PROPS ---
+    // --- ADD WARDROBE PROPS (DESK) ---
     const hatProp = buildAccessory('topHat', 0x222222).meshGroup;
     hatProp.position.set(-1.0, -4.29, 0.1); 
     hatProp.rotation.y = 0.4;
@@ -748,16 +752,43 @@ function createCraftingTable(x, z) {
     glassesProp.rotation.y = -0.3;
     tableGroup.add(glassesProp);
 
-    const boot1 = buildAccessory('boots', 0x8B4513).meshGroup;
+    // FIX: Changed boots to Dark Grey so they stand out from the wood!
+    const boot1 = buildAccessory('boots', 0x333333).meshGroup;
     boot1.position.set(1.1, -3.95, 0.1);
     boot1.rotation.y = -0.6;
     tableGroup.add(boot1);
 
-    const boot2 = buildAccessory('boots', 0x8B4513).meshGroup;
+    const boot2 = buildAccessory('boots', 0x333333).meshGroup;
     boot2.position.set(1.3, -3.95, 0.3);
     boot2.rotation.y = -0.2;
     tableGroup.add(boot2);
-    // --------------------------
+
+    // --- ADD WARDROBE PROPS (BOTTOM SHELF) ---
+    const partyHatProp = buildAccessory('partyHat', 0xFF1493).meshGroup; // Deep pink
+    partyHatProp.position.set(0, -3.15, -0.8);
+    partyHatProp.rotation.y = 0.2;
+    tableGroup.add(partyHatProp);
+
+    const bowTieProp = buildAccessory('bowTie', 0x00FFFF).meshGroup; // Cyan
+    bowTieProp.position.set(-0.8, -3.3, -0.38);
+    bowTieProp.rotation.y = -0.2;
+    tableGroup.add(bowTieProp);
+
+    const monocleProp = buildAccessory('monocle', 0xFFD700).meshGroup; // Gold
+    monocleProp.position.set(0.8, -2.8, -0.59);
+    monocleProp.rotation.y = 0.3;
+    tableGroup.add(monocleProp);
+
+    // --- ADD WARDROBE PROPS (TOP SHELF) ---
+    const beanieProp = buildAccessory('beanie', 0x32CD32).meshGroup; // Lime
+    beanieProp.position.set(-0.6, -1.8, -0.8);
+    beanieProp.rotation.y = -0.4;
+    tableGroup.add(beanieProp);
+
+    const topHatProp2 = buildAccessory('topHat', 0xFF0000).meshGroup; // Red
+    topHatProp2.position.set(0.6, -1.85, -0.8);
+    topHatProp2.rotation.y = 0.5;
+    tableGroup.add(topHatProp2);
 
     tableGroup.position.set(x, 0, z);
     scene.add(tableGroup);
