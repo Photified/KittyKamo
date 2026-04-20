@@ -748,11 +748,10 @@ function createCraftingTable(x, z) {
     tableGroup.add(hatProp);
 
     const glassesProp = buildAccessory('glasses', 0x00FFFF).meshGroup;
-    glassesProp.position.set(0.1, -4.1, 0.3);
+    glassesProp.position.set(0.1, -4.07, 0.3);
     glassesProp.rotation.y = -0.3;
     tableGroup.add(glassesProp);
 
-    // FIX: Changed boots to Dark Grey so they stand out from the wood!
     const boot1 = buildAccessory('boots', 0x333333).meshGroup;
     boot1.position.set(1.1, -3.95, 0.1);
     boot1.rotation.y = -0.6;
@@ -763,32 +762,69 @@ function createCraftingTable(x, z) {
     boot2.rotation.y = -0.2;
     tableGroup.add(boot2);
 
+
     // --- ADD WARDROBE PROPS (BOTTOM SHELF) ---
-    const partyHatProp = buildAccessory('partyHat', 0xFF1493).meshGroup; // Deep pink
-    partyHatProp.position.set(0, -3.15, -0.8);
-    partyHatProp.rotation.y = 0.2;
-    tableGroup.add(partyHatProp);
+    const partyHat1 = buildAccessory('partyHat', 0xFF1493).meshGroup; // Deep pink
+    partyHat1.position.set(-1.2, -2.95, -0.85);
+    partyHat1.rotation.y = 0.2;
+    tableGroup.add(partyHat1);
 
-    const bowTieProp = buildAccessory('bowTie', 0x00FFFF).meshGroup; // Cyan
-    bowTieProp.position.set(-0.8, -3.3, -0.38);
-    bowTieProp.rotation.y = -0.2;
-    tableGroup.add(bowTieProp);
+    const partyHat2 = buildAccessory('partyHat', 0x00FFFF).meshGroup; // Cyan
+    partyHat2.position.set(-0.7, -2.95, -0.85);
+    partyHat2.rotation.y = -0.1;
+    tableGroup.add(partyHat2);
 
-    const monocleProp = buildAccessory('monocle', 0xFFD700).meshGroup; // Gold
-    monocleProp.position.set(0.8, -2.8, -0.59);
-    monocleProp.rotation.y = 0.3;
-    tableGroup.add(monocleProp);
+    const monocle1 = buildAccessory('monocle', 0xFFD700).meshGroup; // Gold
+    monocle1.position.set(-0.2, -2.7, -0.64);
+    monocle1.rotation.y = 0.3;
+    tableGroup.add(monocle1);
+
+    const bowTie1 = buildAccessory('bowTie', 0xFF0000).meshGroup; // Red
+    bowTie1.position.set(0.3, -3.25, -0.43);
+    bowTie1.rotation.y = -0.2;
+    tableGroup.add(bowTie1);
+
+    const bowTie2 = buildAccessory('bowTie', 0x0000FF).meshGroup; // Blue
+    bowTie2.position.set(0.8, -3.25, -0.43); 
+    bowTie2.rotation.y = 0.1;
+    tableGroup.add(bowTie2);
+
+    const glasses2 = buildAccessory('glasses', 0xFFFFFF).meshGroup; // White
+    glasses2.position.set(1.3, -2.7, -0.64);
+    glasses2.rotation.y = -0.4;
+    tableGroup.add(glasses2);
+
 
     // --- ADD WARDROBE PROPS (TOP SHELF) ---
-    const beanieProp = buildAccessory('beanie', 0x32CD32).meshGroup; // Lime
-    beanieProp.position.set(-0.6, -1.8, -0.8);
-    beanieProp.rotation.y = -0.4;
-    tableGroup.add(beanieProp);
+    const beanie1 = buildAccessory('beanie', 0x32CD32).meshGroup; // Lime
+    beanie1.position.set(-1.2, -1.67, -0.85);
+    beanie1.rotation.y = -0.4;
+    tableGroup.add(beanie1);
 
-    const topHatProp2 = buildAccessory('topHat', 0xFF0000).meshGroup; // Red
-    topHatProp2.position.set(0.6, -1.85, -0.8);
-    topHatProp2.rotation.y = 0.5;
-    tableGroup.add(topHatProp2);
+    const beanie2 = buildAccessory('beanie', 0xFF8C00).meshGroup; // Orange
+    beanie2.position.set(-0.7, -1.67, -0.85);
+    beanie2.rotation.y = 0.2;
+    tableGroup.add(beanie2);
+
+    const topHat1 = buildAccessory('topHat', 0xFF0000).meshGroup; // Red
+    topHat1.position.set(-0.2, -1.74, -0.85);
+    topHat1.rotation.y = 0.5;
+    tableGroup.add(topHat1);
+
+    const topHat2 = buildAccessory('topHat', 0x8A2BE2).meshGroup; // Purple
+    topHat2.position.set(0.3, -1.74, -0.85);
+    topHat2.rotation.y = -0.3;
+    tableGroup.add(topHat2);
+
+    const scarf1 = buildAccessory('scarf', 0xFF69B4).meshGroup; // Pink
+    scarf1.position.set(0.8, -1.85, -0.55); 
+    scarf1.rotation.y = 0.1;
+    tableGroup.add(scarf1);
+
+    const head1 = buildAccessory('headband', 0xFFFF00).meshGroup; // Yellow
+    head1.position.set(1.3, -1.61, -0.85);
+    head1.rotation.y = -0.2;
+    tableGroup.add(head1);
 
     tableGroup.position.set(x, 0, z);
     scene.add(tableGroup);
