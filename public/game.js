@@ -98,7 +98,7 @@ function playSound(type) {
         gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    } 
+    }
 }
 
 function playCatMeow(catData) {
@@ -990,7 +990,7 @@ helpModal.innerHTML = `
 
         <div style="display: grid; grid-template-columns: 1fr; gap: 8px; color: #eee; font-size: 12px; line-height: 1.4;">
             <p style="margin: 0;"><b>HIDERS:</b> Stand perfectly still next to a block to copy its color. Shoot hairballs at Seekers to stun them!</p>
-            <p style="margin: 0;"><b>SEEKERS:</b> Jump on the top of a Hider's head to tag them! Listen for Meows!</p>
+            <p style="margin: 0;"><b>SEEKERS:</b> Jump on the top of a Hider's head to tag them! (But don't jump too high over them!) Listen for Meows!</p>
             <p style="margin: 0; color: #ff6666; font-weight: bold;">When a Hider gets tagged, they become a Seeker!</p>
         </div>
 
@@ -1210,16 +1210,13 @@ socket.on('initMap', (mapBlocks) => {
         createWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
 
-        // New Crown MVP Podium structure
+        // New Open-Front Crown MVP Podium structure
         createWall(4, 1.5, 4, 17.5, -4.25, -17.5, 0xFFD700); // Base
-        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 + 1.6, 0xFFD700); // Corner 1
-        createWall(0.8, 1.2, 0.8, 17.5 - 1.6, -2.9, -17.5 + 1.6, 0xFFD700); // Corner 2
-        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 - 1.6, 0xFFD700); // Corner 3
-        createWall(0.8, 1.2, 0.8, 17.5 - 1.6, -2.9, -17.5 - 1.6, 0xFFD700); // Corner 4
-        createWall(0.8, 0.6, 0.8, 17.5 + 1.6, -3.2, -17.5, 0xFFD700); // Middle 1
-        createWall(0.8, 0.6, 0.8, 17.5 - 1.6, -3.2, -17.5, 0xFFD700); // Middle 2
-        createWall(0.8, 0.6, 0.8, 17.5, -3.2, -17.5 + 1.6, 0xFFD700); // Middle 3
-        createWall(0.8, 0.6, 0.8, 17.5, -3.2, -17.5 - 1.6, 0xFFD700); // Middle 4
+        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 - 1.6, 0xFFD700); // Back corner
+        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 + 1.6, 0xFFD700); // Right corner
+        createWall(0.8, 1.2, 0.8, 17.5 - 1.6, -2.9, -17.5 - 1.6, 0xFFD700); // Left corner
+        createWall(0.8, 0.6, 0.8, 17.5 + 1.6, -3.2, -17.5, 0xFFD700); // Back-right middle
+        createWall(0.8, 0.6, 0.8, 17.5, -3.2, -17.5 - 1.6, 0xFFD700); // Back-left middle
 
         createCraftingTable(0, -18.4);
         
@@ -1425,6 +1422,21 @@ function checkCollision(pos) {
     for (let i = 0; i < lobbyCollision.length; i++) {
         const propBox = new THREE.Box3().setFromObject(lobbyCollision[i]); propBox.expandByScalar(-0.02);
         if (pBox.intersectsBox(propBox)) return true;
+    }
+
+    // Player-to-Player collision added here
+    for (let id in otherPlayers) {
+        let other = otherPlayers[id];
+        if (other.role !== 'spectator') {
+            const oScaleY = other.body.scale.y || 1;
+            const oBox = new THREE.Box3();
+            oBox.setFromCenterAndSize(
+                new THREE.Vector3(other.group.position.x, other.group.position.y + ((1.2 * oScaleY)/2), other.group.position.z),
+                new THREE.Vector3(0.5, 1.2 * oScaleY, 0.5)
+            );
+            oBox.expandByScalar(-0.02); // Prevent permanent sticking
+            if (pBox.intersectsBox(oBox)) return true;
+        }
     }
 
     return false;
@@ -1906,8 +1918,10 @@ function animate() {
                 const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                 
                 if (seekerBox.intersectsBox(hiderBox)) {
-                    // Tag requires the seeker to jump onto the hider (Y > Hider Y + 0.5)
-                    if (myPlayerObject.position.y > otherPlayers[id].group.position.y + 0.5) {
+                    // Tag requires the seeker to jump ONTO the hider (Y > Hider Y + 0.5)
+                    // limit the height to max 1.4 blocks so they don't get tagged by a high-flyer
+                    let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
+                    if (heightDiff > 0.5 && heightDiff <= 1.4) {
                         otherPlayers[id].role = 'seeker'; 
                         socket.emit('tagPlayer', id);
                         playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
@@ -1920,7 +1934,6 @@ function animate() {
         Object.keys(activeDecoys).forEach(dId => {
             const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
             if (seekerBox.intersectsBox(decoyBox)) {
-                // Decoys still pop normally to reward the juke
                 socket.emit('tagDecoy', dId);
                 explodeParticles(activeDecoys[dId].group.position, false); 
                 scene.remove(activeDecoys[dId].group); delete activeDecoys[dId]; 
