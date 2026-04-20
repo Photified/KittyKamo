@@ -395,7 +395,8 @@ function createBlock(x, y, z, color) {
 
 const walls = [];
 
-function createHouseWall(w, h, d, x, y, z, color) {
+// ONE Unified createWall function!
+function createWall(w, h, d, x, y, z, color = 0x8B4513) {
     const geo = new THREE.BoxGeometry(w, h, d);
     const mat = new THREE.MeshLambertMaterial({ color: color, transparent: true });
     const mesh = new THREE.Mesh(geo, mat);
@@ -404,18 +405,6 @@ function createHouseWall(w, h, d, x, y, z, color) {
     mesh.position.set(x, y, z);
     scene.add(mesh);
     walls.push(mesh); 
-}
-
-const wallMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
-function createWall(w, h, d, x, y, z) {
-    const geo = new THREE.BoxGeometry(w, h, d);
-    const mat = wallMat.clone();
-    mat.transparent = true; 
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.castShadow = true; mesh.receiveShadow = true;
-    mesh.position.set(x, y, z);
-    scene.add(mesh);
-    walls.push(mesh);
 }
 
 const invisibleWalls = [];
@@ -514,6 +503,8 @@ function createVoxelMVPBed() {
     addP(new THREE.BoxGeometry(4, 0.6, 0.4), rimMat, 0, 99.8, -2.2); 
     addP(new THREE.BoxGeometry(4, 0.6, 0.4), rimMat, 0, 99.8, 2.2); 
 
+    // Moves it far away into the sky void
+    mvpPodiumGroup.position.set(1000, 1000, 1000);
     scene.add(mvpPodiumGroup);
 }
 createVoxelMVPBed();
@@ -572,8 +563,9 @@ function createCatTree(x, z, type = 1) {
         addTreePart(new THREE.BoxGeometry(3, 0.4, 3), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 6, 0.6), matPost, 0, -1.8, 0);
         addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.3, 0);
-        addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, 1.5, -1, 0);
-        addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, -1.5, -3, 0);
+        // Corrected side platforms to perfectly touch the center pole!
+        addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, 0.9, -1, 0);
+        addTreePart(new THREE.BoxGeometry(1.5, 0.2, 1.5), matBase, -0.9, -3, 0);
     } else if (type === 3) {
         addTreePart(new THREE.BoxGeometry(4, 0.4, 3), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 3, 0.6), matPost, -1, -3.3, 0);
@@ -1127,48 +1119,52 @@ socket.on('initMap', (mapBlocks) => {
     scene.updateMatrixWorld(true);
 
     if (mapBlocks.length > 0) {
+        // Find outer boundaries of the actual blocks
         const minX = Math.min(...mapBlocks.map(b => b.x));
         const maxX = Math.max(...mapBlocks.map(b => b.x));
         const minZ = Math.min(...mapBlocks.map(b => b.z));
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
 
-        const widthX = (maxX - minX) + 5; 
-        const depthZ = (maxZ - minZ) + 5;
+        // The blocks have width/depth of 1. So they expand from (minX - 0.5) to (maxX + 0.5)
+        // To seamlessly wrap them with a wall of thickness 2, we place the wall center at minX - 0.5.
+        // This makes the inner edge perfectly touch minX - 0.5, creating a solid corner.
         
-        // Ground perfectly sized to the map to look like a floating island
-        ground.scale.set(widthX, depthZ, 1);
+        const wX = (maxX - minX) + 3; // 43
+        const wZ = (maxZ - minZ) + 3; // 43
+        
+        // Ground perfectly sized to the framed map to look like a floating island
+        ground.scale.set(wX, wZ, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Restore original wall height (10) and position (y=0) so there is no gap/ledge to fall into
-        createWall(widthX, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5);
-        createWall(widthX, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5);
+        // Visible border walls wrapping the outermost blocks completely
+        createWall(wX, 10, 2, (minX + maxX) / 2, 0, minZ - 0.5, 0x8B4513);
+        createWall(wX, 10, 2, (minX + maxX) / 2, 0, maxZ + 0.5, 0x8B4513);
         
-        const wallDepthZ = (maxZ - minZ) + 1;
-        createWall(2, 10, wallDepthZ, minX - 1.5, 0, (minZ + maxZ) / 2);
-        createWall(2, 10, wallDepthZ, maxX + 1.5, 0, (minZ + maxZ) / 2);
+        const sideDepth = (maxZ - minZ) - 1; 
+        createWall(2, 10, sideDepth, minX - 0.5, 0, (minZ + maxZ) / 2, 0x8B4513);
+        createWall(2, 10, sideDepth, maxX + 0.5, 0, (minZ + maxZ) / 2, 0x8B4513);
         
-        // Invisible collision still shoots high into the sky to prevent falling over the walls
-        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, minZ - 1.5);
-        createInvisibleWall(widthX, 40, 2, (minX + maxX) / 2, 25, maxZ + 1.5);
-        createInvisibleWall(2, 40, wallDepthZ, minX - 1.5, 25, (minZ + maxZ) / 2);
-        createInvisibleWall(2, 40, wallDepthZ, maxX + 1.5, 25, (minZ + maxZ) / 2);
-
+        // Invisible collision still shoots high into the sky
+        createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, minZ - 0.5);
+        createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
+        createInvisibleWall(2, 40, sideDepth, minX - 0.5, 25, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        ground.scale.set(100, 100, 1);
+        ground.scale.set(43, 43, 1);
         ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
         
-        createHouseWall(42, 2, 1, 0, -4, -20.5, 0x8B4513); 
-        createHouseWall(42, 2, 1, 0, -4, 20.5, 0x8B4513);  
-        createHouseWall(1, 2, 40, -20.5, -4, 0, 0x8B4513); 
-        createHouseWall(1, 2, 40, 20.5, -4, 0, 0x8B4513);  
+        createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); 
+        createWall(43, 2, 2, 0, -4, 20.5, 0x8B4513);  
+        createWall(2, 2, 39, -20.5, -4, 0, 0x8B4513); 
+        createWall(2, 2, 39, 20.5, -4, 0, 0x8B4513);  
 
-        createInvisibleWall(42, 40, 1, 0, 17, -20.5);
-        createInvisibleWall(42, 40, 1, 0, 17, 20.5);
-        createInvisibleWall(1, 40, 40, -20.5, 17, 0);
-        createInvisibleWall(1, 40, 40, 20.5, 17, 0);
+        createInvisibleWall(43, 40, 2, 0, 17, -20.5);
+        createInvisibleWall(43, 40, 2, 0, 17, 20.5);
+        createInvisibleWall(2, 40, 39, -20.5, 17, 0);
+        createInvisibleWall(2, 40, 39, 20.5, 17, 0);
 
         createCatBed(15, 8, 0xFF69B4);
         createCatBed(15, -8, 0x4169E1);
@@ -1183,10 +1179,10 @@ socket.on('initMap', (mapBlocks) => {
         createCatTree(14, 14, 2);
         createCatTree(-14, -14, 3);
 
-        createHouseWall(6, 4, 1, 0, -3, -19.5, 0x8B4513); 
-        createHouseWall(1, 4, 4, -2.5, -3, -18, 0x8B4513); 
-        createHouseWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
-        createHouseWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
+        createWall(6, 4, 1, 0, -3, -19.5, 0x8B4513); 
+        createWall(1, 4, 4, -2.5, -3, -18, 0x8B4513); 
+        createWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
+        createWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
 
         createCraftingTable(0, -18.4);
         
@@ -1577,13 +1573,15 @@ function animate() {
     if (document.getElementById('startScreen').style.display !== 'none' || serverGameState === 'GAME_OVER') {
         previewCat.group.visible = true;
         
+        // Force daytime lighting for menus
+        scene.background.copy(colorDay);
+        sunLight.intensity = 0.8;
+        ambientLight.intensity = 0.4;
+        if(starMat) starMat.opacity = 0;
+        
         if (serverGameState === 'GAME_OVER' && serverWinnerId) {
-            // MVP SCREEN 
+            // MVP SCREEN - Far away isolated stage
             mvpPodiumGroup.visible = true;
-            scene.background.copy(colorDay);
-            sunLight.intensity = 0.8;
-            ambientLight.intensity = 0.4;
-            if(starMat) starMat.opacity = 0;
 
             let winColor = 0xFFFFFF;
             let winFace = 'happy';
@@ -1617,22 +1615,24 @@ function animate() {
             animateCat(previewCat, currentMvpEmote, now / 200);
 
             // Sync rotation of cat and podium
+            previewCat.group.position.set(1000, 1000.5, 1000);
             previewCat.group.rotation.y += 0.015;
             mvpPodiumGroup.rotation.y = previewCat.group.rotation.y;
 
-            camera.position.set(0, 103, 8); 
-            camera.lookAt(0, 100.5, 0);
+            camera.position.set(1000, 1003, 1008); 
+            camera.lookAt(1000, 1000.5, 1000);
 
         } else {
-            // START SCREEN
+            // START SCREEN - Normal close up, no podium
             mvpPodiumGroup.visible = false;
             previewCat.material.color.setHex(window.myBaseColor);
             previewCat.faceMesh.material.map = getFaceTexture(window.myFace);
             previewCat.crown.visible = false;
             if(previewCat.nameSprite) previewCat.nameSprite.visible = false;
             
-            animateCat(previewCat, 0, 0); // Reset animation
+            animateCat(previewCat, 0, 0); 
             
+            previewCat.group.position.set(0, 100, 0);
             previewCat.group.rotation.y += 0.015;
 
             camera.position.set(0, 100.5, 4); 
