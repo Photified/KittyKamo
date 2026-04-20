@@ -122,11 +122,11 @@ function startLobby() {
         io.emit('initMap', mapBlocks);
 
         ids.forEach(id => {
-            let angle = Math.random() * Math.PI * 2;
-            let dist = 8 + Math.random() * 8; 
-            players[id].x = Math.cos(angle) * dist;
-            players[id].y = 20; 
-            players[id].z = Math.sin(angle) * dist;
+            // Spawn on top of the customization house roof
+            players[id].x = (Math.random() - 0.5) * 5;
+            players[id].y = 5; 
+            players[id].z = -18.5 + (Math.random() - 0.5) * 3;
+            players[id].rY = Math.PI; // Face forwards towards the center tree
         });
     }
 
@@ -201,16 +201,16 @@ function startLobby() {
                     players[id].stunned = false;
                     
                     if (id === currentWinnerId) {
-                        players[id].x = 12;
-                        players[id].y = -2.8; // Top of the 2-block podium
-                        players[id].z = -18;
-                        players[id].rY = -Math.PI / 2; // Face the crowd (-X direction)
+                        players[id].x = 17.5;
+                        players[id].y = -2.8; 
+                        players[id].z = -17.5;
+                        players[id].rY = Math.PI * 0.75; // MVP faces the crowd
                     } else {
-                        // Spawn crowd looking at the podium
-                        players[id].x = 4 + (Math.random() * 4); // X between 4 and 8
+                        // Crowd clusters together, looking directly at the corner podium
+                        players[id].x = 13 + (Math.random() * 3); 
                         players[id].y = -4; 
-                        players[id].z = -18 + ((Math.random() - 0.5) * 6); // Spread along Z
-                        players[id].rY = Math.PI / 2; // Faces the podium (+X direction)
+                        players[id].z = -13 - (Math.random() * 3);
+                        players[id].rY = -Math.PI / 4; // Crowd faces the MVP
                     }
                     // Force the client to teleport seamlessly
                     io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
@@ -278,11 +278,11 @@ io.on('connection', (socket) => {
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
-    // Calculate a safe lobby spawn
-    let angle = Math.random() * Math.PI * 2;
-    let dist = 8 + Math.random() * 8;
-    let startX = (gameState === 'LOBBY' || gameState === 'WAITING') ? Math.cos(angle) * dist : (Math.random() * 30) - 15;
-    let startZ = (gameState === 'LOBBY' || gameState === 'WAITING') ? Math.sin(angle) * dist : (Math.random() * 30) - 15;
+    // Calculate a safe lobby spawn on top of the house
+    let isLobbyPhase = (gameState === 'LOBBY' || gameState === 'WAITING');
+    let startX = isLobbyPhase ? (Math.random() - 0.5) * 5 : (Math.random() * 30) - 15;
+    let startZ = isLobbyPhase ? -18.5 + (Math.random() - 0.5) * 3 : (Math.random() * 30) - 15;
+    let startRY = isLobbyPhase ? Math.PI : 0;
 
     players[socket.id] = {
         id: socket.id,
@@ -291,7 +291,7 @@ io.on('connection', (socket) => {
         x: startX,
         y: 20, 
         z: startZ,
-        rY: 0, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
+        rY: startRY, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
         decoyUsed: false, hairballs: 3, stunned: false, emote: 0, face: 'normal'
     };
 
