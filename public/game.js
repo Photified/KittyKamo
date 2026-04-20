@@ -778,14 +778,14 @@ colorPalette.style.cssText = 'display:flex; gap:10px; margin-bottom:15px; flex-w
 
 const colors = [
     {n:'White', h:0xFFFFFF}, {n:'Black', h:0x222222}, 
-    {n:'Bright Blue', h:0x0066FF}, {n:'Deep Pink', h:0xFF1493}, 
-    {n:'Bright Purple', h:0x9932CC}, {n:'Bright Yellow', h:0xFFFF00}, 
-    {n:'Cyan', h:0x00FFFF}, {n:'Bright Orange', h:0xFF8C00},
+    {n:'Bright Blue', h:0x0044FF}, {n:'Deep Pink', h:0xFF00AA}, 
+    {n:'Bright Purple', h:0xAA00FF}, {n:'Bright Yellow', h:0xFFFF00}, 
+    {n:'Cyan', h:0x00FFFF}, {n:'Bright Orange', h:0xFF6600},
     {n:'Magenta', h:0xFF00FF}, {n:'Violet', h:0x8A2BE2}, 
-    {n:'Deep Sky Blue', h:0x00BFFF}, {n:'Hot Pink', h:0xFF3399},
+    {n:'Deep Sky Blue', h:0x00AAFF}, {n:'Hot Pink', h:0xFF0055},
     {n:'Lime', h:0x32CD32}, {n:'Crimson', h:0xDC143C},
     {n:'Teal', h:0x008080}, {n:'Gold', h:0xFFD700},
-    {n:'Grey', h:0x999999}, {n:'Coral', h:0xFF7F50}
+    {n:'Charcoal', h:0x555555}, {n:'Coral', h:0xFF5533}
 ];
 
 colors.forEach(c => {
@@ -1814,7 +1814,7 @@ function animate() {
 
     if (isMVPGameOver) {
         // Lock the MVP directly onto the podium and rotate
-        myPlayerObject.position.set(0, -2.5, -10);
+        myPlayerObject.position.set(0, -2.8, -10);
         myPlayerObject.rotation.y += 0.05;
         moved = true;
     } else if (isBeaming) {
