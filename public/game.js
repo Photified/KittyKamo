@@ -868,6 +868,13 @@ scene.add(stars);
 const myCatData = createCatSculpt(); 
 myPlayerObject.add(myCatData.group);
 
+// --- ADD MIRROR CAT GLOBALLY ---
+const mirrorCat = createCatSculpt();
+scene.add(mirrorCat.group);
+mirrorCat.group.visible = false;
+const mirrorZ = 19.5;
+// -------------------------------
+
 window.myBaseColor = 0xFFFFFF; 
 window.myFace = 'normal';
 window.myWardrobe = [null, null, null]; // 3 Slots for Customization
@@ -950,6 +957,7 @@ colors.forEach(c => {
     btn.onclick = () => { 
         window.myBaseColor = c.h; 
         previewCat.material.color.setHex(c.h);
+        mirrorCat.material.color.setHex(c.h); // MIRROR SYNC
         Array.from(colorPalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -983,6 +991,7 @@ faces.forEach(f => {
     btn.onclick = () => { 
         window.myFace = f.id; 
         previewCat.faceMesh.material.map = getFaceTexture(f.id);
+        mirrorCat.faceMesh.material.map = getFaceTexture(f.id); // MIRROR SYNC
         Array.from(facePalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -1030,6 +1039,7 @@ items.forEach(item => {
         window.myWardrobe[window.activeSlot] = { id: item.id, color: currentItemColor };
         slots[window.activeSlot].innerHTML = item.icon;
         applyWardrobeToCat(previewCat, window.myWardrobe);
+        applyWardrobeToCat(mirrorCat, window.myWardrobe); // MIRROR SYNC
     };
     itemRow.appendChild(btn);
 });
@@ -1041,6 +1051,7 @@ clearBtn.onclick = () => {
     window.myWardrobe[window.activeSlot] = null;
     slots[window.activeSlot].innerHTML = '+';
     applyWardrobeToCat(previewCat, window.myWardrobe);
+    applyWardrobeToCat(mirrorCat, window.myWardrobe); // MIRROR SYNC
 };
 itemRow.appendChild(clearBtn);
 wardrobeTab.appendChild(itemRow);
@@ -1056,6 +1067,7 @@ colors.forEach(c => {
         if (window.myWardrobe[window.activeSlot]) {
             window.myWardrobe[window.activeSlot].color = currentItemColor;
             applyWardrobeToCat(previewCat, window.myWardrobe);
+            applyWardrobeToCat(mirrorCat, window.myWardrobe); // MIRROR SYNC
         }
     };
     itemColorRow.appendChild(btn);
@@ -1083,7 +1095,6 @@ startBtn.onclick = () => {
     }
     
     let chosenName = nameInput.value.trim();
-    // Send Wardrobe data to the server!
     socket.emit('joinGame', { name: chosenName, color: window.myBaseColor, face: window.myFace, wardrobe: window.myWardrobe });
     
     startScreen.style.display = 'none';
@@ -1380,10 +1391,50 @@ socket.on('initMap', (mapBlocks) => {
         ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
         
+        // Front wall
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); 
-        createWall(43, 2, 2, 0, -4, 20.5, 0x8B4513);  
-        createWall(2, 2, 39, -20.5, -4, 0, 0x8B4513); 
-        createWall(2, 2, 39, 20.5, -4, 0, 0x8B4513);  
+        
+        // --- NEW MIRROR WALL RECESS ---
+        createWall(18.5, 2, 2, -12.25, -4, 20.5, 0x8B4513); // Left back wall
+        createWall(18.5, 2, 2, 12.25, -4, 20.5, 0x8B4513);  // Right back wall
+        
+        // Dark recess box
+        createWall(6, 4, 1, 0, -3, 25.5, 0x111111); // Dark back wall
+        createWall(1, 4, 5, -3.5, -3, 22.5, 0x111111); // Left dark wall
+        createWall(1, 4, 5, 3.5, -3, 22.5, 0x111111); // Right dark wall
+        createWall(8, 1, 5, 0, -5.5, 22.5, 0x111111); // Floor
+        createWall(8, 1, 5, 0, -0.5, 22.5, 0x111111); // Roof
+        
+        createWall(6.5, 4.5, 0.4, 0, -3, 19.7, 0x5C4033); // Mirror Frame
+        createInvisibleWall(6, 10, 1, 0, 0, 19.5); // Invisible wall to block players from walking through mirror
+        
+        const glassGeo = new THREE.PlaneGeometry(5.5, 3.5);
+        const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25 });
+        const glass = new THREE.Mesh(glassGeo, glassMat);
+        glass.position.set(0, -3, 19.49);
+        scene.add(glass);
+        lobbyVisuals.push(glass);
+
+        const mCanvas = document.createElement('canvas');
+        mCanvas.width = 256; mCanvas.height = 64;
+        const mCtx = mCanvas.getContext('2d');
+        mCtx.fillStyle = 'transparent'; mCtx.fillRect(0, 0, 256, 64);
+        mCtx.font = '900 40px "Segoe UI", Arial, sans-serif'; 
+        mCtx.fillStyle = '#AAAAAA';
+        mCtx.textAlign = 'center'; mCtx.textBaseline = 'middle'; 
+        mCtx.shadowColor = '#000000'; mCtx.shadowBlur = 4; mCtx.shadowOffsetX = 2; mCtx.shadowOffsetY = 2;
+        mCtx.fillText("MIRROR", 128, 32);
+        
+        const mGeo = new THREE.PlaneGeometry(2.5, 0.6);
+        const mMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(mCanvas), transparent: true, depthWrite: false });
+        const mMesh = new THREE.Mesh(mGeo, mMat);
+        mMesh.position.set(0, -0.2, 19.49); 
+        scene.add(mMesh);
+        lobbyVisuals.push(mMesh);
+        // ------------------------------
+
+        createWall(2, 2, 39, -20.5, -4, 0, 0x8B4513); // Left Side Wall
+        createWall(2, 2, 39, 20.5, -4, 0, 0x8B4513);  // Right Side Wall
 
         createInvisibleWall(43, 40, 2, 0, 17, -20.5);
         createInvisibleWall(43, 40, 2, 0, 17, 20.5);
@@ -1855,6 +1906,49 @@ function animate() {
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
 
+    // --- MIRROR LOGIC ---
+    if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
+        let distToMirror = mirrorZ - myPlayerObject.position.z;
+        
+        // Render if player is in front of the mirror, within 4.5 blocks, and facing roughly towards it
+        if (distToMirror > 0 && distToMirror <= 4.5 && Math.abs(myPlayerObject.position.x) < 3.5) {
+            mirrorCat.group.visible = true;
+            
+            mirrorCat.group.position.x = myPlayerObject.position.x;
+            mirrorCat.group.position.y = myPlayerObject.position.y;
+            mirrorCat.group.position.z = mirrorZ + distToMirror; // Mirror opposite Z
+            
+            mirrorCat.group.rotation.y = Math.PI - myPlayerObject.rotation.y;
+            
+            mirrorCat.material.color.setHex(myCatData.material.color.getHex());
+            mirrorCat.faceMesh.material.map = myCatData.faceMesh.material.map;
+            mirrorCat.body.scale.copy(myCatData.body.scale);
+            if (mirrorCat.nameSprite) mirrorCat.nameSprite.visible = false;
+            
+            animateCat(mirrorCat, myEmote, myWalkTime);
+            
+            // Calculate Opacity (Fade in closer you get)
+            let op = 1.0 - ((distToMirror - 1) / 3) * 0.75;
+            op = Math.max(0.05, Math.min(1, op)); 
+            
+            mirrorCat.group.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    child.material.transparent = true;
+                    child.material.opacity = op;
+                }
+                if (child.isLineSegments && child.material) {
+                    child.material.transparent = true;
+                    child.material.opacity = op * 0.3; // keep outlines slightly faded
+                }
+            });
+        } else {
+            mirrorCat.group.visible = false;
+        }
+    } else {
+        mirrorCat.group.visible = false;
+    }
+    // --------------------
+
     // Update Confetti Physics
     for (let i = confettiParticles.length - 1; i >= 0; i--) {
         let p = confettiParticles[i];
@@ -2126,8 +2220,6 @@ function animate() {
                 const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
                 
                 if (seekerBox.intersectsBox(hiderBox)) {
-                    // Tag requires the seeker to jump ONTO the hider (Y > Hider Y + 0.5)
-                    // limit the height to max 1.4 blocks so they don't get tagged by a high-flyer
                     let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
                     if (heightDiff > 0.5 && heightDiff <= 1.4) {
                         otherPlayers[id].role = 'seeker'; 
