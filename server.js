@@ -116,7 +116,7 @@ function startLobby() {
     timeRemaining = 60; 
     
     // Only clear and reposition if coming from WAITING. 
-    // If coming from GAME_OVER, players are already hanging out in the lobby map!
+    // If coming from GAME_OVER, players are already hanging out in the lobby map seamlessly!
     if (!wasGameOver) {
         mapBlocks = [];
         io.emit('initMap', mapBlocks);
@@ -185,7 +185,7 @@ function startLobby() {
 
             if (!hidersLeft || timeRemaining <= 0) {
                 gameState = 'GAME_OVER';
-                timeRemaining = 8; // Extra time for MVP celebration
+                timeRemaining = 5; // 5 Seconds of MVP celebration
                 winReason = hidersLeft ? 'HIDERS SURVIVE!' : 'SEEKERS WIN!';
                 
                 let sortedIds = activePlayers.filter(id => players[id]).sort((a,b) => players[b].score - players[a].score);
@@ -202,15 +202,15 @@ function startLobby() {
                     
                     if (id === currentWinnerId) {
                         players[id].x = 0;
-                        players[id].y = -2.5; // Top of the 2-block podium
+                        players[id].y = -2.8; // Top of the 2-block podium
                         players[id].z = -10;
-                        players[id].rY = 0;
+                        players[id].rY = Math.PI; // Faces the crowd (+Z)
                     } else {
                         // Spawn randomly in front of the podium looking at it
                         players[id].x = (Math.random() - 0.5) * 12;
                         players[id].y = -4; 
                         players[id].z = -5 + (Math.random() * 3);
-                        players[id].rY = Math.PI; 
+                        players[id].rY = 0; // Faces the podium (-Z)
                     }
                     // Force the client to teleport seamlessly
                     io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
@@ -270,7 +270,8 @@ function startRound() {
 }
 
 io.on('connection', (socket) => {
-    if (mapBlocks.length === 0 && gameState !== 'LOBBY' && gameState !== 'WAITING') {
+    // Only generate a new map if no one is playing (prevents reconnect bugs overwriting the lobby map during GAME_OVER)
+    if (mapBlocks.length === 0 && (gameState === 'HIDING' || gameState === 'SEEKING')) {
         generateMap();
     }
     socket.emit('initMap', mapBlocks);
