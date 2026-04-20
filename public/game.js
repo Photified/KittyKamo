@@ -1804,10 +1804,15 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[1].position.set(-0.15, 0.15, 0.3);
         cat.legs[1].rotation.x = -Math.PI / 8;
         
-        cat.legs[2].position.set(0.15, 0.1, -0.3);
-        cat.legs[2].rotation.z = Math.PI / 2;
-        cat.legs[3].position.set(-0.15, 0.1, -0.3);
-        cat.legs[3].rotation.z = Math.PI / 2;
+        // Emote 1 Fix: Removed sideways Z rotation, replaced with forward X stretch
+        cat.legs[2].position.set(0.15, 0.15, -0.35); 
+        cat.legs[2].rotation.z = 0;
+        cat.legs[2].rotation.x = Math.PI / 2.2; 
+        
+        cat.legs[3].position.set(-0.15, 0.15, -0.35);
+        cat.legs[3].rotation.z = 0;
+        cat.legs[3].rotation.x = Math.PI / 2.2; 
+        
     } else if (emote === 2) { 
         cat.body.position.y = 0.4;
         cat.body.rotation.x = -Math.PI / 2.5; 
@@ -1841,8 +1846,9 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[0].rotation.x = -Math.PI / 3; 
         cat.legs[1].rotation.x = -Math.PI / 3;
         
-        cat.legs[2].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 1.5) * 0.3; 
-        cat.legs[3].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 1.5 + Math.PI) * 0.3;
+        // Emote 5 Fix: Changed negative rotation to positive so boots stay on the bottom!
+        cat.legs[2].rotation.x = Math.PI / 2.5 + Math.sin(walkTime * 1.5) * 0.3; 
+        cat.legs[3].rotation.x = Math.PI / 2.5 + Math.sin(walkTime * 1.5 + Math.PI) * 0.3;
         cat.tail.rotation.x = -Math.PI / 4;
     } else { 
         if (cat.moving || walkTime > 0) {
@@ -1899,12 +1905,11 @@ function animate() {
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
 
-  // --- MIRROR LOGIC ---
+   // --- MIRROR LOGIC ---
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        // Added: myPlayerObject.position.y < -1 so it doesn't show on the roof!
-        if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(myPlayerObject.position.x) < 4.0 && myPlayerObject.position.y < -1) {
+        if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(myPlayerObject.position.x) < 4.0) {
             mirrorCat.group.visible = true;
             
             mirrorCat.group.position.x = myPlayerObject.position.x;
