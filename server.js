@@ -133,6 +133,9 @@ function startLobby() {
             players[id].y = -4; 
             players[id].z = bed.z + (Math.random() > 0.5 ? 0.6 : -0.6);
             players[id].rY = Math.atan2(-players[id].x, -players[id].z); // Face the center cat tree
+            
+            // Force the client to physically move to the bed!
+            io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
         });
     }
 
@@ -304,6 +307,10 @@ io.on('connection', (socket) => {
     };
 
     socket.emit('currentPlayers', players);
+    
+    // Force the joining player to teleport to their bed immediately!
+    socket.emit('forceTeleport', { x: startX, y: startY, z: startZ, rY: startRY });
+
     socket.broadcast.emit('newPlayer', { id: socket.id, player: players[socket.id] });
 
     if (Object.keys(players).length >= 2 && gameState === 'WAITING') {
