@@ -111,24 +111,28 @@ function startLobby() {
         return;
     }
 
+    let wasGameOver = (gameState === 'GAME_OVER');
     gameState = 'LOBBY';
     timeRemaining = 60; 
     
-    // Clear map for a flat lobby arena!
-    mapBlocks = [];
-    io.emit('initMap', mapBlocks);
+    // Only clear and reposition if coming from WAITING. 
+    // If coming from GAME_OVER, players are already hanging out in the lobby map!
+    if (!wasGameOver) {
+        mapBlocks = [];
+        io.emit('initMap', mapBlocks);
+
+        ids.forEach(id => {
+            let angle = Math.random() * Math.PI * 2;
+            let dist = 8 + Math.random() * 8; 
+            players[id].x = Math.cos(angle) * dist;
+            players[id].y = 20; 
+            players[id].z = Math.sin(angle) * dist;
+        });
+    }
 
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
-        
-        // Spawn players outside of the beam (radius > 6)
-        let angle = Math.random() * Math.PI * 2;
-        let dist = 8 + Math.random() * 8; // Dist between 8 and 16
-        players[id].x = Math.cos(angle) * dist;
-        players[id].y = 20; 
-        players[id].z = Math.sin(angle) * dist;
-        
         players[id].score = 0; 
         players[id].decoyUsed = false; 
         players[id].hairballs = 3; 
@@ -198,16 +202,18 @@ function startLobby() {
                     
                     if (id === currentWinnerId) {
                         players[id].x = 0;
-                        players[id].y = 0; // On top of the roof of the customization house
-                        players[id].z = -18.5;
+                        players[id].y = -2.5; // Top of the 2-block podium
+                        players[id].z = -10;
                         players[id].rY = 0;
                     } else {
-                        // Spawn randomly in front of the house looking at it
+                        // Spawn randomly in front of the podium looking at it
                         players[id].x = (Math.random() - 0.5) * 12;
                         players[id].y = -4; 
-                        players[id].z = -12 + (Math.random() * 4);
-                        players[id].rY = 0; // Look towards -Z (the house)
+                        players[id].z = -5 + (Math.random() * 3);
+                        players[id].rY = Math.PI; 
                     }
+                    // Force the client to teleport seamlessly
+                    io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
                 });
                 io.emit('currentPlayers', players);
             }
@@ -256,6 +262,8 @@ function startRound() {
         players[id].hairballs = 3; 
         players[id].stunned = false;
         players[id].emote = 0; 
+        
+        io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
     });
     
     io.emit('currentPlayers', players); 
