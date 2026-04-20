@@ -133,7 +133,6 @@ function startLobby() {
         players[id].hairballs = 10; 
         players[id].stunned = false;
         players[id].emote = 0; 
-        players[id].tagProgress = 0; 
     });
     
     io.emit('currentPlayers', players); 
@@ -194,11 +193,10 @@ function startLobby() {
                     players[id].role = 'hider';
                     players[id].color = players[id].baseColor;
                     players[id].stunned = false;
-                    players[id].tagProgress = 0; 
                     
                     if (id === currentWinnerId) {
                         players[id].x = 17.5;
-                        players[id].y = -2.8; 
+                        players[id].y = -3.5; // Top of the Crown Podium Base
                         players[id].z = -17.5;
                         players[id].rY = Math.PI * 0.75; 
                     } else {
@@ -256,7 +254,6 @@ function startRound() {
         players[id].hairballs = 10; 
         players[id].stunned = false;
         players[id].emote = 0; 
-        players[id].tagProgress = 0;
         
         io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
     });
@@ -287,13 +284,11 @@ io.on('connection', (socket) => {
         y: startY, 
         z: startZ,
         rY: startRY, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
-        decoys: 3, hairballs: 10, stunned: false, emote: 0, face: 'normal', tagProgress: 0
+        decoys: 3, hairballs: 10, stunned: false, emote: 0, face: 'normal'
     };
 
     socket.emit('currentPlayers', players);
-    
     socket.emit('forceTeleport', { x: startX, y: startY, z: startZ, rY: startRY });
-
     socket.broadcast.emit('newPlayer', { id: socket.id, player: players[socket.id] });
 
     if (Object.keys(players).length >= 2 && gameState === 'WAITING') {
@@ -315,23 +310,15 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Tag tick receiver to track progress instead of instant tags
-    socket.on('tagTick', (data) => {
-        let target = players[data.targetId];
-        let seeker = players[socket.id];
-        
-        if (target && target.role === 'hider' && seeker && seeker.role === 'seeker' && !seeker.stunned) {
-            target.tagProgress = (target.tagProgress || 0) + data.delta;
-            
-            if (target.tagProgress >= 1.0) {
-                target.role = 'seeker';
-                target.color = 0xFF0000;
-                target.tagProgress = 0; 
-                seeker.score += 15;
+    socket.on('tagPlayer', (targetId) => {
+        if (players[targetId] && players[targetId].role === 'hider') {
+            if (players[socket.id] && players[socket.id].role === 'seeker' && !players[socket.id].stunned) {
+                players[targetId].role = 'seeker';
+                players[targetId].color = 0xFF0000;
+                
+                players[socket.id].score += 15;
+                
                 io.emit('currentPlayers', players); 
-            } else {
-                io.to(data.targetId).emit('tagProgressUpdate', target.tagProgress);
-                io.to(socket.id).emit('tagProgressUpdate', target.tagProgress);
             }
         }
     });
