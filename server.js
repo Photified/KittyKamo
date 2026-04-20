@@ -19,6 +19,12 @@ let nextDecoyId = 0;
 let nextHairballId = 0;
 let activePlayers = []; 
 
+// Coordinates for all 8 cat beds in the lobby
+const catBeds = [
+    {x: 15, z: 8}, {x: 15, z: -8}, {x: -15, z: 8}, {x: -15, z: -8},
+    {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15}
+];
+
 function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
@@ -122,11 +128,11 @@ function startLobby() {
         io.emit('initMap', mapBlocks);
 
         ids.forEach(id => {
-            // Spawn on top of the customization house roof
-            players[id].x = (Math.random() - 0.5) * 5;
-            players[id].y = 5; 
-            players[id].z = -18.5 + (Math.random() - 0.5) * 3;
-            players[id].rY = Math.PI; // Face forwards towards the center tree
+            let bed = catBeds[Math.floor(Math.random() * catBeds.length)];
+            players[id].x = bed.x + (Math.random() > 0.5 ? 0.6 : -0.6);
+            players[id].y = -4; 
+            players[id].z = bed.z + (Math.random() > 0.5 ? 0.6 : -0.6);
+            players[id].rY = Math.atan2(-players[id].x, -players[id].z); // Face the center cat tree
         });
     }
 
@@ -202,7 +208,7 @@ function startLobby() {
                     
                     if (id === currentWinnerId) {
                         players[id].x = 17.5;
-                        players[id].y = -2.8; 
+                        players[id].y = -2.8; // Top of the 2-block podium
                         players[id].z = -17.5;
                         players[id].rY = Math.PI * 0.75; // MVP faces the crowd
                     } else {
@@ -278,18 +284,20 @@ io.on('connection', (socket) => {
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
-    // Calculate a safe lobby spawn on top of the house
+    // Calculate a safe lobby spawn in a cat bed, facing the middle tree
     let isLobbyPhase = (gameState === 'LOBBY' || gameState === 'WAITING');
-    let startX = isLobbyPhase ? (Math.random() - 0.5) * 5 : (Math.random() * 30) - 15;
-    let startZ = isLobbyPhase ? -18.5 + (Math.random() - 0.5) * 3 : (Math.random() * 30) - 15;
-    let startRY = isLobbyPhase ? Math.PI : 0;
+    let bed = catBeds[Math.floor(Math.random() * catBeds.length)];
+    let startX = isLobbyPhase ? bed.x + (Math.random() > 0.5 ? 0.6 : -0.6) : (Math.random() * 30) - 15;
+    let startZ = isLobbyPhase ? bed.z + (Math.random() > 0.5 ? 0.6 : -0.6) : (Math.random() * 30) - 15;
+    let startRY = isLobbyPhase ? Math.atan2(-startX, -startZ) : 0;
+    let startY = isLobbyPhase ? -4 : 20;
 
     players[socket.id] = {
         id: socket.id,
         name: 'Cat-' + socket.id.substring(0, 4),
         score: 0,
         x: startX,
-        y: 20, 
+        y: startY, 
         z: startZ,
         rY: startRY, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
         decoyUsed: false, hairballs: 3, stunned: false, emote: 0, face: 'normal'
