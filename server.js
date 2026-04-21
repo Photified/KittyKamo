@@ -320,7 +320,7 @@ function startLobby() {
             startRound(); 
         } else if (gameState === 'HIDING' && timeRemaining <= 0) {
             gameState = 'SEEKING';
-            timeRemaining = 60; 
+            timeRemaining = 180; 
         } else if (gameState === 'SEEKING') {
             let hidersLeft = false;
             activePlayers.forEach(id => {
