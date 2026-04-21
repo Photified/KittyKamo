@@ -25,42 +25,116 @@ const catBeds = [
     {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15}
 ];
 
-// Server-side state for the interactive yarn balls
+// Server-side state for the interactive yarn balls (Now with Y-velocity for arcs!)
 let yarnBalls = [
-    { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vz: 0 },
-    { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vz: 0 },
-    { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vz: 0 }
+    { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vy: 0, vz: 0 },
+    { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vy: 0, vz: 0 },
+    { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vy: 0, vz: 0 }
 ];
 
-// Lightweight physics loop just for the yarn balls (runs at 20fps)
+// Bouncy physics loop for the yarn balls (Runs at 30fps)
 setInterval(() => {
     if (gameState !== 'LOBBY' && gameState !== 'WAITING' && gameState !== 'GAME_OVER') return;
     
     let moved = false;
     yarnBalls.forEach(yarn => {
-        if (Math.abs(yarn.vx) > 0.01 || Math.abs(yarn.vz) > 0.01) {
-            yarn.x += yarn.vx;
-            yarn.z += yarn.vz;
-            yarn.vx *= 0.9; // Friction
-            yarn.vz *= 0.9; // Friction
+        // Apply gravity if it's in the air
+        if (yarn.y > -4.6) {
+            yarn.vy -= 0.025; 
+        }
 
-            // Lobby Wall Bounce Checks
-            if (yarn.x > 18) { yarn.vx *= -1; yarn.x = 18; }
-            if (yarn.x < -18) { yarn.vx *= -1; yarn.x = -18; }
-            if (yarn.z > 18) { yarn.vz *= -1; yarn.z = 18; } // Front mirror wall
-            if (yarn.z < -19) { yarn.vz *= -1; yarn.z = -19; } // Back wall
+        // Only calculate physics if it's moving or in the air
+        if (Math.abs(yarn.vx) > 0.005 || Math.abs(yarn.vz) > 0.005 || Math.abs(yarn.vy) > 0.005 || yarn.y > -4.6) {
+            let nextX = yarn.x + yarn.vx;
+            let nextZ = yarn.z + yarn.vz;
+            let nextY = yarn.y + yarn.vy;
+            
+            // 1. Basic Wall Bounces (Outer Lobby Walls)
+            if (nextX > 19) { yarn.vx *= -0.7; nextX = 19; }
+            if (nextX < -19) { yarn.vx *= -0.7; nextX = -19; }
+            if (nextZ > 18.5) { yarn.vz *= -0.7; nextZ = 18.5; } // Front of mirror
+            if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; }
+            
+            // 2. Floor Bounce
+            if (nextY < -4.6) {
+                nextY = -4.6;
+                if (yarn.vy < -0.1) {
+                    yarn.vy *= -0.6; // Bounce back up!
+                } else {
+                    yarn.vy = 0; // Stop micro-bouncing when rolling
+                }
+                yarn.vx *= 0.95; // Ground friction
+                yarn.vz *= 0.95;
+            } else if (nextY > -4.6) {
+                yarn.vx *= 0.99; // Air resistance
+                yarn.vz *= 0.99;
+            }
 
+            // 3. Player Collision (Bounce off other cats)
+            Object.values(players).forEach(p => {
+                if (p.role !== 'spectator') {
+                    let dx = nextX - p.x;
+                    let dz = nextZ - p.z;
+                    let dy = nextY - p.y;
+                    let distSq = dx*dx + dz*dz;
+                    if (distSq < 1.4 && dy > -0.5 && dy < 1.5) { 
+                        let dist = Math.sqrt(distSq);
+                        if(dist === 0) dist = 0.01;
+                        let nx = dx / dist;
+                        let nz = dz / dist;
+                        
+                        yarn.vx = nx * 0.3; // Deflect away from the cat
+                        yarn.vz = nz * 0.3;
+                        
+                        nextX = p.x + nx * 1.2;
+                        nextZ = p.z + nz * 1.2;
+                    }
+                }
+            });
+
+            // 4. Object Collision (Rough bounding boxes for the main lobby structures)
+            const lobbyObstacles = [
+                { minX: -3.5, maxX: 3.5, minZ: 18.5, maxZ: 25 }, // Mirror area
+                { minX: -5.5, maxX: 5.5, minZ: -20.5, maxZ: -16.5 }, // Desk/Podium area
+                { minX: -2.5, maxX: 2.5, minZ: -2.5, maxZ: 2.5 }, // Center tree
+                { minX: -16.5, maxX: -11.5, minZ: -16.5, maxZ: -11.5 }, // NW tree
+                { minX: 11.5, maxX: 16.5, minZ: 11.5, maxZ: 16.5 }  // SE tree
+            ];
+
+            lobbyObstacles.forEach(obs => {
+                // If hitting an object and close to the ground
+                if (nextX > obs.minX && nextX < obs.maxX && nextZ > obs.minZ && nextZ < obs.maxZ && nextY < 0) { 
+                    let overlapLeft = nextX - obs.minX;
+                    let overlapRight = obs.maxX - nextX;
+                    let overlapTop = nextZ - obs.minZ;
+                    let overlapBottom = obs.maxZ - nextZ;
+
+                    let minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                    
+                    if (minOverlap === overlapLeft) { nextX = obs.minX; yarn.vx *= -0.7; }
+                    else if (minOverlap === overlapRight) { nextX = obs.maxX; yarn.vx *= -0.7; }
+                    else if (minOverlap === overlapTop) { nextZ = obs.minZ; yarn.vz *= -0.7; }
+                    else if (minOverlap === overlapBottom) { nextZ = obs.maxZ; yarn.vz *= -0.7; }
+                }
+            });
+
+            yarn.x = nextX;
+            yarn.y = nextY;
+            yarn.z = nextZ;
+            
+            // Put it fully to sleep if it's barely moving
+            if (Math.abs(yarn.vx) < 0.01 && Math.abs(yarn.vz) < 0.01 && yarn.y === -4.6 && yarn.vy === 0) {
+                yarn.vx = 0; yarn.vz = 0;
+            }
+            
             moved = true;
-        } else {
-            yarn.vx = 0; 
-            yarn.vz = 0;
         }
     });
 
     if (moved) {
         io.emit('yarnState', yarnBalls);
     }
-}, 50);
+}, 33);
 
 function generateMap() {
     mapBlocks = [];
@@ -148,9 +222,9 @@ function startLobby() {
     timeRemaining = 60; 
     
     // Reset yarn balls to starting positions
-    yarnBalls[0] = { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vz: 0 };
-    yarnBalls[1] = { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vz: 0 };
-    yarnBalls[2] = { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vz: 0 };
+    yarnBalls[0] = { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vy: 0, vz: 0 };
+    yarnBalls[1] = { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vy: 0, vz: 0 };
+    yarnBalls[2] = { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vy: 0, vz: 0 };
     io.emit('yarnState', yarnBalls);
 
     if (!wasGameOver) {
@@ -359,9 +433,10 @@ io.on('connection', (socket) => {
     socket.on('kickYarn', (data) => {
         let yarn = yarnBalls.find(y => y.id === data.id);
         if (yarn && (gameState === 'LOBBY' || gameState === 'WAITING' || gameState === 'GAME_OVER')) {
-            let force = 0.4 + Math.random() * 0.4; // Enough force to send it 2 to 8 blocks
+            let force = 0.4 + Math.random() * 0.3; // Kick strength
             yarn.vx = data.dirX * force;
             yarn.vz = data.dirZ * force;
+            yarn.vy = 0.35 + Math.random() * 0.2;  // Upward arc added here!
         }
     });
 
