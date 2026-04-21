@@ -18,7 +18,8 @@ let winReason = "";
 let nextDecoyId = 0;
 let nextHairballId = 0;
 let activePlayers = []; 
-let lastMvp = null; // Tracks the last MVP for the TV screen
+let lastMvp = null; 
+let lastLeaderboard = []; // Stores the final results of the previous round for the TV
 
 // Coordinates for all 10 cat beds in the lobby
 const catBeds = [
@@ -35,7 +36,7 @@ let yarnBalls = [
 // Comprehensive list of all solid lobby objects so the ball bounces off them!
 const lobbyObstacles = [
     // Structural
-    { x: 0, z: 21.5, w: 6, d: 8 }, // Mirror Room (Updated to match exact dimensions)
+    { x: 0, z: 21.5, w: 6, d: 8 }, // Mirror Room
     { x: 0, z: -18.5, w: 5, d: 4 }, // Desk/Crafting Table
     { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, // Podium
 
@@ -70,39 +71,34 @@ setInterval(() => {
     
     let moved = false;
     yarnBalls.forEach(yarn => {
-        // Apply gravity if it's in the air
         if (yarn.y > -4.6) {
             yarn.vy -= 0.025; 
         }
 
-        // Only calculate physics if it's moving or in the air
         if (Math.abs(yarn.vx) > 0.005 || Math.abs(yarn.vz) > 0.005 || Math.abs(yarn.vy) > 0.005 || yarn.y > -4.6) {
             let nextX = yarn.x + yarn.vx;
             let nextZ = yarn.z + yarn.vz;
             let nextY = yarn.y + yarn.vy;
             
-            // 1. Basic Wall Bounces (Outer Lobby Walls)
             if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
             if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
-            if (nextZ > 24.5) { yarn.vz *= -0.7; nextZ = 24.5; } // Bounces off Rainbow Wall!
-            if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } // Front Wall
+            if (nextZ > 24.5) { yarn.vz *= -0.7; nextZ = 24.5; } 
+            if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } 
             
-            // 2. Floor Bounce
             if (nextY < -4.6) {
                 nextY = -4.6;
                 if (yarn.vy < -0.1) {
-                    yarn.vy *= -0.6; // Bounce back up!
+                    yarn.vy *= -0.6; 
                 } else {
-                    yarn.vy = 0; // Stop micro-bouncing when rolling
+                    yarn.vy = 0; 
                 }
-                yarn.vx *= 0.95; // Ground friction
+                yarn.vx *= 0.95; 
                 yarn.vz *= 0.95;
             } else if (nextY > -4.6) {
-                yarn.vx *= 0.99; // Air resistance
+                yarn.vx *= 0.99; 
                 yarn.vz *= 0.99;
             }
 
-            // 3. Player Collision (Bounce off other cats)
             Object.values(players).forEach(p => {
                 if (p.role !== 'spectator') {
                     let dx = nextX - p.x;
@@ -115,7 +111,7 @@ setInterval(() => {
                         let nx = dx / dist;
                         let nz = dz / dist;
                         
-                        yarn.vx = nx * 0.3; // Deflect away from the cat
+                        yarn.vx = nx * 0.3; 
                         yarn.vz = nz * 0.3;
                         
                         nextX = p.x + nx * 1.2;
@@ -124,15 +120,12 @@ setInterval(() => {
                 }
             });
 
-            // 4. Detailed Object Collision
             lobbyObstacles.forEach(obs => {
-                // Expand the hit box by the yarn ball's radius (0.5)
                 let minX = obs.x - (obs.w / 2) - 0.5;
                 let maxX = obs.x + (obs.w / 2) + 0.5;
                 let minZ = obs.z - (obs.d / 2) - 0.5;
                 let maxZ = obs.z + (obs.d / 2) + 0.5;
 
-                // If hitting an object and close to the ground
                 if (nextX > minX && nextX < maxX && nextZ > minZ && nextZ < maxZ && nextY < -1.0) { 
                     let overlapLeft = nextX - minX;
                     let overlapRight = maxX - nextX;
@@ -152,7 +145,6 @@ setInterval(() => {
             yarn.y = nextY;
             yarn.z = nextZ;
             
-            // Put it fully to sleep if it's barely moving
             if (Math.abs(yarn.vx) < 0.01 && Math.abs(yarn.vz) < 0.01 && yarn.y === -4.6 && yarn.vy === 0) {
                 yarn.vx = 0; yarn.vz = 0;
             }
@@ -243,7 +235,7 @@ function startLobby() {
     if (ids.length < 2) {
         gameState = 'WAITING';
         timeRemaining = 0;
-        io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastMvp: lastMvp });
+        io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastLeaderboard: lastLeaderboard, lastMvp: lastMvp });
         return;
     }
 
@@ -331,11 +323,12 @@ function startLobby() {
                 let sortedIds = activePlayers.filter(id => players[id]).sort((a,b) => players[b].score - players[a].score);
                 currentWinnerId = sortedIds.length > 0 ? sortedIds[0] : null;
 
-                // Capture MVP details
+                // Capture MVP & Leaderboard details for TV persistence
                 if (currentWinnerId && players[currentWinnerId]) {
                     let w = players[currentWinnerId];
-                    lastMvp = { name: w.name, color: w.baseColor, face: w.face, wardrobe: w.wardrobe, score: w.score };
+                    lastMvp = { name: w.name, score: w.score };
                 }
+                lastLeaderboard = sortedIds.map(id => ({ name: players[id].name, score: players[id].score }));
 
                 mapBlocks = [];
                 io.emit('initMap', mapBlocks);
@@ -373,9 +366,10 @@ function startLobby() {
             state: gameState, 
             time: timeRemaining, 
             leaderboard: leaderboardData,
+            lastLeaderboard: lastLeaderboard, // Persistent data
             winnerId: currentWinnerId,
             winReason: winReason,
-            lastMvp: lastMvp // Broadcast MVP to all clients
+            lastMvp: lastMvp 
         });
     }, 1000);
 }
@@ -588,12 +582,12 @@ io.on('connection', (socket) => {
             mapBlocks = [];
             io.emit('initMap', mapBlocks);
             if (gameTimer) clearInterval(gameTimer);
-            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastMvp: lastMvp });
+            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastLeaderboard: lastLeaderboard, lastMvp: lastMvp });
         } else if (gameState === 'WAITING' && Object.keys(players).length < 2) {
             mapBlocks = [];
             io.emit('initMap', mapBlocks);
             if (gameTimer) clearInterval(gameTimer);
-            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastMvp: lastMvp });
+            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastLeaderboard: lastLeaderboard, lastMvp: lastMvp });
         }
     });
 });
