@@ -1603,7 +1603,8 @@ socket.on('initMap', (mapBlocks) => {
         }
         
         // VOXEL TEXT FOR LOBBY
-        buildVoxelText('KITTY KAMO', 18.5, 13, 25.4, 0.4);
+        // Centered exactly based on character width calculations
+        buildVoxelText('KITTY KAMO', 16.4, 13, 25.4, 0.4);
 
         // Side Walls
         createWall(2, 2, 47, -20.5, -4, 3, 0x8B4513); 
@@ -2075,14 +2076,14 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[3].rotation.x = Math.PI / 4;
         cat.tail.rotation.x = Math.PI / 4;
     } else if (emote === 4) { 
-        // 360 Spin Dance!
-        cat.body.rotation.y = walkTime * 2; 
-        cat.body.position.y = Math.abs(Math.sin(walkTime * 4)) * 0.2; 
+        // 360 Spin Dance! (Slowed down)
+        cat.body.rotation.y = walkTime * 0.8; 
+        cat.body.position.y = Math.abs(Math.sin(walkTime * 1.6)) * 0.2; 
         cat.head.rotation.x = -Math.PI / 8;
-        cat.legs[0].rotation.x = Math.sin(walkTime * 4) * 0.5;
-        cat.legs[1].rotation.x = -Math.sin(walkTime * 4) * 0.5;
-        cat.legs[2].rotation.x = -Math.sin(walkTime * 4) * 0.5;
-        cat.legs[3].rotation.x = Math.sin(walkTime * 4) * 0.5;
+        cat.legs[0].rotation.x = Math.sin(walkTime * 1.6) * 0.5;
+        cat.legs[1].rotation.x = -Math.sin(walkTime * 1.6) * 0.5;
+        cat.legs[2].rotation.x = -Math.sin(walkTime * 1.6) * 0.5;
+        cat.legs[3].rotation.x = Math.sin(walkTime * 1.6) * 0.5;
     } else if (emote === 5) { 
         cat.body.position.y = 0.3; 
         cat.body.rotation.x = Math.PI / 3; 
