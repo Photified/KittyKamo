@@ -1122,8 +1122,8 @@ const colors = [
     {n:'Bright Purple', h:0xAA00FF}, {n:'Bright Yellow', h:0xFFFF00}, 
     {n:'Cyan', h:0x00FFFF}, {n:'Bright Orange', h:0xFF6600},
     {n:'Magenta', h:0xFF00FF}, {n:'Violet', h:0x8A2BE2}, 
-    {n:'Deep Sky Blue', h:0x00AAFF}, {n:'Hot Pink', h:0xFF0055},
-    {n:'Lime', h:0x32CD32}, {n:'Crimson', h:0xDC143C},
+    {n:'Deep Sky Blue', h:0x00AAFF}, 
+    {n:'Lime', h:0x32CD32}, 
     {n:'Teal', h:0x008080}, {n:'Gold', h:0xFFD700},
     {n:'Charcoal', h:0x555555}, {n:'Coral', h:0xFF5533}
 ];
@@ -2214,7 +2214,7 @@ function animate() {
 
     let cycleProgress = 0;
     if (serverGameState === 'SEEKING') {
-        cycleProgress = Math.max(0, Math.min(1, (60 - serverTime) / 60)); 
+        cycleProgress = Math.max(0, Math.min(1, (180 - serverTime) / 180)); 
     } else if (serverGameState === 'WAITING') {
         let timeLoop = (Date.now() % 60000) / 60000; 
         cycleProgress = Math.abs(timeLoop * 2 - 1); 
@@ -2402,6 +2402,7 @@ function animate() {
         myPlayerObject.position.set(17.5, -3.5, -17.5);
         myPlayerObject.rotation.y += 0.05;
         moved = true;
+        isGrounded = true; // Forces the game to think you are grounded so it stops looping the landing sound
     } else if (isBeaming) {
         velocityY = 0.2; 
         myPlayerObject.position.y += velocityY;
