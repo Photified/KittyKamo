@@ -2514,7 +2514,7 @@ function animate() {
 
     let cameraTargetPos = idealOffset.applyMatrix4(focusObject.matrixWorld);
     camera.position.lerp(cameraTargetPos, 0.15);
-    let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 0.5, 0));
+    let lookAtTarget = focusObject.position.clone().add(new THREE.Vector3(0, 1.5, 0));
     camera.lookAt(lookAtTarget);
 
     walls.forEach(w => {
