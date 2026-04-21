@@ -81,11 +81,11 @@ setInterval(() => {
             let nextZ = yarn.z + yarn.vz;
             let nextY = yarn.y + yarn.vy;
             
-            // Tight original lobby boundaries
-            if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
-            if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
-            if (nextZ > 25.5) { yarn.vz *= -0.7; nextZ = 25.5; } 
-            if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } 
+           // Tight original lobby boundaries (adjusted for ball radius)
+            if (nextX > 19.0) { yarn.vx *= -0.7; nextX = 19.0; }
+            if (nextX < -19.0) { yarn.vx *= -0.7; nextX = -19.0; }
+            if (nextZ > 25.0) { yarn.vz *= -0.7; nextZ = 25.0; } 
+            if (nextZ < -19.0) { yarn.vz *= -0.7; nextZ = -19.0; }
             
             if (nextY < -4.6) {
                 nextY = -4.6;
