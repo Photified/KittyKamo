@@ -1602,7 +1602,7 @@ socket.on('initMap', (mapBlocks) => {
         
         // VOXEL TEXT FOR LOBBY
         // Centered exactly based on character width calculations
-        buildVoxelText('KITTY KAMO', 16.4, 13, 25.4, 0.4);
+        buildVoxelText('KITTY KAMO', 16.4, 6.5, 25.4, 0.4);
 
         // Side Walls
         createWall(2, 2, 47, -20.5, -4, 3, 0x8B4513); 
