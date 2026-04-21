@@ -219,6 +219,8 @@ function getFaceTexture(type) {
 
 const style = document.createElement('style');
 style.innerHTML = `
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; margin: 0; padding: 0; }
     .menu-btn { background: #333; color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content:center; }
     .menu-btn:hover { background: #555; transform: scale(1.05); }
@@ -658,20 +660,22 @@ const mvpTex = new THREE.CanvasTexture(mvpCanvas);
 
 function updateLeaderboardTV(leaderboard) {
     lbCtx.fillStyle = '#111'; lbCtx.fillRect(0, 0, 512, 256);
-    lbCtx.fillStyle = 'cyan'; lbCtx.font = 'bold 36px "Segoe UI"'; lbCtx.textAlign = 'center';
-    lbCtx.fillText('🏆 TOP SURVIVORS 🏆', 256, 60); // Shifted down
+    lbCtx.fillStyle = 'cyan'; 
+    lbCtx.font = '24px "Press Start 2P", "Courier New", monospace'; 
+    lbCtx.textAlign = 'center';
+    lbCtx.fillText('TOP SURVIVORS', 256, 70); 
     
     lbCtx.textAlign = 'left';
-    lbCtx.font = 'bold 28px "Segoe UI"';
+    lbCtx.font = '16px "Press Start 2P", "Courier New", monospace';
     if (!leaderboard || leaderboard.length === 0) {
         // Leave the list blank if no data yet
     } else {
         for(let i=0; i<Math.min(5, leaderboard.length); i++) {
             let p = leaderboard[i];
             lbCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
-            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 105 + (i * 32)); // Shifted down & evenly spaced
+            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 120 + (i * 30)); 
             lbCtx.textAlign = 'right';
-            lbCtx.fillText(`${p.score}s`, 472, 105 + (i * 32));
+            lbCtx.fillText(`${p.score}s`, 472, 120 + (i * 30));
             lbCtx.textAlign = 'left';
         }
     }
@@ -680,14 +684,18 @@ function updateLeaderboardTV(leaderboard) {
 
 function updateMVPDisplay(mvpData) {
     mvpCtx.fillStyle = '#111'; mvpCtx.fillRect(0, 0, 512, 256);
-    mvpCtx.fillStyle = 'gold'; mvpCtx.font = 'bold 40px "Segoe UI"'; mvpCtx.textAlign = 'center';
-    mvpCtx.fillText('⭐ RECENT MVP ⭐', 256, 80); // Shifted down
+    mvpCtx.fillStyle = 'gold'; 
+    mvpCtx.font = '24px "Press Start 2P", "Courier New", monospace'; 
+    mvpCtx.textAlign = 'center';
+    mvpCtx.fillText('RECENT MVP', 256, 80); 
     
     if (mvpData) {
-        mvpCtx.fillStyle = 'white'; mvpCtx.font = 'bold 48px "Segoe UI"';
-        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 150); // Shifted down
-        mvpCtx.fillStyle = 'cyan'; mvpCtx.font = 'bold 32px "Segoe UI"';
-        mvpCtx.fillText('SURVIVED: ' + mvpData.score + 's', 256, 210); // Shifted down
+        mvpCtx.fillStyle = 'white'; 
+        mvpCtx.font = '28px "Press Start 2P", "Courier New", monospace';
+        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 160); 
+        mvpCtx.fillStyle = 'cyan'; 
+        mvpCtx.font = '18px "Press Start 2P", "Courier New", monospace';
+        mvpCtx.fillText('SURVIVED: ' + mvpData.score + 's', 256, 210); 
     }
     mvpTex.needsUpdate = true;
 }
@@ -1056,7 +1064,7 @@ myPlayerObject.add(myCatData.group);
 const myMirrorCat = createCatSculpt();
 scene.add(myMirrorCat.group);
 myMirrorCat.group.visible = false;
-const mirrorZ = 24.5; 
+const mirrorZ = 31.0; // Mirror is now pushed way back to the rainbow wall!
 
 let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
@@ -1576,38 +1584,38 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        // Floor expanded backward
-        ground.scale.set(43, 55, 1);
-        ground.position.set(0, -5, 3.0);
+        // Floor expanded backward significantly to prevent gaps
+        ground.scale.set(53, 65, 1);
+        ground.position.set(0, -5, 5.0);
         ground.material.color.setHex(0x654321); 
         
-        createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
+        createWall(53, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
         // NEW TALL RAINBOW WALL Behind Mirror Room
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
         for (let i = 0; i < 7; i++) {
             let h = 25 / 7;
             let y = -5 + (i * h) + (h / 2);
-            createWall(43, h, 2, 0, y, 32.5, rainbowColors[6 - i]); // Pushed back to 32.5
+            createWall(53, h, 2, 0, y, 32.5, rainbowColors[6 - i]); // Pushed back to 32.5
         }
         
         // VOXEL TEXT FOR LOBBY
         buildVoxelText('KITTY KAMO', 18.5, 13, 31.4, 0.4);
 
         // Extended Side Walls
-        createWall(2, 2, 53, -20.5, -4, 6, 0x8B4513); 
-        createWall(2, 2, 53, 20.5, -4, 6, 0x8B4513);  
+        createWall(2, 2, 55, -25.5, -4, 6, 0x8B4513); 
+        createWall(2, 2, 55, 25.5, -4, 6, 0x8B4513);  
 
         // Mirror Room Walls (Extended depth to prevent seeing rainbow wall above the back)
-        createWall(1, 4, 15, -2.5, -3, 24.5, 0x8B4513); 
-        createWall(1, 4, 15, 2.5, -3, 24.5, 0x8B4513); 
-        createWall(7, 1, 15, 0, -0.5, 24.5, 0xAA4A44); // Roof
-        createWall(6, 4, 1, 0, -3, 31.5, 0x8B4513); // Back Wall pushed deeper
+        createWall(1, 4, 12, -2.5, -3, 26.0, 0x8B4513); // Left
+        createWall(1, 4, 12, 2.5, -3, 26.0, 0x8B4513); // Right
+        createWall(7, 1, 12, 0, -0.5, 26.0, 0xAA4A44); // Roof
+        createWall(6, 4, 1, 0, -3, 31.5, 0x8B4513); // Back Wall pushed deep to rainbow wall
         
         const glassGeo = new THREE.PlaneGeometry(4.98, 3.98);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 24.5); // Mirror stays at 24.5
+        glass.position.set(0, -3, 31.0); // Mirror is now pushed way back to 31.0
         glass.rotation.y = Math.PI; 
         scene.add(glass);
         lobbyVisuals.push(glass);
@@ -1639,8 +1647,8 @@ socket.on('initMap', (mapBlocks) => {
         // Invisible collision boundaries for the expanded space
         createInvisibleWall(43, 40, 2, 0, 17, 32.5); // Back
         createInvisibleWall(43, 40, 2, 0, 17, -20.5); // Front
-        createInvisibleWall(2, 40, 53, -20.5, 17, 6); // Left
-        createInvisibleWall(2, 40, 53, 20.5, 17, 6); // Right
+        createInvisibleWall(2, 40, 55, -25.5, 17, 6); // Left
+        createInvisibleWall(2, 40, 55, 25.5, 17, 6); // Right
 
         // Standard Beds
         createCatBed(15, 8, 0xFF69B4);
@@ -2181,11 +2189,11 @@ function animate() {
                 playSound('pop'); 
             }
 
-            // Mirror Yarn Update
+            // Mirror Yarn Update - Starts showing when yarn is 12 units away
             let mYarn = localMirrorYarnBalls[id];
             if (mYarn) {
                 let distToMirror = mirrorZ - yarn.position.z;
-                if (distToMirror > 0 && distToMirror <= 6.0 && Math.abs(yarn.position.x) < 2.5) {
+                if (distToMirror > 0 && distToMirror <= 12.0 && yarn.position.z > 20.0 && yarn.position.z < 31.0 && Math.abs(yarn.position.x) < 2.0) {
                     mYarn.visible = true;
                     mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
                     mYarn.quaternion.copy(yarn.quaternion); 
@@ -2193,7 +2201,7 @@ function animate() {
                     mYarn.rotation.y = -mYarn.rotation.y;
                     mYarn.rotation.z = -mYarn.rotation.z;
 
-                    let op = 1.0 - ((distToMirror - 1.0) / 4.0);
+                    let op = 1.0 - ((distToMirror - 1.0) / 11.0);
                     op = Math.max(0.0, Math.min(1.0, op));
                     mYarn.material.transparent = true;
                     mYarn.material.opacity = op;
@@ -2214,8 +2222,8 @@ function animate() {
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        // Starts fading in 4-5 blocks away (distToMirror <= 6.0)
-        if (distToMirror > 0 && distToMirror <= 6.0 && Math.abs(myPlayerObject.position.x) < 2.5 && myPlayerObject.position.y < -1) {
+        // Fades in starting from 12 blocks away
+        if (distToMirror > 0 && distToMirror <= 12.0 && myPlayerObject.position.z > 20.0 && myPlayerObject.position.z < 31.0 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
             myMirrorCat.group.visible = true;
             
             myMirrorCat.group.position.x = myPlayerObject.position.x;
@@ -2239,7 +2247,7 @@ function animate() {
             animateCat(myMirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
             myMirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
             
-            let op = 1.0 - ((distToMirror - 1.0) / 4.0);
+            let op = 1.0 - ((distToMirror - 1.0) / 11.0);
             op = Math.max(0.0, Math.min(1.0, op)); 
             
             myMirrorCat.group.traverse((child) => {
@@ -2663,7 +2671,7 @@ function animate() {
         if (oMirror) {
             if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
                 let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > 0 && distToMirror <= 6.0 && Math.abs(p.group.position.x) < 2.5 && p.group.position.y < -1) {
+                if (distToMirror > 0 && distToMirror <= 12.0 && p.group.position.z > 20.0 && p.group.position.z < 31.0 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
                     oMirror.group.visible = true;
                     
                     oMirror.group.position.x = p.group.position.x;
@@ -2684,7 +2692,7 @@ function animate() {
                     animateCat(oMirror, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
                     oMirror.tail.rotation.y = -Math.sin(p.tailTime) * 0.3; 
                     
-                    let op = 1.0 - ((distToMirror - 1.0) / 4.0);
+                    let op = 1.0 - ((distToMirror - 1.0) / 11.0);
                     op = Math.max(0.0, Math.min(1.0, op)); 
                     
                     oMirror.group.traverse((child) => {
