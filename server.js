@@ -19,10 +19,11 @@ let nextDecoyId = 0;
 let nextHairballId = 0;
 let activePlayers = []; 
 
-// Coordinates for all 8 cat beds in the lobby
+// Coordinates for all 10 cat beds in the lobby (Added 2 new ones in the back corners!)
 const catBeds = [
     {x: 15, z: 8}, {x: 15, z: -8}, {x: -15, z: 8}, {x: -15, z: -8},
-    {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15}
+    {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15},
+    {x: 15, z: 22}, {x: -15, z: 22} 
 ];
 
 // Single Yarn Ball for Soccer
@@ -34,7 +35,6 @@ let yarnBalls = [
 const lobbyObstacles = [
     // Structural
     { x: 0, z: 22.5, w: 8, d: 6 }, // Mirror Room
-    { x: 0, z: 26.5, w: 43, d: 2 }, // TALL BACK WALL
     { x: 0, z: -18.5, w: 5, d: 4 }, // Desk/Crafting Table
     { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, // Podium
 
@@ -53,6 +53,7 @@ const lobbyObstacles = [
     { x: -15, z: 8, w: 3.4, d: 3.4 }, { x: -15, z: -8, w: 3.4, d: 3.4 },
     { x: 8, z: 15, w: 3.4, d: 3.4 }, { x: -8, z: 15, w: 3.4, d: 3.4 }, 
     { x: 8, z: -15, w: 3.4, d: 3.4 }, { x: -8, z: -15, w: 3.4, d: 3.4 },
+    { x: 15, z: 22, w: 3.4, d: 3.4 }, { x: -15, z: 22, w: 3.4, d: 3.4 }, // NEW BEDS
 
     // Open/Closed Boxes (Right Side Only)
     { x: 10, z: -6, w: 3.5, d: 3.5 },
@@ -79,11 +80,11 @@ setInterval(() => {
             let nextZ = yarn.z + yarn.vz;
             let nextY = yarn.y + yarn.vy;
             
-            // 1. Basic Wall Bounces (Outer Lobby Walls)
+            // 1. Basic Wall Bounces (Outer Lobby Walls - Expanded Z axis!)
             if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
             if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
-            if (nextZ > 18.5 && Math.abs(nextX) < 4) { yarn.vz *= -0.7; nextZ = 18.5; } // Front of mirror house
-            if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; }
+            if (nextZ > 24.5) { yarn.vz *= -0.7; nextZ = 24.5; } // Bounces off Rainbow Wall!
+            if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } // Front Wall
             
             // 2. Floor Bounce
             if (nextY < -4.6) {
