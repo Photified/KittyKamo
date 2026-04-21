@@ -1563,26 +1563,26 @@ socket.on('initMap', (mapBlocks) => {
         const minZ = Math.min(...mapBlocks.map(b => b.z));
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
 
-        const wX = (maxX - minX) + 3; 
-        const wZ = (maxZ - minZ) + 3; 
+        const blockSpanX = (maxX - minX) + 1; 
+        const blockSpanZ = (maxZ - minZ) + 1; 
         
-        // Reset to normal ground scale for gameplay
-        ground.scale.set(wX, wZ, 1);
+        // Ground scale enlarged drastically to guarantee no gaps ever
+        ground.scale.set(blockSpanX + 10, blockSpanZ + 10, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Fix Z-fighting by offsetting the original thick walls by just 0.02 units
-        createWall(wX, 10, 2, (minX + maxX) / 2, 0, minZ - 0.52, 0x8B4513);
-        createWall(wX, 10, 2, (minX + maxX) / 2, 0, maxZ + 0.52, 0x8B4513);
+        // Perfect boundary wrapping: thickness 2 walls exactly bordering the outer blocks 
+        createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5, 0x8B4513);
+        createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5, 0x8B4513);
         
-        const sideDepth = (maxZ - minZ) - 1; 
-        createWall(2, 10, sideDepth, minX - 0.52, 0, (minZ + maxZ) / 2, 0x8B4513);
-        createWall(2, 10, sideDepth, maxX + 0.52, 0, (minZ + maxZ) / 2, 0x8B4513);
+        createWall(2, 10, blockSpanZ, minX - 1.5, 0, (minZ + maxZ) / 2, 0x8B4513);
+        createWall(2, 10, blockSpanZ, maxX + 1.5, 0, (minZ + maxZ) / 2, 0x8B4513);
         
-        createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, minZ - 0.5);
-        createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
-        createInvisibleWall(2, 40, sideDepth, minX - 0.5, 25, (minZ + maxZ) / 2);
-        createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
+        // Invisible walls pushed up to prevent the invisible roof effect on high blocks
+        createInvisibleWall(blockSpanX + 4, 100, 2, (minX + maxX) / 2, 45, minZ - 1.5);
+        createInvisibleWall(blockSpanX + 4, 100, 2, (minX + maxX) / 2, 45, maxZ + 1.5);
+        createInvisibleWall(2, 100, blockSpanZ, minX - 1.5, 45, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 100, blockSpanZ, maxX + 1.5, 45, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
         // Floor extended back by 5 blocks behind the rainbow wall to hold the mirror cat!
