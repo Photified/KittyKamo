@@ -1475,6 +1475,11 @@ function updateRightBox(leaderboardData) {
 }
 
 socket.on('gameStateUpdate', (data) => {
+    if (data.state === 'HIDING' && serverGameState !== 'HIDING') {
+        window.initialDropLanded = false;
+        Object.values(otherPlayers).forEach(p => p.initialDropLanded = false);
+    }
+    
     let wasNotGameOver = serverGameState !== 'GAME_OVER';
     serverGameState = data.state;
     serverTime = data.time;
@@ -2147,7 +2152,7 @@ function animate() {
     if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         Object.keys(localYarnBalls).forEach(id => {
             let yarn = localYarnBalls[id];
-            if (!yarn.visible) return;
+            yarn.visible = true; // Force visibility so physics loop pausing doesn't hide it
             
             // Player collision with yarn triggers the kick!
             let distToYarn = myPlayerObject.position.distanceTo(yarn.position);
@@ -2523,8 +2528,10 @@ function animate() {
     myCatData.stunned = amIStunned; 
     animateCat(myCatData, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
 
-    let isDropping = (serverGameState === 'HIDING' && serverTime >= 8);
-    let targetOp = isDropping ? 0.6 : 0;
+    if (isGrounded && serverGameState === 'HIDING') {
+        window.initialDropLanded = true;
+    }
+    let targetOp = (serverGameState === 'HIDING' && !window.initialDropLanded) ? 0.6 : 0;
     myCatData.dBeamMat.opacity += (targetOp - myCatData.dBeamMat.opacity) * 0.1;
 
     let finalScaleY = 1; let finalScaleXZ = 1;
@@ -2584,8 +2591,14 @@ function animate() {
         let isOtherBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(id));
         animateCat(p, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
 
-        let isOtherDropping = (serverGameState === 'HIDING' && serverTime >= 8);
-        let targetOtherOp = isOtherDropping ? 0.6 : 0;
+        if (serverGameState === 'HIDING') {
+            if (p.lastDropY !== undefined && p.group.position.y < 24.5 && Math.abs(p.group.position.y - p.lastDropY) < 0.05) {
+                p.initialDropLanded = true;
+            }
+        }
+        p.lastDropY = p.group.position.y;
+
+        let targetOtherOp = (serverGameState === 'HIDING' && !p.initialDropLanded) ? 0.6 : 0;
         p.dBeamMat.opacity += (targetOtherOp - p.dBeamMat.opacity) * 0.1;
     });
 
