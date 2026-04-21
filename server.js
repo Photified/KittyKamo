@@ -36,8 +36,8 @@ let yarnBalls = [
 // Comprehensive list of all solid lobby objects so the ball bounces off them!
 const lobbyObstacles = [
     // Structural
-    { x: 0, z: 25.0, w: 6.4, d: 15 }, // Mirror Room Tunnel (widened slightly to cover TVs)
-    { x: 0, z: 31.5, w: 5, d: 1 },  // Mirror Glass Backing (Collision so ball bounces off mirror)
+    { x: 0, z: 19.5, w: 6.4, d: 4.5 }, // Mirror Room (Shortened to 4 blocks deep, TVs on sides)
+    { x: 0, z: 21.5, w: 6.0, d: 1 },  // Mirror Glass Backing/Wall (Collision so ball bounces off)
     { x: 0, z: -18.5, w: 5, d: 4 }, // Desk/Crafting Table
     { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, // Podium
 
@@ -81,9 +81,10 @@ setInterval(() => {
             let nextZ = yarn.z + yarn.vz;
             let nextY = yarn.y + yarn.vy;
             
+            // Reverted bounds back to the original snug fit
             if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
             if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
-            if (nextZ > 32.5) { yarn.vz *= -0.7; nextZ = 32.5; } 
+            if (nextZ > 24.5) { yarn.vz *= -0.7; nextZ = 24.5; } 
             if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } 
             
             if (nextY < -4.6) {
