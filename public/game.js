@@ -1571,13 +1571,13 @@ socket.on('initMap', (mapBlocks) => {
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Fix Z-fighting by placing 1-unit thick walls that touch blocks, not overlap
-        createWall(wX, 10, 1, (minX + maxX) / 2, 0, minZ - 1.0, 0x8B4513);
-        createWall(wX, 10, 1, (minX + maxX) / 2, 0, maxZ + 1.0, 0x8B4513);
+        // Fix Z-fighting by offsetting the original thick walls by just 0.02 units
+        createWall(wX, 10, 2, (minX + maxX) / 2, 0, minZ - 0.52, 0x8B4513);
+        createWall(wX, 10, 2, (minX + maxX) / 2, 0, maxZ + 0.52, 0x8B4513);
         
-        const sideDepth = (maxZ - minZ) + 1; 
-        createWall(1, 10, sideDepth, minX - 1.0, 0, (minZ + maxZ) / 2, 0x8B4513);
-        createWall(1, 10, sideDepth, maxX + 1.0, 0, (minZ + maxZ) / 2, 0x8B4513);
+        const sideDepth = (maxZ - minZ) - 1; 
+        createWall(2, 10, sideDepth, minX - 0.52, 0, (minZ + maxZ) / 2, 0x8B4513);
+        createWall(2, 10, sideDepth, maxX + 0.52, 0, (minZ + maxZ) / 2, 0x8B4513);
         
         createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, minZ - 0.5);
         createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
@@ -1778,7 +1778,7 @@ socket.on('yarnState', (yarns) => {
             mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
             mesh.castShadow = true; mesh.receiveShadow = true;
             scene.add(mesh);
-            lobbyVisuals.push(mesh);
+            
             localYarnBalls[yData.id] = mesh;
         }
 
