@@ -1065,7 +1065,7 @@ myPlayerObject.add(myCatData.group);
 const myMirrorCat = createCatSculpt();
 scene.add(myMirrorCat.group);
 myMirrorCat.group.visible = false;
-const mirrorZ = 23.5; // Shortened mirror distance
+const mirrorZ = 21.5; 
 
 let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
@@ -1568,7 +1568,7 @@ socket.on('initMap', (mapBlocks) => {
         const wX = (maxX - minX) + 3; 
         const wZ = (maxZ - minZ) + 3; 
         
-        // Normal game ground
+        // Reset to normal ground scale for gameplay
         ground.scale.set(wX, wZ, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
@@ -1586,14 +1586,14 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        // Perfectly fitted floor (Floating platform aesthetic restored)
+        // Floor bounded exactly to original dimensions (-20.5 to 20.5)
         ground.scale.set(43, 47, 1);
         ground.position.set(0, -5, 3.0); 
         ground.material.color.setHex(0x654321); 
         
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
-        // TALL RAINBOW WALL Behind Mirror Room
+        // TALL RAINBOW WALL (pushed behind the mirror room entirely)
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
         for (let i = 0; i < 7; i++) {
             let h = 25 / 7;
@@ -1608,45 +1608,45 @@ socket.on('initMap', (mapBlocks) => {
         createWall(2, 2, 47, -20.5, -4, 3, 0x8B4513); 
         createWall(2, 2, 47, 20.5, -4, 3, 0x8B4513);  
 
-        // Mirror Room Walls (Shortened to exactly 4 blocks deep)
-        createWall(1, 4, 4, -2.5, -3, 21.5, 0x8B4513); // Left 
-        createWall(1, 4, 4, 2.5, -3, 21.5, 0x8B4513); // Right 
-        createWall(7, 1, 4, 0, -0.5, 21.5, 0xAA4A44); // Roof
-        createWall(6, 4, 1, 0, -3, 24.0, 0x8B4513); // Solid brown wall restored directly behind mirror
+        // Mirror Room Walls (Exactly 4 blocks deep, starts at z=17.5, ends at z=25.5)
+        createWall(1, 4, 8, -2.5, -3, 21.5, 0x8B4513); // Left 
+        createWall(1, 4, 8, 2.5, -3, 21.5, 0x8B4513); // Right 
+        createWall(6, 1, 8, 0, -0.5, 21.5, 0xAA4A44); // Roof (Perfectly spans inner width)
+        createWall(6, 4, 1, 0, -3, 26.0, 0x8B4513); // Solid brown wall restored directly behind mirror
         
-        // Mirror Glass
+        // Mirror Glass (Positioned in the middle of the room, leaving 4 blocks behind it)
         const glassGeo = new THREE.PlaneGeometry(4.98, 3.98);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 23.5); 
+        glass.position.set(0, -3, 21.5); 
         glass.rotation.y = Math.PI; 
         scene.add(glass);
         lobbyVisuals.push(glass);
 
         // Invisible wall exactly behind the mirror so you can't walk through it
-        createInvisibleWall(5, 4, 1, 0, -3, 24.0);
+        createInvisibleWall(5, 4, 1, 0, -3, 22.0);
         
         // Add TVs to Mirror Room Exterior (Thin & mounted flush to wall)
-        const tvGeo = new THREE.BoxGeometry(0.1, 2.4, 3.6);
+        const tvGeo = new THREE.BoxGeometry(0.2, 2.4, 3.6);
         const tvMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
         // Leaderboard TV (Left Side, outside wall is x=-3.0)
         const lbTV = new THREE.Mesh(tvGeo, tvMat);
-        lbTV.position.set(-3.05, -2.8, 21.5);
+        lbTV.position.set(-3.1, -2.8, 19.5);
         scene.add(lbTV); lobbyVisuals.push(lbTV); lobbyCollision.push(lbTV);
 
-        const lbScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 2.0), new THREE.MeshBasicMaterial({ map: lbTex }));
-        lbScreen.position.set(-3.11, -2.8, 21.5);
+        const lbScreen = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.2), new THREE.MeshBasicMaterial({ map: lbTex }));
+        lbScreen.position.set(-3.21, -2.8, 19.5);
         lbScreen.rotation.y = -Math.PI / 2;
         scene.add(lbScreen); lobbyVisuals.push(lbScreen);
 
         // MVP TV (Right Side, outside wall is x=3.0)
         const mvpTV = new THREE.Mesh(tvGeo, tvMat);
-        mvpTV.position.set(3.05, -2.8, 21.5);
+        mvpTV.position.set(3.1, -2.8, 19.5);
         scene.add(mvpTV); lobbyVisuals.push(mvpTV); lobbyCollision.push(mvpTV);
 
-        const mvpScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 2.0), new THREE.MeshBasicMaterial({ map: mvpTex }));
-        mvpScreen.position.set(3.11, -2.8, 21.5);
+        const mvpScreen = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.2), new THREE.MeshBasicMaterial({ map: mvpTex }));
+        mvpScreen.position.set(3.21, -2.8, 19.5);
         mvpScreen.rotation.y = Math.PI / 2;
         scene.add(mvpScreen); lobbyVisuals.push(mvpScreen);
 
@@ -2199,7 +2199,7 @@ function animate() {
             let mYarn = localMirrorYarnBalls[id];
             if (mYarn) {
                 let distToMirror = mirrorZ - yarn.position.z;
-                if (distToMirror > 0 && distToMirror <= 4.0 && yarn.position.z > 19.5 && yarn.position.z < 23.5 && Math.abs(yarn.position.x) < 2.0) {
+                if (distToMirror > 0 && distToMirror <= 4.0 && yarn.position.z > 17.5 && yarn.position.z < 21.5 && Math.abs(yarn.position.x) < 2.0) {
                     mYarn.visible = true;
                     mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
                     mYarn.quaternion.copy(yarn.quaternion); 
@@ -2229,7 +2229,7 @@ function animate() {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
         // Fades in starting from 4 blocks away (within the room bounds)
-        if (distToMirror > 0 && distToMirror <= 4.0 && myPlayerObject.position.z > 19.5 && myPlayerObject.position.z < 23.5 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
+        if (distToMirror > 0 && distToMirror <= 4.0 && myPlayerObject.position.z > 17.5 && myPlayerObject.position.z < 21.5 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
             myMirrorCat.group.visible = true;
             
             myMirrorCat.group.position.x = myPlayerObject.position.x;
@@ -2677,7 +2677,7 @@ function animate() {
         if (oMirror) {
             if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
                 let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > 0 && distToMirror <= 4.0 && p.group.position.z > 19.5 && p.group.position.z < 23.5 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
+                if (distToMirror > 0 && distToMirror <= 4.0 && p.group.position.z > 17.5 && p.group.position.z < 21.5 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
                     oMirror.group.visible = true;
                     
                     oMirror.group.position.x = p.group.position.x;
