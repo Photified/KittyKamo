@@ -1122,9 +1122,9 @@ const colors = [
     {n:'Bright Purple', h:0xAA00FF}, {n:'Bright Yellow', h:0xFFFF00}, 
     {n:'Cyan', h:0x00FFFF}, {n:'Bright Orange', h:0xFF6600},
     {n:'Magenta', h:0xFF00FF}, {n:'Violet', h:0x8A2BE2}, 
-    {n:'Deep Sky Blue', h:0x00AAFF}, 
+    {n:'Brown', h:0x8B4513}, 
     {n:'Lime', h:0x32CD32}, 
-    {n:'Teal', h:0x008080}, {n:'Gold', h:0xFFD700},
+    {n:'Teal', h:0x008080}, {n:'Mint', h:0x00FA9A},
     {n:'Charcoal', h:0x555555}, {n:'Coral', h:0xFF5533}
 ];
 
