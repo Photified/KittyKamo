@@ -572,28 +572,26 @@ const voxelFont = {
 };
 
 function buildVoxelText(text, x, y, z, scale) {
+    // We start from a POSITIVE x and subtract so it draws left-to-right from the camera's perspective
     let currX = x;
-    const colors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3, 0xFF1493, 0x00FFFF];
-    let colorIdx = 0;
+    const charColor = 0xFFFFFF; // White
     
     for (let i = 0; i < text.length; i++) {
         let char = text[i];
         let grid = voxelFont[char];
         if (!grid) continue;
         
-        let charColor = colors[colorIdx % colors.length];
-        if (char !== ' ') colorIdx++;
-        
-        let charWidth = grid[0].length * scale;
+        let charWidth = grid[0].length * scale * 2; // Doubled width
         
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
                 if (grid[r][c] === '1') {
-                    let bx = currX + (c * scale);
+                    // Subtract X so it correctly draws left-to-right when facing the back wall (+Z)
+                    let bx = currX - (c * scale * 2);
                     let by = y + ((grid.length - 1 - r) * scale); // Build top-down
                     let bz = z;
                     
-                    const geo = new THREE.BoxGeometry(scale, scale, scale);
+                    const geo = new THREE.BoxGeometry(scale * 2, scale, scale); // Double wide
                     const mat = new THREE.MeshLambertMaterial({ color: charColor });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
@@ -603,7 +601,7 @@ function buildVoxelText(text, x, y, z, scale) {
                 }
             }
         }
-        currX += charWidth + scale; 
+        currX -= charWidth + (scale * 2); // Space between chars
     }
 }
 // -----------------------------------
@@ -1527,11 +1525,16 @@ socket.on('initMap', (mapBlocks) => {
         
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); 
         
-        // NEW Tall Wall Behind Mirror Room
-        createWall(43, 25, 2, 0, 7.5, 26.5, 0x8B4513); 
+        // NEW TALL RAINBOW WALL Behind Mirror Room
+        const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
+        for (let i = 0; i < 7; i++) {
+            let h = 25 / 7;
+            let y = -5 + (i * h) + (h / 2);
+            createWall(43, h, 2, 0, y, 26.5, rainbowColors[6 - i]); // Red on top
+        }
         
-        // VOXEL TEXT FOR LOBBY
-        buildVoxelText('KITTY KAMO', -12.6, 10, 25.4, 0.6);
+        // VOXEL TEXT FOR LOBBY - Double Wide, White, and Built Left-To-Right (Negative X Step)
+        buildVoxelText('KITTY KAMO', 16.8, 13, 25.4, 0.4);
 
         createWall(18.5, 2, 2, -12.25, -4, 20.5, 0x8B4513); 
         createWall(18.5, 2, 2, 12.25, -4, 20.5, 0x8B4513);  
@@ -1574,25 +1577,25 @@ socket.on('initMap', (mapBlocks) => {
 
         // --- SOCCER NET START ---
         // Left post
-        createWall(0.4, 4, 0.4, -18, -2.8, -4.2, 0xFFFFFF); 
+        createWall(0.4, 4, 0.4, -17.0, -2.8, -4.2, 0xFFFFFF); 
         // Right post
-        createWall(0.4, 4, 0.4, -18, -2.8, 4.2, 0xFFFFFF);  
+        createWall(0.4, 4, 0.4, -17.0, -2.8, 4.2, 0xFFFFFF);  
         // Crossbar
-        createWall(0.4, 0.4, 8.8, -18, -0.6, 0, 0xFFFFFF); 
+        createWall(0.4, 0.4, 8.8, -17.0, -0.6, 0, 0xFFFFFF); 
         
         // Semi-transparent net walls
         const netMat = new THREE.MeshLambertMaterial({ color: 0xDDDDDD, transparent: true, opacity: 0.4 });
         
         const netBack = new THREE.Mesh(new THREE.BoxGeometry(0.4, 4, 8.8), netMat);
-        netBack.position.set(-19.8, -2.8, 0);
+        netBack.position.set(-19.0, -2.8, 0);
         scene.add(netBack); lobbyVisuals.push(netBack); lobbyCollision.push(netBack);
         
         const netLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 0.4), netMat);
-        netLeft.position.set(-19, -2.8, -4.2);
+        netLeft.position.set(-18.0, -2.8, -4.2);
         scene.add(netLeft); lobbyVisuals.push(netLeft); lobbyCollision.push(netLeft);
 
         const netRight = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 0.4), netMat);
-        netRight.position.set(-19, -2.8, 4.2);
+        netRight.position.set(-18.0, -2.8, 4.2);
         scene.add(netRight); lobbyVisuals.push(netRight); lobbyCollision.push(netRight);
         // --- SOCCER NET END ---
 
