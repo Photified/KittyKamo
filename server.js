@@ -25,11 +25,43 @@ const catBeds = [
     {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15}
 ];
 
-// Server-side state for the interactive yarn balls (Now with Y-velocity for arcs!)
+// Server-side state for the interactive yarn balls 
 let yarnBalls = [
     { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vy: 0, vz: 0 },
     { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vy: 0, vz: 0 },
     { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vy: 0, vz: 0 }
+];
+
+// Comprehensive list of all solid lobby objects so the yarn bounces off them!
+const lobbyObstacles = [
+    // Structural
+    { x: 0, z: 22.5, w: 8, d: 6 }, // Mirror Room
+    { x: 0, z: -18.5, w: 5, d: 4 }, // Desk/Crafting Table
+    { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, // Podium
+
+    // Cat Trees 
+    { x: 0, z: 0, w: 4.5, d: 4.5 }, 
+    { x: 14, z: 14, w: 4.5, d: 4.5 }, 
+    { x: -14, z: -14, w: 4.5, d: 4.5 },  
+
+    // Cat Beds
+    { x: 15, z: 8, w: 3.4, d: 3.4 }, { x: 15, z: -8, w: 3.4, d: 3.4 }, 
+    { x: -15, z: 8, w: 3.4, d: 3.4 }, { x: -15, z: -8, w: 3.4, d: 3.4 },
+    { x: 8, z: 15, w: 3.4, d: 3.4 }, { x: -8, z: 15, w: 3.4, d: 3.4 }, 
+    { x: 8, z: -15, w: 3.4, d: 3.4 }, { x: -8, z: -15, w: 3.4, d: 3.4 },
+
+    // Open Boxes
+    { x: -8, z: -4, w: 3.5, d: 3.5 },
+    { x: 10, z: -6, w: 3.5, d: 3.5 },
+    { x: -10, z: 6, w: 3.5, d: 3.5 },
+
+    // Closed Boxes (Expanded slightly to account for their rotation)
+    { x: -4.5, z: 0, w: 2.2, d: 2.2 },
+    { x: 11.5, z: 14, w: 2.2, d: 2.2 },
+    { x: -10.5, z: -11.5, w: 2.2, d: 2.2 },
+    { x: -6, z: -8, w: 2.2, d: 2.2 },
+    { x: 13, z: -4, w: 1.8, d: 1.8 },
+    { x: 0, z: 10, w: 2.2, d: 2.2 }
 ];
 
 // Bouncy physics loop for the yarn balls (Runs at 30fps)
@@ -92,29 +124,27 @@ setInterval(() => {
                 }
             });
 
-            // 4. Object Collision (Rough bounding boxes for the main lobby structures)
-            const lobbyObstacles = [
-                { minX: -3.5, maxX: 3.5, minZ: 18.5, maxZ: 25 }, // Mirror area
-                { minX: -5.5, maxX: 5.5, minZ: -20.5, maxZ: -16.5 }, // Desk/Podium area
-                { minX: -2.5, maxX: 2.5, minZ: -2.5, maxZ: 2.5 }, // Center tree
-                { minX: -16.5, maxX: -11.5, minZ: -16.5, maxZ: -11.5 }, // NW tree
-                { minX: 11.5, maxX: 16.5, minZ: 11.5, maxZ: 16.5 }  // SE tree
-            ];
-
+            // 4. Detailed Object Collision
             lobbyObstacles.forEach(obs => {
+                // Expand the hit box by the yarn ball's radius (0.5)
+                let minX = obs.x - (obs.w / 2) - 0.5;
+                let maxX = obs.x + (obs.w / 2) + 0.5;
+                let minZ = obs.z - (obs.d / 2) - 0.5;
+                let maxZ = obs.z + (obs.d / 2) + 0.5;
+
                 // If hitting an object and close to the ground
-                if (nextX > obs.minX && nextX < obs.maxX && nextZ > obs.minZ && nextZ < obs.maxZ && nextY < 0) { 
-                    let overlapLeft = nextX - obs.minX;
-                    let overlapRight = obs.maxX - nextX;
-                    let overlapTop = nextZ - obs.minZ;
-                    let overlapBottom = obs.maxZ - nextZ;
+                if (nextX > minX && nextX < maxX && nextZ > minZ && nextZ < maxZ && nextY < -2.0) { 
+                    let overlapLeft = nextX - minX;
+                    let overlapRight = maxX - nextX;
+                    let overlapTop = nextZ - minZ;
+                    let overlapBottom = maxZ - nextZ;
 
                     let minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
                     
-                    if (minOverlap === overlapLeft) { nextX = obs.minX; yarn.vx *= -0.7; }
-                    else if (minOverlap === overlapRight) { nextX = obs.maxX; yarn.vx *= -0.7; }
-                    else if (minOverlap === overlapTop) { nextZ = obs.minZ; yarn.vz *= -0.7; }
-                    else if (minOverlap === overlapBottom) { nextZ = obs.maxZ; yarn.vz *= -0.7; }
+                    if (minOverlap === overlapLeft) { nextX = minX; yarn.vx *= -0.7; }
+                    else if (minOverlap === overlapRight) { nextX = maxX; yarn.vx *= -0.7; }
+                    else if (minOverlap === overlapTop) { nextZ = minZ; yarn.vz *= -0.7; }
+                    else if (minOverlap === overlapBottom) { nextZ = maxZ; yarn.vz *= -0.7; }
                 }
             });
 
@@ -313,7 +343,7 @@ function startLobby() {
                     
                     if (id === currentWinnerId) {
                         players[id].x = 17.5;
-                        players[id].y = -3.5; // Top of the Crown Podium Base
+                        players[id].y = -3.5; 
                         players[id].z = -17.5;
                         players[id].rY = Math.PI * 0.75; 
                     } else {
@@ -383,7 +413,7 @@ io.on('connection', (socket) => {
         generateMap();
     }
     socket.emit('initMap', mapBlocks);
-    socket.emit('yarnState', yarnBalls); // Send initial yarn state to new player
+    socket.emit('yarnState', yarnBalls); 
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
@@ -433,10 +463,10 @@ io.on('connection', (socket) => {
     socket.on('kickYarn', (data) => {
         let yarn = yarnBalls.find(y => y.id === data.id);
         if (yarn && (gameState === 'LOBBY' || gameState === 'WAITING' || gameState === 'GAME_OVER')) {
-            let force = 0.4 + Math.random() * 0.3; // Kick strength
+            let force = 0.4 + Math.random() * 0.3; 
             yarn.vx = data.dirX * force;
             yarn.vz = data.dirZ * force;
-            yarn.vy = 0.35 + Math.random() * 0.2;  // Upward arc added here!
+            yarn.vy = 0.35 + Math.random() * 0.2;  
         }
     });
 
