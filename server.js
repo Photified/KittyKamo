@@ -35,17 +35,6 @@ let yarnBalls = [
 
 // Comprehensive list of all solid lobby objects so the ball bounces off them!
 const lobbyObstacles = [
-    // Mirror Room (Real Part, 3 blocks deep)
-    { x: -2.5, z: 19.0, w: 1, d: 3 }, // Left Wall
-    { x: 2.5, z: 19.0, w: 1, d: 3 },  // Right Wall
-    
-    // Mirror Room (Reflection Part, 3 blocks deep)
-    { x: -2.5, z: 22.0, w: 1, d: 3 }, // Left Wall Reflection
-    { x: 2.5, z: 22.0, w: 1, d: 3 },  // Right Wall Reflection
-
-    { x: 0, z: 24.0, w: 6, d: 1 },    // Back Solid Brown Wall
-    { x: 0, z: 20.5, w: 5, d: 0.5 },  // Mirror Glass (Collision so the ball bounces off!)
-
     // Desk/Crafting Table
     { x: 0, z: -18.5, w: 5, d: 4 }, 
     
@@ -95,7 +84,7 @@ setInterval(() => {
             // Tight original lobby boundaries
             if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
             if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
-            if (nextZ > 25.5) { yarn.vz *= -0.7; nextZ = 25.5; } // Bounces off Rainbow Wall (fallback)
+            if (nextZ > 25.5) { yarn.vz *= -0.7; nextZ = 25.5; } // Bounces off Rainbow Wall/Mirror 
             if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } 
             
             if (nextY < -4.6) {
