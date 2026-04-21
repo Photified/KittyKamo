@@ -39,9 +39,9 @@ const lobbyObstacles = [
     { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, // Podium
 
     // Soccer Net (Built as a U-Shape so the ball goes IN)
-    { x: -19, z: -4.2, w: 2, d: 0.4 },  // Left net side
-    { x: -19, z: 4.2, w: 2, d: 0.4 },   // Right net side
-    { x: -19.8, z: 0, w: 0.4, d: 8.8 }, // Back of net
+    { x: -18.0, z: -4.2, w: 2, d: 0.4 },  // Left net side
+    { x: -18.0, z: 4.2, w: 2, d: 0.4 },   // Right net side
+    { x: -19.0, z: 0, w: 0.4, d: 8.8 },   // Back of net
 
     // Cat Trees 
     { x: 0, z: 0, w: 4.5, d: 4.5 }, 
