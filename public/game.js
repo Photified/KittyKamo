@@ -656,7 +656,45 @@ mvpCanvas.width = 512; mvpCanvas.height = 256;
 const mvpCtx = mvpCanvas.getContext('2d');
 const mvpTex = new THREE.CanvasTexture(mvpCanvas);
 
-let mvpCatModel = null;
+function updateLeaderboardTV(leaderboard) {
+    lbCtx.fillStyle = '#111'; lbCtx.fillRect(0, 0, 512, 256);
+    lbCtx.fillStyle = 'cyan'; lbCtx.font = 'bold 36px "Segoe UI"'; lbCtx.textAlign = 'center';
+    lbCtx.fillText('🏆 TOP SURVIVORS 🏆', 256, 40);
+    
+    lbCtx.textAlign = 'left';
+    lbCtx.font = 'bold 28px "Segoe UI"';
+    if (!leaderboard || leaderboard.length === 0) {
+        // Leave the list blank if no data yet
+    } else {
+        for(let i=0; i<Math.min(5, leaderboard.length); i++) {
+            let p = leaderboard[i];
+            lbCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
+            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 90 + (i * 35));
+            lbCtx.textAlign = 'right';
+            lbCtx.fillText(`${p.score}s`, 472, 90 + (i * 35));
+            lbCtx.textAlign = 'left';
+        }
+    }
+    lbTex.needsUpdate = true;
+}
+
+function updateMVPDisplay(mvpData) {
+    mvpCtx.fillStyle = '#111'; mvpCtx.fillRect(0, 0, 512, 256);
+    mvpCtx.fillStyle = 'gold'; mvpCtx.font = 'bold 40px "Segoe UI"'; mvpCtx.textAlign = 'center';
+    mvpCtx.fillText('⭐ RECENT MVP ⭐', 256, 60);
+    
+    if (mvpData) {
+        mvpCtx.fillStyle = 'white'; mvpCtx.font = 'bold 48px "Segoe UI"';
+        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 130);
+        mvpCtx.fillStyle = 'cyan'; mvpCtx.font = 'bold 32px "Segoe UI"';
+        mvpCtx.fillText('SURVIVED: ' + mvpData.score + 's', 256, 200);
+    }
+    mvpTex.needsUpdate = true;
+}
+
+// Initialize TVs immediately to an ON state
+updateLeaderboardTV([]);
+updateMVPDisplay(null);
 // -------------------------
 
 // --- LOBBY BEAM VISUALS ---
@@ -1018,7 +1056,7 @@ myPlayerObject.add(myCatData.group);
 const myMirrorCat = createCatSculpt();
 scene.add(myMirrorCat.group);
 myMirrorCat.group.visible = false;
-const mirrorZ = 25.4; 
+const mirrorZ = 24.5; // Moved inward by 1 block
 
 let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
@@ -1450,56 +1488,6 @@ function updateRightBox(leaderboardData) {
     rightBox.innerHTML = invHTML + lbText;
 }
 
-function updateLeaderboardTV(leaderboard) {
-    lbCtx.fillStyle = '#111'; lbCtx.fillRect(0, 0, 512, 256);
-    lbCtx.fillStyle = 'cyan'; lbCtx.font = 'bold 36px "Segoe UI"'; lbCtx.textAlign = 'center';
-    lbCtx.fillText('🏆 TOP SURVIVORS 🏆', 256, 40);
-    
-    lbCtx.textAlign = 'left';
-    lbCtx.font = 'bold 28px "Segoe UI"';
-    if (!leaderboard || leaderboard.length === 0) {
-        lbCtx.fillStyle = '#777';
-        lbCtx.textAlign = 'center';
-        lbCtx.fillText('NO DATA YET', 256, 140);
-    } else {
-        for(let i=0; i<Math.min(5, leaderboard.length); i++) {
-            let p = leaderboard[i];
-            lbCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
-            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 90 + (i * 35));
-            lbCtx.textAlign = 'right';
-            lbCtx.fillText(`${p.score}s`, 472, 90 + (i * 35));
-            lbCtx.textAlign = 'left';
-        }
-    }
-    lbTex.needsUpdate = true;
-}
-
-function updateMVPDisplay(mvpData) {
-    mvpCtx.fillStyle = '#111'; mvpCtx.fillRect(0, 0, 512, 256);
-    mvpCtx.fillStyle = 'gold'; mvpCtx.font = 'bold 40px "Segoe UI"'; mvpCtx.textAlign = 'center';
-    if (!mvpData) {
-        mvpCtx.fillText('WAITING FOR MVP...', 256, 138);
-        if(mvpCatModel) mvpCatModel.group.visible = false;
-    } else {
-        mvpCtx.fillText('⭐ RECENT MVP ⭐', 256, 60);
-        mvpCtx.fillStyle = 'white'; mvpCtx.font = 'bold 48px "Segoe UI"';
-        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 130);
-        mvpCtx.fillStyle = 'cyan'; mvpCtx.font = 'bold 32px "Segoe UI"';
-        mvpCtx.fillText('SURVIVED: ' + mvpData.score + 's', 256, 200);
-        
-        if(mvpCatModel) {
-            mvpCatModel.group.visible = (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER');
-            mvpCatModel.material.color.setHex(mvpData.color);
-            mvpCatModel.faceMesh.material.map = getFaceTexture(mvpData.face || 'normal');
-            applyWardrobeToCat(mvpCatModel, mvpData.wardrobe);
-            mvpCatModel.crown.visible = true; 
-            let cColor = (mvpData.color === 0xFFFFFF || mvpData.color === 0xFF0000) ? 0xFFD700 : mvpData.color;
-            mvpCatModel.crownMat.color.setHex(cColor);
-        }
-    }
-    mvpTex.needsUpdate = true;
-}
-
 socket.on('gameStateUpdate', (data) => {
     let wasNotGameOver = serverGameState !== 'GAME_OVER';
     serverGameState = data.state;
@@ -1519,7 +1507,10 @@ socket.on('gameStateUpdate', (data) => {
     }
 
     updateRightBox(data.leaderboard);
-    updateLeaderboardTV(data.leaderboard);
+    
+    if (data.lastLeaderboard !== undefined) {
+        updateLeaderboardTV(data.lastLeaderboard);
+    }
     if (data.lastMvp !== undefined) {
         updateMVPDisplay(data.lastMvp);
     }
@@ -1583,8 +1574,6 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
         createInvisibleWall(2, 40, sideDepth, minX - 0.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
-        
-        if (mvpCatModel) mvpCatModel.group.visible = false;
     } else {
         // FLAT LOBBY
         // Floor expanded backward
@@ -1618,7 +1607,7 @@ socket.on('initMap', (mapBlocks) => {
         const glassGeo = new THREE.PlaneGeometry(4.98, 3.98);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 25.4); // Moved mirror to back wall
+        glass.position.set(0, -3, 24.5); // Moved mirror inward by 1 full block
         glass.rotation.y = Math.PI; 
         scene.add(glass);
         lobbyVisuals.push(glass);
@@ -1646,18 +1635,6 @@ socket.on('initMap', (mapBlocks) => {
         mvpScreen.position.set(3.21, -2, 21.5);
         mvpScreen.rotation.y = Math.PI / 2;
         scene.add(mvpScreen); lobbyVisuals.push(mvpScreen);
-
-        if (!mvpCatModel) {
-            mvpCatModel = createCatSculpt(0xFFFFFF, 'normal');
-        }
-        mvpCatModel.group.position.set(4.5, -3.5, 21.5);
-        mvpCatModel.group.rotation.y = -Math.PI / 2;
-        scene.add(mvpCatModel.group);
-        lobbyVisuals.push(mvpCatModel.group);
-        
-        const podium = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.5, 16), new THREE.MeshLambertMaterial({color: 0xFFD700}));
-        podium.position.set(4.5, -4.75, 21.5);
-        scene.add(podium); lobbyVisuals.push(podium);
 
         // Invisible collision boundaries for the expanded space
         createInvisibleWall(43, 40, 2, 0, 17, -20.5); // Front
@@ -2204,11 +2181,11 @@ function animate() {
                 playSound('pop'); 
             }
 
-            // Mirror Yarn Update
+            // Mirror Yarn Update - Constrained within Mirror Room bounds
             let mYarn = localMirrorYarnBalls[id];
             if (mYarn) {
                 let distToMirror = mirrorZ - yarn.position.z;
-                if (distToMirror > 0 && distToMirror <= 8.0 && Math.abs(yarn.position.x) < 2.5) {
+                if (distToMirror > 0 && distToMirror <= 7.0 && yarn.position.z > 17.5 && yarn.position.z < 24.5 && Math.abs(yarn.position.x) < 2.0) {
                     mYarn.visible = true;
                     mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
                     mYarn.quaternion.copy(yarn.quaternion); 
@@ -2233,18 +2210,12 @@ function animate() {
     }
     // ---------------------------------------
 
-    // --- MVP CAT ANIMATION ---
-    if (mvpCatModel && mvpCatModel.group.visible) {
-        mvpCatModel.group.rotation.y += 0.02;
-        animateCat(mvpCatModel, 2, performance.now() / 136);
-        mvpCatModel.tail.rotation.y = Math.sin(performance.now() / 136) * 0.3;
-    }
-
     // --- MIRROR LOGIC (LOCAL PLAYER) ---
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        if (distToMirror > 0 && distToMirror <= 8.0 && Math.abs(myPlayerObject.position.x) < 2.5 && myPlayerObject.position.y < -1) {
+        // Ensure player is firmly inside the bounds of the mirror room before rendering reflection
+        if (distToMirror > 0 && distToMirror <= 7.0 && myPlayerObject.position.z > 17.5 && myPlayerObject.position.z < 24.5 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
             myMirrorCat.group.visible = true;
             
             myMirrorCat.group.position.x = myPlayerObject.position.x;
@@ -2692,7 +2663,8 @@ function animate() {
         if (oMirror) {
             if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
                 let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > 0 && distToMirror <= 8.0 && Math.abs(p.group.position.x) < 2.5 && p.group.position.y < -1) {
+                // Constraints updated to prevent seeing reflections through the side walls
+                if (distToMirror > 0 && distToMirror <= 7.0 && p.group.position.z > 17.5 && p.group.position.z < 24.5 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
                     oMirror.group.visible = true;
                     
                     oMirror.group.position.x = p.group.position.x;
