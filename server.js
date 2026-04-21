@@ -18,8 +18,9 @@ let winReason = "";
 let nextDecoyId = 0;
 let nextHairballId = 0;
 let activePlayers = []; 
+let lastMvp = null; // Tracks the last MVP for the TV screen
 
-// Coordinates for all 10 cat beds in the lobby (Added 2 new ones in the back corners!)
+// Coordinates for all 10 cat beds in the lobby
 const catBeds = [
     {x: 15, z: 8}, {x: 15, z: -8}, {x: -15, z: 8}, {x: -15, z: -8},
     {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15},
@@ -34,7 +35,7 @@ let yarnBalls = [
 // Comprehensive list of all solid lobby objects so the ball bounces off them!
 const lobbyObstacles = [
     // Structural
-    { x: 0, z: 22.5, w: 8, d: 6 }, // Mirror Room
+    { x: 0, z: 21.5, w: 6, d: 8 }, // Mirror Room (Updated to match exact dimensions)
     { x: 0, z: -18.5, w: 5, d: 4 }, // Desk/Crafting Table
     { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, // Podium
 
@@ -53,7 +54,7 @@ const lobbyObstacles = [
     { x: -15, z: 8, w: 3.4, d: 3.4 }, { x: -15, z: -8, w: 3.4, d: 3.4 },
     { x: 8, z: 15, w: 3.4, d: 3.4 }, { x: -8, z: 15, w: 3.4, d: 3.4 }, 
     { x: 8, z: -15, w: 3.4, d: 3.4 }, { x: -8, z: -15, w: 3.4, d: 3.4 },
-    { x: 15, z: 22, w: 3.4, d: 3.4 }, { x: -15, z: 22, w: 3.4, d: 3.4 }, // NEW BEDS
+    { x: 15, z: 22, w: 3.4, d: 3.4 }, { x: -15, z: 22, w: 3.4, d: 3.4 },
 
     // Open/Closed Boxes (Right Side Only)
     { x: 10, z: -6, w: 3.5, d: 3.5 },
@@ -80,7 +81,7 @@ setInterval(() => {
             let nextZ = yarn.z + yarn.vz;
             let nextY = yarn.y + yarn.vy;
             
-            // 1. Basic Wall Bounces (Outer Lobby Walls - Expanded Z axis!)
+            // 1. Basic Wall Bounces (Outer Lobby Walls)
             if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
             if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
             if (nextZ > 24.5) { yarn.vz *= -0.7; nextZ = 24.5; } // Bounces off Rainbow Wall!
@@ -242,7 +243,7 @@ function startLobby() {
     if (ids.length < 2) {
         gameState = 'WAITING';
         timeRemaining = 0;
-        io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [] });
+        io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastMvp: lastMvp });
         return;
     }
 
@@ -330,6 +331,12 @@ function startLobby() {
                 let sortedIds = activePlayers.filter(id => players[id]).sort((a,b) => players[b].score - players[a].score);
                 currentWinnerId = sortedIds.length > 0 ? sortedIds[0] : null;
 
+                // Capture MVP details
+                if (currentWinnerId && players[currentWinnerId]) {
+                    let w = players[currentWinnerId];
+                    lastMvp = { name: w.name, color: w.baseColor, face: w.face, wardrobe: w.wardrobe, score: w.score };
+                }
+
                 mapBlocks = [];
                 io.emit('initMap', mapBlocks);
                 
@@ -367,7 +374,8 @@ function startLobby() {
             time: timeRemaining, 
             leaderboard: leaderboardData,
             winnerId: currentWinnerId,
-            winReason: winReason
+            winReason: winReason,
+            lastMvp: lastMvp // Broadcast MVP to all clients
         });
     }, 1000);
 }
@@ -410,7 +418,7 @@ io.on('connection', (socket) => {
         generateMap();
     }
     socket.emit('initMap', mapBlocks);
-    socket.emit('yarnState', yarnBalls); // Send initial ball state to new player
+    socket.emit('yarnState', yarnBalls); 
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
@@ -580,12 +588,12 @@ io.on('connection', (socket) => {
             mapBlocks = [];
             io.emit('initMap', mapBlocks);
             if (gameTimer) clearInterval(gameTimer);
-            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [] });
+            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastMvp: lastMvp });
         } else if (gameState === 'WAITING' && Object.keys(players).length < 2) {
             mapBlocks = [];
             io.emit('initMap', mapBlocks);
             if (gameTimer) clearInterval(gameTimer);
-            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [] });
+            io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastMvp: lastMvp });
         }
     });
 });
