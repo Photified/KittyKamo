@@ -25,19 +25,23 @@ const catBeds = [
     {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15}
 ];
 
-// Server-side state for the interactive yarn balls 
+// Single Yarn Ball for Soccer
 let yarnBalls = [
-    { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vy: 0, vz: 0 },
-    { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vy: 0, vz: 0 },
-    { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vy: 0, vz: 0 }
+    { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFFFFFF, vx: 0, vy: 0, vz: 0 }
 ];
 
-// Comprehensive list of all solid lobby objects so the yarn bounces off them!
+// Comprehensive list of all solid lobby objects so the ball bounces off them!
 const lobbyObstacles = [
     // Structural
     { x: 0, z: 22.5, w: 8, d: 6 }, // Mirror Room
+    { x: 0, z: 26.5, w: 43, d: 2 }, // TALL BACK WALL
     { x: 0, z: -18.5, w: 5, d: 4 }, // Desk/Crafting Table
     { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, // Podium
+
+    // Soccer Net (Built as a U-Shape so the ball goes IN)
+    { x: -19, z: -4.2, w: 2, d: 0.4 },  // Left net side
+    { x: -19, z: 4.2, w: 2, d: 0.4 },   // Right net side
+    { x: -19.8, z: 0, w: 0.4, d: 8.8 }, // Back of net
 
     // Cat Trees 
     { x: 0, z: 0, w: 4.5, d: 4.5 }, 
@@ -50,21 +54,15 @@ const lobbyObstacles = [
     { x: 8, z: 15, w: 3.4, d: 3.4 }, { x: -8, z: 15, w: 3.4, d: 3.4 }, 
     { x: 8, z: -15, w: 3.4, d: 3.4 }, { x: -8, z: -15, w: 3.4, d: 3.4 },
 
-    // Open Boxes
-    { x: -8, z: -4, w: 3.5, d: 3.5 },
+    // Open/Closed Boxes (Right Side Only)
     { x: 10, z: -6, w: 3.5, d: 3.5 },
-    { x: -10, z: 6, w: 3.5, d: 3.5 },
-
-    // Closed Boxes (Expanded slightly to account for their rotation)
-    { x: -4.5, z: 0, w: 2.2, d: 2.2 },
     { x: 11.5, z: 14, w: 2.2, d: 2.2 },
-    { x: -10.5, z: -11.5, w: 2.2, d: 2.2 },
-    { x: -6, z: -8, w: 2.2, d: 2.2 },
     { x: 13, z: -4, w: 1.8, d: 1.8 },
-    { x: 0, z: 10, w: 2.2, d: 2.2 }
+    { x: 0, z: 10, w: 2.2, d: 2.2 },
+    { x: -4.5, z: 0, w: 2.2, d: 2.2 }
 ];
 
-// Bouncy physics loop for the yarn balls (Runs at 30fps)
+// Bouncy physics loop for the yarn ball (Runs at 30fps)
 setInterval(() => {
     if (gameState !== 'LOBBY' && gameState !== 'WAITING' && gameState !== 'GAME_OVER') return;
     
@@ -82,9 +80,9 @@ setInterval(() => {
             let nextY = yarn.y + yarn.vy;
             
             // 1. Basic Wall Bounces (Outer Lobby Walls)
-            if (nextX > 19) { yarn.vx *= -0.7; nextX = 19; }
-            if (nextX < -19) { yarn.vx *= -0.7; nextX = -19; }
-            if (nextZ > 18.5) { yarn.vz *= -0.7; nextZ = 18.5; } // Front of mirror
+            if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
+            if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
+            if (nextZ > 18.5 && Math.abs(nextX) < 4) { yarn.vz *= -0.7; nextZ = 18.5; } // Front of mirror house
             if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; }
             
             // 2. Floor Bounce
@@ -133,7 +131,7 @@ setInterval(() => {
                 let maxZ = obs.z + (obs.d / 2) + 0.5;
 
                 // If hitting an object and close to the ground
-                if (nextX > minX && nextX < maxX && nextZ > minZ && nextZ < maxZ && nextY < -2.0) { 
+                if (nextX > minX && nextX < maxX && nextZ > minZ && nextZ < maxZ && nextY < -1.0) { 
                     let overlapLeft = nextX - minX;
                     let overlapRight = maxX - nextX;
                     let overlapTop = nextZ - minZ;
@@ -251,10 +249,8 @@ function startLobby() {
     gameState = 'LOBBY';
     timeRemaining = 60; 
     
-    // Reset yarn balls to starting positions
-    yarnBalls[0] = { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vy: 0, vz: 0 };
-    yarnBalls[1] = { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vy: 0, vz: 0 };
-    yarnBalls[2] = { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vy: 0, vz: 0 };
+    // Reset ball to starting position
+    yarnBalls[0] = { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFFFFFF, vx: 0, vy: 0, vz: 0 };
     io.emit('yarnState', yarnBalls);
 
     if (!wasGameOver) {
@@ -413,7 +409,7 @@ io.on('connection', (socket) => {
         generateMap();
     }
     socket.emit('initMap', mapBlocks);
-    socket.emit('yarnState', yarnBalls); 
+    socket.emit('yarnState', yarnBalls); // Send initial ball state to new player
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
@@ -463,10 +459,10 @@ io.on('connection', (socket) => {
     socket.on('kickYarn', (data) => {
         let yarn = yarnBalls.find(y => y.id === data.id);
         if (yarn && (gameState === 'LOBBY' || gameState === 'WAITING' || gameState === 'GAME_OVER')) {
-            let force = 0.4 + Math.random() * 0.3; 
+            let force = 0.4 + Math.random() * 0.3; // Kick strength
             yarn.vx = data.dirX * force;
             yarn.vz = data.dirZ * force;
-            yarn.vy = 0.35 + Math.random() * 0.2;  
+            yarn.vy = 0.35 + Math.random() * 0.2;  // Upward arc
         }
     });
 
