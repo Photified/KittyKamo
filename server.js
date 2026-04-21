@@ -30,7 +30,7 @@ const catBeds = [
 
 // Single Yarn Ball for Soccer
 let yarnBalls = [
-    { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFFFFFF, vx: 0, vy: 0, vz: 0, inGoal: false }
+    { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFF0000, vx: 0, vy: 0, vz: 0, inGoal: false }
 ];
 
 // Comprehensive list of all solid lobby objects so the ball bounces off them!
@@ -259,7 +259,7 @@ function startLobby() {
     timeRemaining = 60; 
     
     // Reset ball to starting position
-    yarnBalls[0] = { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFFFFFF, vx: 0, vy: 0, vz: 0, inGoal: false };
+    yarnBalls[0] = { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFF0000, vx: 0, vy: 0, vz: 0, inGoal: false };
     io.emit('yarnState', yarnBalls);
 
     if (!wasGameOver) {
