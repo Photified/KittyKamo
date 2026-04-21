@@ -2204,6 +2204,7 @@ function animate() {
                 currentMvpEmote = Math.floor(Math.random() * 5) + 1;
                 mvpEmoteTimer = now + 1500;
             }
+            currentMvpEmote = currentMvpEmote || 1;
             myEmote = currentMvpEmote; 
         }
     }
@@ -2434,9 +2435,8 @@ function animate() {
         const seekerBox = new THREE.Box3();
         seekerBox.setFromCenterAndSize(
             new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
-            new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
+            new THREE.Vector3(0.5, 1.2 * currentScaleY, 0.5)
         );
-        seekerBox.expandByScalar(0.2);
 
         Object.keys(otherPlayers).forEach(id => {
             if (otherPlayers[id].role === 'hider') {
@@ -2447,7 +2447,7 @@ function animate() {
                 
                 if (seekerBox.intersectsBox(hiderBox)) {
                     let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
-                    if (heightDiff > 0.5 && heightDiff <= 1.4) {
+                    if (heightDiff > 0.4 && heightDiff <= 0.9) {
                         otherPlayers[id].role = 'seeker'; 
                         socket.emit('tagPlayer', id);
                         playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
