@@ -1059,7 +1059,7 @@ window.myBaseColor = 0xFFFFFF;
 window.myFace = 'normal';
 window.myWardrobe = [null, null, null]; 
 window.activeSlot = 0;
-let currentItemColor = 0xFF0000; 
+let currentItemColor = 0x0044FF; // Default accessory color changed to Bright Blue
 
 const previewCat = createCatSculpt(window.myBaseColor, window.myFace);
 previewCat.group.position.set(0, 100, 0); 
