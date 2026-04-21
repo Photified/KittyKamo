@@ -1563,26 +1563,26 @@ socket.on('initMap', (mapBlocks) => {
         const minZ = Math.min(...mapBlocks.map(b => b.z));
         const maxZ = Math.max(...mapBlocks.map(b => b.z));
 
-        const blockSpanX = (maxX - minX) + 1; 
-        const blockSpanZ = (maxZ - minZ) + 1; 
+        const wX = (maxX - minX) + 3; 
+        const wZ = (maxZ - minZ) + 3; 
         
-        // Ground scale enlarged drastically to guarantee no gaps ever
-        ground.scale.set(blockSpanX + 10, blockSpanZ + 10, 1);
+        // Reset to normal ground scale for gameplay
+        ground.scale.set(wX, wZ, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Perfect boundary wrapping: thickness 2 walls exactly bordering the outer blocks 
-        createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5, 0x8B4513);
-        createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5, 0x8B4513);
+        // Fix Z-fighting by offsetting the original thick walls by just 0.02 units
+        createWall(wX, 10, 2, (minX + maxX) / 2, 0, minZ - 0.52, 0x8B4513);
+        createWall(wX, 10, 2, (minX + maxX) / 2, 0, maxZ + 0.52, 0x8B4513);
         
-        createWall(2, 10, blockSpanZ, minX - 1.5, 0, (minZ + maxZ) / 2, 0x8B4513);
-        createWall(2, 10, blockSpanZ, maxX + 1.5, 0, (minZ + maxZ) / 2, 0x8B4513);
+        const sideDepth = (maxZ - minZ) - 1; 
+        createWall(2, 10, sideDepth, minX - 0.52, 0, (minZ + maxZ) / 2, 0x8B4513);
+        createWall(2, 10, sideDepth, maxX + 0.52, 0, (minZ + maxZ) / 2, 0x8B4513);
         
-        // Invisible walls pushed up to prevent the invisible roof effect on high blocks
-        createInvisibleWall(blockSpanX + 4, 100, 2, (minX + maxX) / 2, 45, minZ - 1.5);
-        createInvisibleWall(blockSpanX + 4, 100, 2, (minX + maxX) / 2, 45, maxZ + 1.5);
-        createInvisibleWall(2, 100, blockSpanZ, minX - 1.5, 45, (minZ + maxZ) / 2);
-        createInvisibleWall(2, 100, blockSpanZ, maxX + 1.5, 45, (minZ + maxZ) / 2);
+        createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, minZ - 0.5);
+        createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
+        createInvisibleWall(2, 40, sideDepth, minX - 0.5, 25, (minZ + maxZ) / 2);
+        createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
         // Floor extended back by 5 blocks behind the rainbow wall to hold the mirror cat!
@@ -2431,30 +2431,31 @@ function animate() {
         let closestHider = null;
 
         const currentScaleY = myCatData.body.scale.y;
-     
+        const seekerBox = new THREE.Box3();
         seekerBox.setFromCenterAndSize(
             new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
             new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
         );
-        
+        seekerBox.expandByScalar(0.2);
 
-Object.keys(otherPlayers).forEach(id => {
-    if (otherPlayers[id].role === 'hider') {
-        const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
-        
-        if (seekerBox.intersectsBox(hiderBox)) {
-            let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
-            // Tightened height check: 0.5 to 1.1 (previously 1.4)
-            if (heightDiff > 0.5 && heightDiff <= 1.1) {
-                otherPlayers[id].role = 'seeker'; 
-                socket.emit('tagPlayer', id);
-                playCatMeow(otherPlayers[id]); 
-                explodeParticles(otherPlayers[id].group.position, true);
-                playSound('tag'); 
+        Object.keys(otherPlayers).forEach(id => {
+            if (otherPlayers[id].role === 'hider') {
+                let true3DDist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
+                if (true3DDist < closestDist) { closestDist = true3DDist; closestHider = otherPlayers[id]; }
+
+                const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
+                
+                if (seekerBox.intersectsBox(hiderBox)) {
+                    let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
+                    if (heightDiff > 0.5 && heightDiff <= 1.4) {
+                        otherPlayers[id].role = 'seeker'; 
+                        socket.emit('tagPlayer', id);
+                        playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
+                        playSound('tag'); 
+                    }
+                }
             }
-        }
-    }
-});
+        });
 
         Object.keys(activeDecoys).forEach(dId => {
             const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
