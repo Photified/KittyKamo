@@ -84,7 +84,7 @@ setInterval(() => {
             // Tight original lobby boundaries
             if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
             if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
-            if (nextZ > 25.5) { yarn.vz *= -0.7; nextZ = 25.5; } // Bounces off Rainbow Wall/Mirror 
+            if (nextZ > 25.5) { yarn.vz *= -0.7; nextZ = 25.5; } // Bounces off Rainbow Wall
             if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } 
             
             if (nextY < -4.6) {
@@ -325,10 +325,10 @@ function startLobby() {
                 let sortedIds = activePlayers.filter(id => players[id]).sort((a,b) => players[b].score - players[a].score);
                 currentWinnerId = sortedIds.length > 0 ? sortedIds[0] : null;
 
-                // Capture MVP & Leaderboard details for TV persistence
+                // Capture MVP details for TV persistence
                 if (currentWinnerId && players[currentWinnerId]) {
                     let w = players[currentWinnerId];
-                    lastMvp = { name: w.name, score: w.score };
+                    lastMvp = { name: w.name, score: w.score, face: w.face, color: w.baseColor };
                 }
                 lastLeaderboard = sortedIds.map(id => ({ name: players[id].name, score: players[id].score }));
 
