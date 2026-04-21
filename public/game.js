@@ -663,7 +663,7 @@ function updateLeaderboardTV(leaderboard) {
     lbCtx.fillStyle = 'cyan'; 
     lbCtx.font = '24px "Press Start 2P", "Courier New", monospace'; 
     lbCtx.textAlign = 'center';
-    lbCtx.fillText('TOP SURVIVORS', 256, 60); 
+    lbCtx.fillText('TOP SURVIVORS', 256, 70); 
     
     lbCtx.textAlign = 'left';
     lbCtx.font = '16px "Press Start 2P", "Courier New", monospace';
@@ -673,9 +673,9 @@ function updateLeaderboardTV(leaderboard) {
         for(let i=0; i<Math.min(5, leaderboard.length); i++) {
             let p = leaderboard[i];
             lbCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
-            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 110 + (i * 30)); 
+            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 120 + (i * 30)); 
             lbCtx.textAlign = 'right';
-            lbCtx.fillText(`${p.score}s`, 472, 110 + (i * 30));
+            lbCtx.fillText(`${p.score}s`, 472, 120 + (i * 30));
             lbCtx.textAlign = 'left';
         }
     }
@@ -687,12 +687,12 @@ function updateMVPDisplay(mvpData) {
     mvpCtx.fillStyle = 'gold'; 
     mvpCtx.font = '24px "Press Start 2P", "Courier New", monospace'; 
     mvpCtx.textAlign = 'center';
-    mvpCtx.fillText('RECENT MVP', 256, 70); 
+    mvpCtx.fillText('RECENT MVP', 256, 80); 
     
     if (mvpData) {
         mvpCtx.fillStyle = 'white'; 
         mvpCtx.font = '28px "Press Start 2P", "Courier New", monospace';
-        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 150); 
+        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 160); 
         mvpCtx.fillStyle = 'cyan'; 
         mvpCtx.font = '18px "Press Start 2P", "Courier New", monospace';
         mvpCtx.fillText('SURVIVED: ' + mvpData.score + 's', 256, 210); 
@@ -1032,7 +1032,7 @@ for(let i=0; i<3; i++) {
 }
 blindfoldStage.visible = false; 
 
-// MASSIVE Ground Plane so there are absolutely zero sky gaps
+// Perfectly sized floating platform
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0x4CAF50, side: THREE.DoubleSide }));
 ground.rotation.x = -Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; 
 scene.add(ground);
@@ -1586,12 +1586,12 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        // Floor expanded MASSIVELY to prevent any edge/sky gaps
-        ground.scale.set(100, 100, 1);
-        ground.position.set(0, -5, 0);
+        // Perfectly fitted floor (Floating platform aesthetic restored)
+        ground.scale.set(43, 55, 1);
+        ground.position.set(0, -5, 6.0); // Center shifted to match the deeper back wall
         ground.material.color.setHex(0x654321); 
         
-        createWall(53, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
+        createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
         // NEW TALL RAINBOW WALL Behind Mirror Room
         // Split into Left and Right chunks to leave a hole for the mirror room tunnel
@@ -1600,17 +1600,15 @@ socket.on('initMap', (mapBlocks) => {
             let h = 25 / 7;
             let y = -5 + (i * h) + (h / 2);
             
-            // Left chunk
-            createWall(23.5, h, 2, -14.75, y, 32.5, rainbowColors[6 - i]); 
-            // Right chunk
-            createWall(23.5, h, 2, 14.75, y, 32.5, rainbowColors[6 - i]); 
+            // Left chunk (width 18.5, placed exactly between x=-21.5 and x=-3)
+            createWall(18.5, h, 2, -12.25, y, 32.5, rainbowColors[6 - i]); 
+            // Right chunk (width 18.5, placed exactly between x=3 and x=21.5)
+            createWall(18.5, h, 2, 12.25, y, 32.5, rainbowColors[6 - i]); 
             
             // Top chunk (above the tunnel hole)
             if (y - h/2 >= 0) {
-                // Entire band is above the tunnel (tunnel roof is y=-0.5 max)
                 createWall(6, h, 2, 0, y, 32.5, rainbowColors[6 - i]);
             } else if (y + h/2 > 0) {
-                // Partial band above the tunnel
                 let partialH = (y + h/2) - 0;
                 createWall(6, partialH, 2, 0, partialH / 2, 32.5, rainbowColors[6 - i]);
             }
@@ -1619,23 +1617,27 @@ socket.on('initMap', (mapBlocks) => {
         // VOXEL TEXT FOR LOBBY
         buildVoxelText('KITTY KAMO', 18.5, 13, 31.4, 0.4);
 
-        // Extended Side Walls
-        createWall(2, 2, 55, -25.5, -4, 6, 0x8B4513); 
-        createWall(2, 2, 55, 25.5, -4, 6, 0x8B4513);  
+        // Side Walls (Tightened back to original layout)
+        createWall(2, 2, 55, -20.5, -4, 6, 0x8B4513); 
+        createWall(2, 2, 55, 20.5, -4, 6, 0x8B4513);  
 
         // Mirror Room Walls (Extended as a tunnel *through* the rainbow wall to prevent clipping)
-        createWall(1, 4, 25, -2.5, -3, 32.5, 0x8B4513); // Left Tunnel Wall
-        createWall(1, 4, 25, 2.5, -3, 32.5, 0x8B4513); // Right Tunnel Wall
-        createWall(7, 1, 25, 0, -0.5, 32.5, 0xAA4A44); // Tunnel Roof
+        createWall(1, 4, 12, -2.5, -3, 26.0, 0x8B4513); // Left Tunnel Wall
+        createWall(1, 4, 12, 2.5, -3, 26.0, 0x8B4513); // Right Tunnel Wall
+        createWall(7, 1, 12, 0, -0.5, 26.0, 0xAA4A44); // Tunnel Roof
         // Intentionally no back wall so the tunnel extends into the void!
         
+        // Mirror Glass (Sitting flush against the rainbow wall plane)
         const glassGeo = new THREE.PlaneGeometry(4.98, 3.98);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 31.0); // Mirror is perfectly placed before the rainbow wall
+        glass.position.set(0, -3, 31.0); 
         glass.rotation.y = Math.PI; 
         scene.add(glass);
         lobbyVisuals.push(glass);
+
+        // Invisible wall behind the mirror so you can't walk through it
+        createInvisibleWall(5, 4, 1, 0, -3, 31.5);
         
         // Add TVs to Mirror Room Exterior (Thin & mounted flush to wall)
         const tvGeo = new THREE.BoxGeometry(0.1, 2.4, 4.2);
@@ -1664,8 +1666,8 @@ socket.on('initMap', (mapBlocks) => {
         // Invisible collision boundaries for the expanded space
         createInvisibleWall(43, 40, 2, 0, 17, 32.5); // Back
         createInvisibleWall(43, 40, 2, 0, 17, -20.5); // Front
-        createInvisibleWall(2, 40, 55, -25.5, 17, 6); // Left
-        createInvisibleWall(2, 40, 55, 25.5, 17, 6); // Right
+        createInvisibleWall(2, 40, 55, -20.5, 17, 6); // Left
+        createInvisibleWall(2, 40, 55, 20.5, 17, 6); // Right
 
         // Standard Beds
         createCatBed(15, 8, 0xFF69B4);
