@@ -2431,31 +2431,30 @@ function animate() {
         let closestHider = null;
 
         const currentScaleY = myCatData.body.scale.y;
-        const seekerBox = new THREE.Box3();
+     
         seekerBox.setFromCenterAndSize(
             new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
             new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6)
         );
-        seekerBox.expandByScalar(0.2);
+        
 
-        Object.keys(otherPlayers).forEach(id => {
-            if (otherPlayers[id].role === 'hider') {
-                let true3DDist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
-                if (true3DDist < closestDist) { closestDist = true3DDist; closestHider = otherPlayers[id]; }
-
-                const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
-                
-                if (seekerBox.intersectsBox(hiderBox)) {
-                    let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
-                    if (heightDiff > 0.5 && heightDiff <= 1.4) {
-                        otherPlayers[id].role = 'seeker'; 
-                        socket.emit('tagPlayer', id);
-                        playCatMeow(otherPlayers[id]); explodeParticles(otherPlayers[id].group.position, true);
-                        playSound('tag'); 
-                    }
-                }
+Object.keys(otherPlayers).forEach(id => {
+    if (otherPlayers[id].role === 'hider') {
+        const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
+        
+        if (seekerBox.intersectsBox(hiderBox)) {
+            let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
+            // Tightened height check: 0.5 to 1.1 (previously 1.4)
+            if (heightDiff > 0.5 && heightDiff <= 1.1) {
+                otherPlayers[id].role = 'seeker'; 
+                socket.emit('tagPlayer', id);
+                playCatMeow(otherPlayers[id]); 
+                explodeParticles(otherPlayers[id].group.position, true);
+                playSound('tag'); 
             }
-        });
+        }
+    }
+});
 
         Object.keys(activeDecoys).forEach(dId => {
             const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
