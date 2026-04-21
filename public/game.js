@@ -13,6 +13,14 @@ let lastRenderTime = 0;
 
 const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
+// --- GLOBAL TEMPORARY VARIABLES FOR MEMORY OPTIMIZATION ---
+// Reusing these prevents the browser's Garbage Collector from freezing the game mid-round
+const tempBox1 = new THREE.Box3();
+const tempBox2 = new THREE.Box3();
+const tempVec1 = new THREE.Vector3();
+const tempVec2 = new THREE.Vector3();
+// ----------------------------------------------------------
+
 const colorDay = new THREE.Color(0x87CEEB);   
 const colorSunset = new THREE.Color(0xFF7E47); 
 const colorNight = new THREE.Color(0x020211); 
@@ -305,8 +313,10 @@ sunLight.position.set(40, 40, 20);
 sunLight.castShadow = true;
 sunLight.shadow.camera.left = -40; sunLight.shadow.camera.right = 40;
 sunLight.shadow.camera.top = 40; sunLight.shadow.camera.bottom = -40;
-sunLight.shadow.mapSize.width = isMobile ? 1024 : 2048; 
-sunLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
+
+// OPTIMIZATION: Reduced shadow map size to massively boost FPS on lower-end hardware
+sunLight.shadow.mapSize.width = isMobile ? 512 : 1024; 
+sunLight.shadow.mapSize.height = isMobile ? 512 : 1024;
 scene.add(sunLight);
 
 const camRaycaster = new THREE.Raycaster();
@@ -656,11 +666,9 @@ tvTex.magFilter = THREE.NearestFilter;
 let currentMvpData = null;
 
 function renderBigTV() {
-    // Bright glowing background!
     tvCtx.fillStyle = '#EAF6FF'; 
     tvCtx.fillRect(0, 0, 1024, 512);
 
-    // Subtle grid pattern for aesthetics
     tvCtx.strokeStyle = '#D0E8FF';
     tvCtx.lineWidth = 2;
     for(let i=0; i<1024; i+=32) { tvCtx.beginPath(); tvCtx.moveTo(i, 0); tvCtx.lineTo(i, 512); tvCtx.stroke(); }
@@ -1036,7 +1044,7 @@ const cloudMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: tru
 for (let i = 0; i < 20; i++) {
     let cloud = new THREE.Mesh(new THREE.BoxGeometry(Math.random() * 6 + 3, Math.random() * 1.5 + 0.5, Math.random() * 6 + 3), cloudMat);
     cloud.position.set((Math.random() * 120) - 60, Math.random() * 10 + 15, (Math.random() * 120) - 60);
-    cloud.castShadow = true; scene.add(cloud); clouds.push(cloud);
+    scene.add(cloud); clouds.push(cloud);
 }
 
 const starGeo = new THREE.BufferGeometry();
@@ -1059,7 +1067,7 @@ window.myBaseColor = 0xFFFFFF;
 window.myFace = 'normal';
 window.myWardrobe = [null, null, null]; 
 window.activeSlot = 0;
-let currentItemColor = 0x0044FF; // Default accessory color changed to Bright Blue
+let currentItemColor = 0x0044FF; 
 
 const previewCat = createCatSculpt(window.myBaseColor, window.myFace);
 previewCat.group.position.set(0, 100, 0); 
@@ -1566,33 +1574,28 @@ socket.on('initMap', (mapBlocks) => {
         const blockSpanX = (maxX - minX) + 1; 
         const blockSpanZ = (maxZ - minZ) + 1; 
         
-        // Ground scale enlarged drastically to guarantee no gaps ever
         ground.scale.set(blockSpanX + 10, blockSpanZ + 10, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Perfect boundary wrapping: thickness 2 walls exactly bordering the outer blocks 
         createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5, 0x8B4513);
         createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5, 0x8B4513);
         
         createWall(2, 10, blockSpanZ, minX - 1.5, 0, (minZ + maxZ) / 2, 0x8B4513);
         createWall(2, 10, blockSpanZ, maxX + 1.5, 0, (minZ + maxZ) / 2, 0x8B4513);
         
-        // Invisible walls pushed up to prevent the invisible roof effect on high blocks
         createInvisibleWall(blockSpanX + 4, 100, 2, (minX + maxX) / 2, 45, minZ - 1.5);
         createInvisibleWall(blockSpanX + 4, 100, 2, (minX + maxX) / 2, 45, maxZ + 1.5);
         createInvisibleWall(2, 100, blockSpanZ, minX - 1.5, 45, (minZ + maxZ) / 2);
         createInvisibleWall(2, 100, blockSpanZ, maxX + 1.5, 45, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        // Floor extended back by 5 blocks behind the rainbow wall to hold the mirror cat!
         ground.scale.set(43, 52, 1);
         ground.position.set(0, -5, 5.5); 
         ground.material.color.setHex(0x654321); 
         
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
-        // TALL RAINBOW WALL (Mirror removed, back to pink base)
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
         for (let i = 0; i < 7; i++) {
             let h = 25 / 7;
@@ -1600,35 +1603,29 @@ socket.on('initMap', (mapBlocks) => {
             createWall(43, h, 2, 0, y, 26.5, i === 0 ? 0xFF69B4 : rainbowColors[6 - i]); 
         }
         
-        // VOXEL TEXT FOR LOBBY
-        // Centered exactly based on character width calculations
         buildVoxelText('KITTY KAMO', 16.4, 6.5, 25.4, 0.4);
 
-        // Side Walls
         createWall(2, 2, 47, -20.5, -4, 3, 0x8B4513); 
         createWall(2, 2, 47, 20.5, -4, 3, 0x8B4513);  
 
-        // --- DRIVE-IN TV SCREEN (Positioned on the RIGHT side: x = +20.25) ---
-        // Big TV Housing
+        // --- DRIVE-IN TV SCREEN ---
         const tvGroup = new THREE.Group();
         const screenGeo = new THREE.BoxGeometry(0.5, 12, 24); 
         const screenMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
         const bigTV = new THREE.Mesh(screenGeo, screenMat);
-        bigTV.position.set(20.25, 8, 3); // Right wall!
+        bigTV.position.set(20.25, 8, 3); 
         scene.add(bigTV); lobbyVisuals.push(bigTV); lobbyCollision.push(bigTV);
 
-        // Canvas Display Plane
         const displayPlane = new THREE.Mesh(new THREE.PlaneGeometry(23.5, 11.5), new THREE.MeshBasicMaterial({ map: tvTex }));
-        displayPlane.position.set(19.99, 8, 3); // Slightly inside to prevent Z-fighting
-        displayPlane.rotation.y = -Math.PI / 2; // Facing the center of the room (-x)
+        displayPlane.position.set(19.99, 8, 3); 
+        displayPlane.rotation.y = -Math.PI / 2; 
         scene.add(displayPlane); lobbyVisuals.push(displayPlane);
 
-        // Poles for Drive-In TV (Shortened to stop at the bottom of the screen)
         const poleGeo = new THREE.CylinderGeometry(0.4, 0.4, 7);
         const poleMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
 
         const pole1 = new THREE.Mesh(poleGeo, poleMat);
-        pole1.position.set(20.25, -1.5, 12); // Centers at y=-1.5, stretches from y=-5 to y=2
+        pole1.position.set(20.25, -1.5, 12); 
         scene.add(pole1); lobbyVisuals.push(pole1); lobbyCollision.push(pole1);
 
         const pole2 = new THREE.Mesh(poleGeo, poleMat);
@@ -1637,13 +1634,11 @@ socket.on('initMap', (mapBlocks) => {
         // ----------------------------------------------------------------------
 
 
-        // Invisible collision boundaries for the normal space
         createInvisibleWall(43, 40, 2, 0, 17, 25.5); // Back
         createInvisibleWall(43, 40, 2, 0, 17, -20.5); // Front
         createInvisibleWall(2, 40, 47, -20.5, 17, 3); // Left
         createInvisibleWall(2, 40, 47, 20.5, 17, 3); // Right
 
-        // Standard Beds
         createCatBed(15, 8, 0xFF69B4);
         createCatBed(15, -8, 0x4169E1);
         createCatBed(-15, 8, 0xFFD700);
@@ -1653,7 +1648,6 @@ socket.on('initMap', (mapBlocks) => {
         createCatBed(8, -15, 0xFF8C00);
         createCatBed(-8, -15, 0x00FF00);
         
-        // NEW Rear Corner Beds
         createCatBed(15, 22, 0x32CD32);
         createCatBed(-15, 22, 0xFF4500);
 
@@ -1702,7 +1696,6 @@ socket.on('initMap', (mapBlocks) => {
         scene.add(pad);
         lobbyVisuals.push(pad);
 
-        // Right side boxes
         createClosedBox(1.5, 1.5, 1.5, -4.5, -4.25, 0, Math.PI/6); 
         createClosedBox(1.5, 1.5, 1.5, 11.5, -4.25, 14, -Math.PI/8);
         createOpenBox(3.5, 1.5, 3.5, 10, -4.25, -6, 0);
@@ -1768,7 +1761,6 @@ socket.on('currentPlayers', (players) => {
     updateUI(); 
 });
 
-// YARN SOCKET LISTENER
 socket.on('yarnState', (yarns) => {
     yarns.forEach(yData => {
         if (!localYarnBalls[yData.id]) {
@@ -1892,42 +1884,43 @@ function addOtherPlayer(id, playerInfo) {
     otherPlayers[id] = catData;
 }
 
+// OPTIMIZATION: Updated checkCollision to recycle global variables instead of creating new ones
 function checkCollision(pos) {
-    const pBox = new THREE.Box3();
     const currentScaleY = myCatData.body.scale.y; 
-    pBox.setFromCenterAndSize(new THREE.Vector3(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z), new THREE.Vector3(0.5, 1.2 * currentScaleY, 0.5));
+    
+    tempVec1.set(pos.x, pos.y + ((1.2 * currentScaleY)/2), pos.z);
+    tempVec2.set(0.5, 1.2 * currentScaleY, 0.5);
+    tempBox1.setFromCenterAndSize(tempVec1, tempVec2);
     
     for (let i = 0; i < mapObjects.length; i++) {
-        const bBox = new THREE.Box3().setFromObject(mapObjects[i]); bBox.expandByScalar(-0.02);
-        if (pBox.intersectsBox(bBox)) return true;
+        tempBox2.setFromObject(mapObjects[i]).expandByScalar(-0.02);
+        if (tempBox1.intersectsBox(tempBox2)) return true;
     }
     
     for (let i = 0; i < walls.length; i++) {
-        const wBox = new THREE.Box3().setFromObject(walls[i]); wBox.expandByScalar(-0.02);
-        if (pBox.intersectsBox(wBox)) return true;
+        tempBox2.setFromObject(walls[i]).expandByScalar(-0.02);
+        if (tempBox1.intersectsBox(tempBox2)) return true;
     }
 
     for (let i = 0; i < invisibleWalls.length; i++) {
-        const wBox = new THREE.Box3().setFromObject(invisibleWalls[i]); wBox.expandByScalar(-0.02);
-        if (pBox.intersectsBox(wBox)) return true;
+        tempBox2.setFromObject(invisibleWalls[i]).expandByScalar(-0.02);
+        if (tempBox1.intersectsBox(tempBox2)) return true;
     }
 
     for (let i = 0; i < lobbyCollision.length; i++) {
-        const propBox = new THREE.Box3().setFromObject(lobbyCollision[i]); propBox.expandByScalar(-0.02);
-        if (pBox.intersectsBox(propBox)) return true;
+        tempBox2.setFromObject(lobbyCollision[i]).expandByScalar(-0.02);
+        if (tempBox1.intersectsBox(tempBox2)) return true;
     }
 
     for (let id in otherPlayers) {
         let other = otherPlayers[id];
         if (other.role !== 'spectator') {
             const oScaleY = other.body.scale.y || 1;
-            const oBox = new THREE.Box3();
-            oBox.setFromCenterAndSize(
-                new THREE.Vector3(other.group.position.x, other.group.position.y + ((1.2 * oScaleY)/2), other.group.position.z),
-                new THREE.Vector3(0.5, 1.2 * oScaleY, 0.5)
-            );
-            oBox.expandByScalar(-0.02); 
-            if (pBox.intersectsBox(oBox)) return true;
+            tempVec1.set(other.group.position.x, other.group.position.y + ((1.2 * oScaleY)/2), other.group.position.z);
+            tempVec2.set(0.5, 1.2 * oScaleY, 0.5);
+            tempBox2.setFromCenterAndSize(tempVec1, tempVec2).expandByScalar(-0.02);
+            
+            if (tempBox1.intersectsBox(tempBox2)) return true;
         }
     }
 
@@ -2074,7 +2067,6 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[3].rotation.x = Math.PI / 4;
         cat.tail.rotation.x = Math.PI / 4;
     } else if (emote === 4) { 
-        // 360 Spin Dance! (Slowed down)
         cat.body.rotation.y = walkTime * 0.8; 
         cat.body.position.y = Math.abs(Math.sin(walkTime * 1.6)) * 0.2; 
         cat.head.rotation.x = -Math.PI / 8;
@@ -2152,16 +2144,15 @@ function animate() {
     if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         Object.keys(localYarnBalls).forEach(id => {
             let yarn = localYarnBalls[id];
-            yarn.visible = true; // Force visibility so physics loop pausing doesn't hide it
+            yarn.visible = true; 
             
-            // Player collision with yarn triggers the kick!
             let distToYarn = myPlayerObject.position.distanceTo(yarn.position);
             if (distToYarn < 1.2 && (!lastYarnKickTime[id] || now - lastYarnKickTime[id] > 500)) {
                 lastYarnKickTime[id] = now;
                 
                 let dir = new THREE.Vector3().subVectors(yarn.position, myPlayerObject.position);
                 dir.y = 0;
-                dir.normalize(); // Get direction you hit the ball
+                dir.normalize(); 
                 
                 socket.emit('kickYarn', { id: id, dirX: dir.x, dirZ: dir.z });
                 playSound('pop'); 
@@ -2172,7 +2163,6 @@ function animate() {
     }
     // ---------------------------------------
 
-    // Update Confetti Physics
     for (let i = confettiParticles.length - 1; i >= 0; i--) {
         let p = confettiParticles[i];
         p.position.add(p.vel);
@@ -2254,6 +2244,7 @@ function animate() {
         if (p.scale.x < 0.01) { scene.remove(p); particles.splice(i, 1); }
     }
 
+    // OPTIMIZATION: Updated Hairball loop to recycle memory variables
     for (let i = activeHairballs.length - 1; i >= 0; i--) {
         let hb = activeHairballs[i];
         
@@ -2273,34 +2264,37 @@ function animate() {
         if (hb.mesh.position.y <= -4.8) hitWall = true;
         if (Math.abs(hb.mesh.position.x) > 30 || Math.abs(hb.mesh.position.z) > 30) hitWall = true;
 
-        const hbBox = new THREE.Box3().setFromObject(hb.mesh);
+        tempBox1.setFromObject(hb.mesh);
 
         if (!hitWall) {
             for(let j=0; j<mapObjects.length; j++){
-               if(hbBox.intersectsBox(new THREE.Box3().setFromObject(mapObjects[j]))) { hitWall = true; break; }
+               tempBox2.setFromObject(mapObjects[j]);
+               if(tempBox1.intersectsBox(tempBox2)) { hitWall = true; break; }
             }
             if(!hitWall){
                for(let j=0; j<walls.length; j++){
-                  if(hbBox.intersectsBox(new THREE.Box3().setFromObject(walls[j]))) { hitWall = true; break; }
+                  tempBox2.setFromObject(walls[j]);
+                  if(tempBox1.intersectsBox(tempBox2)) { hitWall = true; break; }
                }
             }
         }
 
         if (!hitWall) {
             if (hb.ownerId !== socket.id) {
-                let myBox = new THREE.Box3();
                 const currentScaleY = myCatData.body.scale.y; 
-                myBox.setFromCenterAndSize(new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY)/2), myPlayerObject.position.z), new THREE.Vector3(0.6, 1.2 * currentScaleY, 0.6));
+                tempVec1.set(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY)/2), myPlayerObject.position.z);
+                tempVec2.set(0.6, 1.2 * currentScaleY, 0.6);
+                tempBox2.setFromCenterAndSize(tempVec1, tempVec2);
                 
-                if (hbBox.intersectsBox(myBox)) {
+                if (tempBox1.intersectsBox(tempBox2)) {
                     hitWall = true;
                 }
             }
             
             Object.keys(otherPlayers).forEach(id => {
                 if (id !== hb.ownerId) { 
-                    let sBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
-                    if (hbBox.intersectsBox(sBox)) {
+                    tempBox2.setFromObject(otherPlayers[id].group);
+                    if (tempBox1.intersectsBox(tempBox2)) {
                         hitWall = true;
                         if (hb.ownerId === socket.id) {
                             hitSeekerId = id; 
@@ -2402,7 +2396,7 @@ function animate() {
         myPlayerObject.position.set(17.5, -3.5, -17.5);
         myPlayerObject.rotation.y += 0.05;
         moved = true;
-        isGrounded = true; // Forces the game to think you are grounded so it stops looping the landing sound
+        isGrounded = true; 
     } else if (isBeaming) {
         velocityY = 0.2; 
         myPlayerObject.position.y += velocityY;
@@ -2428,25 +2422,24 @@ function animate() {
         if (myPlayerObject.position.y <= -5) { myPlayerObject.position.y = -5; velocityY = 0; isGrounded = true; }
     }
 
+    // OPTIMIZATION: Updated Seeker tag detection to recycle global variables
     if (myRole === 'seeker' && serverGameState === 'SEEKING' && !amIStunned) {
         let closestDist = 999;
         let closestHider = null;
 
         const currentScaleY = myCatData.body.scale.y;
-        const seekerBox = new THREE.Box3();
-        seekerBox.setFromCenterAndSize(
-            new THREE.Vector3(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z), 
-            new THREE.Vector3(0.5, 1.2 * currentScaleY, 0.5)
-        );
+        tempVec1.set(myPlayerObject.position.x, myPlayerObject.position.y + ((1.2 * currentScaleY) / 2), myPlayerObject.position.z);
+        tempVec2.set(0.5, 1.2 * currentScaleY, 0.5);
+        tempBox1.setFromCenterAndSize(tempVec1, tempVec2);
 
         Object.keys(otherPlayers).forEach(id => {
             if (otherPlayers[id].role === 'hider') {
                 let true3DDist = myPlayerObject.position.distanceTo(otherPlayers[id].group.position);
                 if (true3DDist < closestDist) { closestDist = true3DDist; closestHider = otherPlayers[id]; }
 
-                const hiderBox = new THREE.Box3().setFromObject(otherPlayers[id].group);
+                tempBox2.setFromObject(otherPlayers[id].group);
                 
-                if (seekerBox.intersectsBox(hiderBox)) {
+                if (tempBox1.intersectsBox(tempBox2)) {
                     let heightDiff = myPlayerObject.position.y - otherPlayers[id].group.position.y;
                     if (heightDiff > 0.4 && heightDiff <= 0.9) {
                         otherPlayers[id].role = 'seeker'; 
@@ -2459,8 +2452,8 @@ function animate() {
         });
 
         Object.keys(activeDecoys).forEach(dId => {
-            const decoyBox = new THREE.Box3().setFromObject(activeDecoys[dId].group);
-            if (seekerBox.intersectsBox(decoyBox)) {
+            tempBox2.setFromObject(activeDecoys[dId].group);
+            if (tempBox1.intersectsBox(tempBox2)) {
                 socket.emit('tagDecoy', dId);
                 explodeParticles(activeDecoys[dId].group.position, false); 
                 scene.remove(activeDecoys[dId].group); delete activeDecoys[dId]; 
@@ -2473,18 +2466,19 @@ function animate() {
         }
     }
 
+    // OPTIMIZATION: Updated Hider Color-Copy calculation to recycle variables
     if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned && serverGameState === 'SEEKING') { 
         let minDist = 2.0; let closestBlockColor = null;
         
         for (let i = 0; i < mapObjects.length; i++) {
-            const bBox = new THREE.Box3().setFromObject(mapObjects[i]);
-            let dist = bBox.distanceToPoint(myPlayerObject.position);
+            tempBox2.setFromObject(mapObjects[i]);
+            let dist = tempBox2.distanceToPoint(myPlayerObject.position);
             if (dist < minDist) { minDist = dist; closestBlockColor = mapObjects[i].material.color.getHex(); }
         }
         
         for (let i = 0; i < walls.length; i++) {
-            const wBox = new THREE.Box3().setFromObject(walls[i]);
-            let dist = wBox.distanceToPoint(myPlayerObject.position);
+            tempBox2.setFromObject(walls[i]);
+            let dist = tempBox2.distanceToPoint(myPlayerObject.position);
             if (dist < minDist) { minDist = dist; closestBlockColor = walls[i].material.color.getHex(); }
         }
         
