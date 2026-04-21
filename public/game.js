@@ -647,62 +647,72 @@ let ignoreServerPositionUntil = 0;
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
 
-// --- LOBBY TV SCREENS ---
-const lbCanvas = document.createElement('canvas');
-lbCanvas.width = 512; lbCanvas.height = 256;
-const lbCtx = lbCanvas.getContext('2d');
-const lbTex = new THREE.CanvasTexture(lbCanvas);
+// --- LARGE DRIVE-IN TV SCREEN ---
+const tvCanvas = document.createElement('canvas');
+tvCanvas.width = 1024; tvCanvas.height = 512;
+const tvCtx = tvCanvas.getContext('2d');
+const tvTex = new THREE.CanvasTexture(tvCanvas);
+tvTex.magFilter = THREE.NearestFilter; 
 
-const mvpCanvas = document.createElement('canvas');
-mvpCanvas.width = 512; mvpCanvas.height = 256;
-const mvpCtx = mvpCanvas.getContext('2d');
-const mvpTex = new THREE.CanvasTexture(mvpCanvas);
+let currentLeaderboardData = [];
+let currentMvpData = null;
 
-function updateLeaderboardTV(leaderboard) {
-    lbCtx.fillStyle = '#111'; lbCtx.fillRect(0, 0, 512, 256);
-    lbCtx.fillStyle = 'cyan'; 
-    lbCtx.font = '24px "Press Start 2P", "Courier New", monospace'; 
-    lbCtx.textAlign = 'center';
-    lbCtx.fillText('TOP SURVIVORS', 256, 70); 
-    
-    lbCtx.textAlign = 'left';
-    lbCtx.font = '16px "Press Start 2P", "Courier New", monospace';
-    if (!leaderboard || leaderboard.length === 0) {
-        // Leave the list blank if no data yet
-    } else {
-        for(let i=0; i<Math.min(5, leaderboard.length); i++) {
-            let p = leaderboard[i];
-            lbCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
-            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 120 + (i * 30)); 
-            lbCtx.textAlign = 'right';
-            lbCtx.fillText(`${p.score}s`, 472, 120 + (i * 30));
-            lbCtx.textAlign = 'left';
+function renderBigTV() {
+    tvCtx.fillStyle = '#111'; tvCtx.fillRect(0, 0, 1024, 512);
+
+    // Left Side - Leaderboard
+    tvCtx.fillStyle = 'cyan';
+    tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
+    tvCtx.textAlign = 'center';
+    tvCtx.fillText('TOP SURVIVORS', 256, 80);
+
+    tvCtx.textAlign = 'left';
+    tvCtx.font = '24px "Press Start 2P", "Courier New", monospace';
+    if (currentLeaderboardData && currentLeaderboardData.length > 0) {
+        for(let i=0; i<Math.min(5, currentLeaderboardData.length); i++) {
+            let p = currentLeaderboardData[i];
+            tvCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
+            tvCtx.fillText(`${i+1}. ${p.name}`, 40, 160 + (i * 60));
+            tvCtx.textAlign = 'right';
+            tvCtx.fillText(`${p.score}s`, 472, 160 + (i * 60));
+            tvCtx.textAlign = 'left';
         }
     }
-    lbTex.needsUpdate = true;
+
+    // Center Divider
+    tvCtx.strokeStyle = '#333';
+    tvCtx.lineWidth = 4;
+    tvCtx.beginPath(); tvCtx.moveTo(512, 40); tvCtx.lineTo(512, 472); tvCtx.stroke();
+
+    // Right Side - MVP
+    tvCtx.fillStyle = 'gold';
+    tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
+    tvCtx.textAlign = 'center';
+    tvCtx.fillText('RECENT MVP', 768, 120);
+
+    if (currentMvpData) {
+        tvCtx.fillStyle = 'white';
+        tvCtx.font = '48px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText(currentMvpData.name.toUpperCase(), 768, 260);
+        tvCtx.fillStyle = 'cyan';
+        tvCtx.font = '24px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText('SURVIVED: ' + currentMvpData.score + 's', 768, 340);
+    }
+
+    tvTex.needsUpdate = true;
+}
+
+function updateLeaderboardTV(leaderboard) {
+    currentLeaderboardData = leaderboard;
+    renderBigTV();
 }
 
 function updateMVPDisplay(mvpData) {
-    mvpCtx.fillStyle = '#111'; mvpCtx.fillRect(0, 0, 512, 256);
-    mvpCtx.fillStyle = 'gold'; 
-    mvpCtx.font = '24px "Press Start 2P", "Courier New", monospace'; 
-    mvpCtx.textAlign = 'center';
-    mvpCtx.fillText('RECENT MVP', 256, 80); 
-    
-    if (mvpData) {
-        mvpCtx.fillStyle = 'white'; 
-        mvpCtx.font = '28px "Press Start 2P", "Courier New", monospace';
-        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 160); 
-        mvpCtx.fillStyle = 'cyan'; 
-        mvpCtx.font = '18px "Press Start 2P", "Courier New", monospace';
-        mvpCtx.fillText('SURVIVED: ' + mvpData.score + 's', 256, 210); 
-    }
-    mvpTex.needsUpdate = true;
+    currentMvpData = mvpData;
+    renderBigTV();
 }
 
-// Initialize TVs immediately to an ON state
-updateLeaderboardTV([]);
-updateMVPDisplay(null);
+renderBigTV();
 // -------------------------
 
 // --- LOBBY BEAM VISUALS ---
@@ -1065,7 +1075,7 @@ myPlayerObject.add(myCatData.group);
 const myMirrorCat = createCatSculpt();
 scene.add(myMirrorCat.group);
 myMirrorCat.group.visible = false;
-const mirrorZ = 20.5; // Shortened mirror distance for exactly 3 blocks deep
+const mirrorZ = 25.5; // The front face of the Rainbow Wall at z=26.5
 
 let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
@@ -1586,19 +1596,29 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        // Floor bounded exactly to original dimensions (-20.5 to 20.5)
-        ground.scale.set(43, 47, 1);
-        ground.position.set(0, -5, 3.0); 
+        // Floor extended back by 5 blocks behind the rainbow wall to hold the mirror cat!
+        ground.scale.set(43, 52, 1);
+        ground.position.set(0, -5, 5.5); 
         ground.material.color.setHex(0x654321); 
         
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
-        // TALL RAINBOW WALL (pushed behind the mirror room entirely)
+        // TALL RAINBOW WALL (Mirror layer at the bottom)
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
         for (let i = 0; i < 7; i++) {
             let h = 25 / 7;
             let y = -5 + (i * h) + (h / 2);
-            createWall(43, h, 2, 0, y, 26.5, rainbowColors[6 - i]); 
+            
+            if (i === 0) {
+                // Bottom Layer: Pink/Violet Tinted Mirror Glass
+                const glassGeo = new THREE.BoxGeometry(43, h, 2);
+                const glassMat = new THREE.MeshBasicMaterial({ color: 0xFF69B4, transparent: true, opacity: 0.35 });
+                const glass = new THREE.Mesh(glassGeo, glassMat);
+                glass.position.set(0, y, 26.5);
+                scene.add(glass); lobbyVisuals.push(glass); lobbyCollision.push(glass);
+            } else {
+                createWall(43, h, 2, 0, y, 26.5, rainbowColors[6 - i]); 
+            }
         }
         
         // VOXEL TEXT FOR LOBBY
@@ -1608,73 +1628,33 @@ socket.on('initMap', (mapBlocks) => {
         createWall(2, 2, 47, -20.5, -4, 3, 0x8B4513); 
         createWall(2, 2, 47, 20.5, -4, 3, 0x8B4513);  
 
-        // --- SPLIT MIRROR ROOM (3 Blocks Deep Real + 3 Blocks Deep Reflection) ---
-        // Real Walls (Spans z=17.5 to 20.5)
-        createWall(1, 4, 3, -2.5, -3, 19.0, 0x8B4513); // Left Real
-        createWall(1, 4, 3, 2.5, -3, 19.0, 0x8B4513); // Right Real
-        createWall(6, 1, 3, 0, -0.5, 19.0, 0xAA4A44); // Roof Real
+        // --- DRIVE-IN TV SCREEN (Positioned above the left wall: x = -20.5) ---
+        // Big TV Housing
+        const tvGroup = new THREE.Group();
+        const screenGeo = new THREE.BoxGeometry(0.5, 12, 24); 
+        const screenMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+        const bigTV = new THREE.Mesh(screenGeo, screenMat);
+        bigTV.position.set(-20.25, 8, 3); 
+        scene.add(bigTV); lobbyVisuals.push(bigTV); lobbyCollision.push(bigTV);
 
-        // Reflection Walls (Spans z=20.5 to 23.5)
-        createWall(1, 4, 3, -2.5, -3, 22.0, 0x8B4513); // Left Refl
-        createWall(1, 4, 3, 2.5, -3, 22.0, 0x8B4513); // Right Refl
-        createWall(6, 1, 3, 0, -0.5, 22.0, 0xAA4A44); // Roof Refl
-        
-        // Back Wall
-        createWall(6, 4, 1, 0, -3, 24.0, 0x8B4513); 
-        
-        // Mirror Glass (Positioned at 20.5, exactly in the middle of the split room)
-        const glassGeo = new THREE.PlaneGeometry(4.98, 3.98);
-        const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
-        const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 20.5); 
-        glass.rotation.y = Math.PI; 
-        scene.add(glass);
-        lobbyVisuals.push(glass);
+        // Canvas Display Plane
+        const displayPlane = new THREE.Mesh(new THREE.PlaneGeometry(23.5, 11.5), new THREE.MeshBasicMaterial({ map: tvTex }));
+        displayPlane.position.set(-19.99, 8, 3); // Slightly inside the TV face to prevent Z-fighting
+        displayPlane.rotation.y = Math.PI / 2; // Facing +x
+        scene.add(displayPlane); lobbyVisuals.push(displayPlane);
 
-        // Invisible wall exactly behind the mirror so you can't walk through it
-        createInvisibleWall(5, 4, 1, 0, -3, 21.0);
-        
-        // Add TVs to the OUTSIDE of the Mirror Room walls
-        const tvGeo = new THREE.BoxGeometry(0.1, 2.4, 2.8); // Shorter width to fit the 3-block wall perfectly
-        const tvMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+        // Poles for Drive-In TV
+        const poleGeo = new THREE.CylinderGeometry(0.4, 0.4, 15);
+        const poleMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
 
-        // --- LEFT SIDE TVS ---
-        const lbTV_L = new THREE.Mesh(tvGeo, tvMat);
-        lbTV_L.position.set(-3.05, -2.8, 19.0); // Real Side
-        scene.add(lbTV_L); lobbyVisuals.push(lbTV_L); lobbyCollision.push(lbTV_L);
+        const pole1 = new THREE.Mesh(poleGeo, poleMat);
+        pole1.position.set(-20.25, 0.5, 12);
+        scene.add(pole1); lobbyVisuals.push(pole1); lobbyCollision.push(pole1);
 
-        const lbScreen_L = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.2), new THREE.MeshBasicMaterial({ map: lbTex }));
-        lbScreen_L.position.set(-3.11, -2.8, 19.0);
-        lbScreen_L.rotation.y = -Math.PI / 2;
-        scene.add(lbScreen_L); lobbyVisuals.push(lbScreen_L);
-
-        const mvpTV_L = new THREE.Mesh(tvGeo, tvMat);
-        mvpTV_L.position.set(-3.05, -2.8, 22.0); // Reflection Side
-        scene.add(mvpTV_L); lobbyVisuals.push(mvpTV_L); lobbyCollision.push(mvpTV_L);
-
-        const mvpScreen_L = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.2), new THREE.MeshBasicMaterial({ map: mvpTex }));
-        mvpScreen_L.position.set(-3.11, -2.8, 22.0);
-        mvpScreen_L.rotation.y = -Math.PI / 2;
-        scene.add(mvpScreen_L); lobbyVisuals.push(mvpScreen_L);
-
-        // --- RIGHT SIDE TVS ---
-        const lbTV_R = new THREE.Mesh(tvGeo, tvMat);
-        lbTV_R.position.set(3.05, -2.8, 19.0); // Real Side
-        scene.add(lbTV_R); lobbyVisuals.push(lbTV_R); lobbyCollision.push(lbTV_R);
-
-        const lbScreen_R = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.2), new THREE.MeshBasicMaterial({ map: lbTex }));
-        lbScreen_R.position.set(3.11, -2.8, 19.0);
-        lbScreen_R.rotation.y = Math.PI / 2;
-        scene.add(lbScreen_R); lobbyVisuals.push(lbScreen_R);
-
-        const mvpTV_R = new THREE.Mesh(tvGeo, tvMat);
-        mvpTV_R.position.set(3.05, -2.8, 22.0); // Reflection Side
-        scene.add(mvpTV_R); lobbyVisuals.push(mvpTV_R); lobbyCollision.push(mvpTV_R);
-
-        const mvpScreen_R = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.2), new THREE.MeshBasicMaterial({ map: mvpTex }));
-        mvpScreen_R.position.set(3.11, -2.8, 22.0);
-        mvpScreen_R.rotation.y = Math.PI / 2;
-        scene.add(mvpScreen_R); lobbyVisuals.push(mvpScreen_R);
+        const pole2 = new THREE.Mesh(poleGeo, poleMat);
+        pole2.position.set(-20.25, 0.5, -6);
+        scene.add(pole2); lobbyVisuals.push(pole2); lobbyCollision.push(pole2);
+        // ----------------------------------------------------------------------
 
 
         // Invisible collision boundaries for the normal space
@@ -2222,11 +2202,11 @@ function animate() {
                 playSound('pop'); 
             }
 
-            // Mirror Yarn Update - Starts showing when yarn is 3 units away
+            // Mirror Yarn Update - Starts showing when yarn is 4 units away across the full arena width
             let mYarn = localMirrorYarnBalls[id];
             if (mYarn) {
                 let distToMirror = mirrorZ - yarn.position.z;
-                if (distToMirror > 0 && distToMirror <= 3.0 && yarn.position.z > 17.5 && yarn.position.z < 20.5 && Math.abs(yarn.position.x) < 2.0) {
+                if (distToMirror > 0 && distToMirror <= 4.0 && Math.abs(yarn.position.x) < 21.5) {
                     mYarn.visible = true;
                     mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
                     mYarn.quaternion.copy(yarn.quaternion); 
@@ -2234,7 +2214,7 @@ function animate() {
                     mYarn.rotation.y = -mYarn.rotation.y;
                     mYarn.rotation.z = -mYarn.rotation.z;
 
-                    let op = 1.0 - ((distToMirror - 1.0) / 2.0);
+                    let op = 1.0 - ((distToMirror - 3.0) / 1.0);
                     op = Math.max(0.0, Math.min(1.0, op));
                     mYarn.material.transparent = true;
                     mYarn.material.opacity = op;
@@ -2255,8 +2235,8 @@ function animate() {
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        // Fades in starting from 3 blocks away (within the room bounds)
-        if (distToMirror > 0 && distToMirror <= 3.0 && myPlayerObject.position.z > 17.5 && myPlayerObject.position.z < 20.5 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
+        // Fades in starting from 4 blocks away across the entire wall
+        if (distToMirror > 0 && distToMirror <= 4.0 && Math.abs(myPlayerObject.position.x) < 21.5 && myPlayerObject.position.y < -1) {
             myMirrorCat.group.visible = true;
             
             myMirrorCat.group.position.x = myPlayerObject.position.x;
@@ -2280,7 +2260,7 @@ function animate() {
             animateCat(myMirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
             myMirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
             
-            let op = 1.0 - ((distToMirror - 1.0) / 2.0);
+            let op = 1.0 - ((distToMirror - 3.0) / 1.0);
             op = Math.max(0.0, Math.min(1.0, op)); 
             
             myMirrorCat.group.traverse((child) => {
@@ -2704,7 +2684,7 @@ function animate() {
         if (oMirror) {
             if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
                 let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > 0 && distToMirror <= 3.0 && p.group.position.z > 17.5 && p.group.position.z < 20.5 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
+                if (distToMirror > 0 && distToMirror <= 4.0 && Math.abs(p.group.position.x) < 21.5 && p.group.position.y < -1) {
                     oMirror.group.visible = true;
                     
                     oMirror.group.position.x = p.group.position.x;
@@ -2725,7 +2705,7 @@ function animate() {
                     animateCat(oMirror, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
                     oMirror.tail.rotation.y = -Math.sin(p.tailTime) * 0.3; 
                     
-                    let op = 1.0 - ((distToMirror - 1.0) / 2.0);
+                    let op = 1.0 - ((distToMirror - 3.0) / 1.0);
                     op = Math.max(0.0, Math.min(1.0, op)); 
                     
                     oMirror.group.traverse((child) => {
