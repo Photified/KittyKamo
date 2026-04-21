@@ -663,7 +663,7 @@ function updateLeaderboardTV(leaderboard) {
     lbCtx.fillStyle = 'cyan'; 
     lbCtx.font = '24px "Press Start 2P", "Courier New", monospace'; 
     lbCtx.textAlign = 'center';
-    lbCtx.fillText('TOP SURVIVORS', 256, 70); 
+    lbCtx.fillText('TOP SURVIVORS', 256, 60); 
     
     lbCtx.textAlign = 'left';
     lbCtx.font = '16px "Press Start 2P", "Courier New", monospace';
@@ -673,9 +673,9 @@ function updateLeaderboardTV(leaderboard) {
         for(let i=0; i<Math.min(5, leaderboard.length); i++) {
             let p = leaderboard[i];
             lbCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
-            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 120 + (i * 30)); 
+            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 110 + (i * 30)); 
             lbCtx.textAlign = 'right';
-            lbCtx.fillText(`${p.score}s`, 472, 120 + (i * 30));
+            lbCtx.fillText(`${p.score}s`, 472, 110 + (i * 30));
             lbCtx.textAlign = 'left';
         }
     }
@@ -687,12 +687,12 @@ function updateMVPDisplay(mvpData) {
     mvpCtx.fillStyle = 'gold'; 
     mvpCtx.font = '24px "Press Start 2P", "Courier New", monospace'; 
     mvpCtx.textAlign = 'center';
-    mvpCtx.fillText('RECENT MVP', 256, 80); 
+    mvpCtx.fillText('RECENT MVP', 256, 70); 
     
     if (mvpData) {
         mvpCtx.fillStyle = 'white'; 
         mvpCtx.font = '28px "Press Start 2P", "Courier New", monospace';
-        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 160); 
+        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 150); 
         mvpCtx.fillStyle = 'cyan'; 
         mvpCtx.font = '18px "Press Start 2P", "Courier New", monospace';
         mvpCtx.fillText('SURVIVED: ' + mvpData.score + 's', 256, 210); 
@@ -1032,6 +1032,7 @@ for(let i=0; i<3; i++) {
 }
 blindfoldStage.visible = false; 
 
+// MASSIVE Ground Plane so there are absolutely zero sky gaps
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0x4CAF50, side: THREE.DoubleSide }));
 ground.rotation.x = -Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; 
 scene.add(ground);
@@ -1064,7 +1065,7 @@ myPlayerObject.add(myCatData.group);
 const myMirrorCat = createCatSculpt();
 scene.add(myMirrorCat.group);
 myMirrorCat.group.visible = false;
-const mirrorZ = 31.0; // Mirror is now pushed way back to the rainbow wall!
+const mirrorZ = 31.0; 
 
 let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
@@ -1567,6 +1568,7 @@ socket.on('initMap', (mapBlocks) => {
         const wX = (maxX - minX) + 3; 
         const wZ = (maxZ - minZ) + 3; 
         
+        // Reset to normal ground scale for gameplay
         ground.scale.set(wX, wZ, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
@@ -1584,19 +1586,34 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        // Floor expanded backward significantly to prevent gaps
-        ground.scale.set(53, 65, 1);
-        ground.position.set(0, -5, 5.0);
+        // Floor expanded MASSIVELY to prevent any edge/sky gaps
+        ground.scale.set(100, 100, 1);
+        ground.position.set(0, -5, 0);
         ground.material.color.setHex(0x654321); 
         
         createWall(53, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
         // NEW TALL RAINBOW WALL Behind Mirror Room
+        // Split into Left and Right chunks to leave a hole for the mirror room tunnel
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
         for (let i = 0; i < 7; i++) {
             let h = 25 / 7;
             let y = -5 + (i * h) + (h / 2);
-            createWall(53, h, 2, 0, y, 32.5, rainbowColors[6 - i]); // Pushed back to 32.5
+            
+            // Left chunk
+            createWall(23.5, h, 2, -14.75, y, 32.5, rainbowColors[6 - i]); 
+            // Right chunk
+            createWall(23.5, h, 2, 14.75, y, 32.5, rainbowColors[6 - i]); 
+            
+            // Top chunk (above the tunnel hole)
+            if (y - h/2 >= 0) {
+                // Entire band is above the tunnel (tunnel roof is y=-0.5 max)
+                createWall(6, h, 2, 0, y, 32.5, rainbowColors[6 - i]);
+            } else if (y + h/2 > 0) {
+                // Partial band above the tunnel
+                let partialH = (y + h/2) - 0;
+                createWall(6, partialH, 2, 0, partialH / 2, 32.5, rainbowColors[6 - i]);
+            }
         }
         
         // VOXEL TEXT FOR LOBBY
@@ -1606,41 +1623,41 @@ socket.on('initMap', (mapBlocks) => {
         createWall(2, 2, 55, -25.5, -4, 6, 0x8B4513); 
         createWall(2, 2, 55, 25.5, -4, 6, 0x8B4513);  
 
-        // Mirror Room Walls (Extended depth to prevent seeing rainbow wall above the back)
-        createWall(1, 4, 12, -2.5, -3, 26.0, 0x8B4513); // Left
-        createWall(1, 4, 12, 2.5, -3, 26.0, 0x8B4513); // Right
-        createWall(7, 1, 12, 0, -0.5, 26.0, 0xAA4A44); // Roof
-        createWall(6, 4, 1, 0, -3, 31.5, 0x8B4513); // Back Wall pushed deep to rainbow wall
+        // Mirror Room Walls (Extended as a tunnel *through* the rainbow wall to prevent clipping)
+        createWall(1, 4, 25, -2.5, -3, 32.5, 0x8B4513); // Left Tunnel Wall
+        createWall(1, 4, 25, 2.5, -3, 32.5, 0x8B4513); // Right Tunnel Wall
+        createWall(7, 1, 25, 0, -0.5, 32.5, 0xAA4A44); // Tunnel Roof
+        // Intentionally no back wall so the tunnel extends into the void!
         
         const glassGeo = new THREE.PlaneGeometry(4.98, 3.98);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 31.0); // Mirror is now pushed way back to 31.0
+        glass.position.set(0, -3, 31.0); // Mirror is perfectly placed before the rainbow wall
         glass.rotation.y = Math.PI; 
         scene.add(glass);
         lobbyVisuals.push(glass);
         
-        // Add TVs to Mirror Room Exterior
-        const tvGeo = new THREE.BoxGeometry(0.2, 3, 5);
+        // Add TVs to Mirror Room Exterior (Thin & mounted flush to wall)
+        const tvGeo = new THREE.BoxGeometry(0.1, 2.4, 4.2);
         const tvMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
-        // Leaderboard TV (Left Side)
+        // Leaderboard TV (Left Side, outside wall is x=-3.0)
         const lbTV = new THREE.Mesh(tvGeo, tvMat);
-        lbTV.position.set(-3.1, -2, 21.5);
+        lbTV.position.set(-3.05, -2.8, 23.0);
         scene.add(lbTV); lobbyVisuals.push(lbTV); lobbyCollision.push(lbTV);
 
-        const lbScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 2.8), new THREE.MeshBasicMaterial({ map: lbTex }));
-        lbScreen.position.set(-3.21, -2, 21.5);
+        const lbScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 2.2), new THREE.MeshBasicMaterial({ map: lbTex }));
+        lbScreen.position.set(-3.11, -2.8, 23.0);
         lbScreen.rotation.y = -Math.PI / 2;
         scene.add(lbScreen); lobbyVisuals.push(lbScreen);
 
-        // MVP TV (Right Side)
+        // MVP TV (Right Side, outside wall is x=3.0)
         const mvpTV = new THREE.Mesh(tvGeo, tvMat);
-        mvpTV.position.set(3.1, -2, 21.5);
+        mvpTV.position.set(3.05, -2.8, 23.0);
         scene.add(mvpTV); lobbyVisuals.push(mvpTV); lobbyCollision.push(mvpTV);
 
-        const mvpScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 2.8), new THREE.MeshBasicMaterial({ map: mvpTex }));
-        mvpScreen.position.set(3.21, -2, 21.5);
+        const mvpScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 2.2), new THREE.MeshBasicMaterial({ map: mvpTex }));
+        mvpScreen.position.set(3.11, -2.8, 23.0);
         mvpScreen.rotation.y = Math.PI / 2;
         scene.add(mvpScreen); lobbyVisuals.push(mvpScreen);
 
@@ -2193,7 +2210,7 @@ function animate() {
             let mYarn = localMirrorYarnBalls[id];
             if (mYarn) {
                 let distToMirror = mirrorZ - yarn.position.z;
-                if (distToMirror > 0 && distToMirror <= 12.0 && yarn.position.z > 20.0 && yarn.position.z < 31.0 && Math.abs(yarn.position.x) < 2.0) {
+                if (distToMirror > 0 && distToMirror <= 12.0 && yarn.position.z > 19.0 && yarn.position.z < 31.0 && Math.abs(yarn.position.x) < 2.0) {
                     mYarn.visible = true;
                     mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
                     mYarn.quaternion.copy(yarn.quaternion); 
@@ -2223,7 +2240,7 @@ function animate() {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
         // Fades in starting from 12 blocks away
-        if (distToMirror > 0 && distToMirror <= 12.0 && myPlayerObject.position.z > 20.0 && myPlayerObject.position.z < 31.0 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
+        if (distToMirror > 0 && distToMirror <= 12.0 && myPlayerObject.position.z > 19.0 && myPlayerObject.position.z < 31.0 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
             myMirrorCat.group.visible = true;
             
             myMirrorCat.group.position.x = myPlayerObject.position.x;
@@ -2671,7 +2688,7 @@ function animate() {
         if (oMirror) {
             if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
                 let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > 0 && distToMirror <= 12.0 && p.group.position.z > 20.0 && p.group.position.z < 31.0 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
+                if (distToMirror > 0 && distToMirror <= 12.0 && p.group.position.z > 19.0 && p.group.position.z < 31.0 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
                     oMirror.group.visible = true;
                     
                     oMirror.group.position.x = p.group.position.x;
