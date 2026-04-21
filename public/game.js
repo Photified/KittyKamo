@@ -1613,18 +1613,15 @@ socket.on('currentPlayers', (players) => {
 socket.on('yarnState', (yarns) => {
     yarns.forEach(yData => {
         if (!localYarnBalls[yData.id]) {
-            // Create main yarn ball
             const geo = new THREE.SphereGeometry(0.5, 16, 16);
             const mat = new THREE.MeshLambertMaterial({ color: yData.color });
             const mesh = new THREE.Mesh(geo, mat);
-            // Add cartoon edges
             mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
             mesh.castShadow = true; mesh.receiveShadow = true;
             scene.add(mesh);
             lobbyVisuals.push(mesh);
             localYarnBalls[yData.id] = mesh;
 
-            // Create mirror yarn ball
             const mMesh = new THREE.Mesh(geo, mat.clone());
             mMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
             mMesh.visible = false;
@@ -1632,10 +1629,8 @@ socket.on('yarnState', (yarns) => {
             localMirrorYarnBalls[yData.id] = mMesh;
         }
 
-        // Update Position
         localYarnBalls[yData.id].position.set(yData.x, yData.y, yData.z);
         
-        // Add rolling rotation visually
         let dist = Math.sqrt(yData.vx * yData.vx + yData.vz * yData.vz);
         if (dist > 0.01) {
             let axis = new THREE.Vector3(yData.vz, 0, -yData.vx).normalize();
@@ -2014,14 +2009,14 @@ function animate() {
             let yarn = localYarnBalls[id];
             if (!yarn.visible) return;
             
-            // Player collision with yarn
+            // Player collision with yarn triggers the kick!
             let distToYarn = myPlayerObject.position.distanceTo(yarn.position);
             if (distToYarn < 1.2 && (!lastYarnKickTime[id] || now - lastYarnKickTime[id] > 500)) {
                 lastYarnKickTime[id] = now;
                 
                 let dir = new THREE.Vector3().subVectors(yarn.position, myPlayerObject.position);
                 dir.y = 0;
-                dir.normalize();
+                dir.normalize(); // Get direction you hit the ball
                 
                 socket.emit('kickYarn', { id: id, dirX: dir.x, dirZ: dir.z });
                 playSound('pop'); 
