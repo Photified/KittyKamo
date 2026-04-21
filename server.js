@@ -25,6 +25,43 @@ const catBeds = [
     {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15}
 ];
 
+// Server-side state for the interactive yarn balls
+let yarnBalls = [
+    { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vz: 0 },
+    { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vz: 0 },
+    { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vz: 0 }
+];
+
+// Lightweight physics loop just for the yarn balls (runs at 20fps)
+setInterval(() => {
+    if (gameState !== 'LOBBY' && gameState !== 'WAITING' && gameState !== 'GAME_OVER') return;
+    
+    let moved = false;
+    yarnBalls.forEach(yarn => {
+        if (Math.abs(yarn.vx) > 0.01 || Math.abs(yarn.vz) > 0.01) {
+            yarn.x += yarn.vx;
+            yarn.z += yarn.vz;
+            yarn.vx *= 0.9; // Friction
+            yarn.vz *= 0.9; // Friction
+
+            // Lobby Wall Bounce Checks
+            if (yarn.x > 18) { yarn.vx *= -1; yarn.x = 18; }
+            if (yarn.x < -18) { yarn.vx *= -1; yarn.x = -18; }
+            if (yarn.z > 18) { yarn.vz *= -1; yarn.z = 18; } // Front mirror wall
+            if (yarn.z < -19) { yarn.vz *= -1; yarn.z = -19; } // Back wall
+
+            moved = true;
+        } else {
+            yarn.vx = 0; 
+            yarn.vz = 0;
+        }
+    });
+
+    if (moved) {
+        io.emit('yarnState', yarnBalls);
+    }
+}, 50);
+
 function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
@@ -110,6 +147,12 @@ function startLobby() {
     gameState = 'LOBBY';
     timeRemaining = 60; 
     
+    // Reset yarn balls to starting positions
+    yarnBalls[0] = { id: 'yarn0', x: 5, y: -4.6, z: 5, color: 0xFF1493, vx: 0, vz: 0 };
+    yarnBalls[1] = { id: 'yarn1', x: -5, y: -4.6, z: 5, color: 0x00BFFF, vx: 0, vz: 0 };
+    yarnBalls[2] = { id: 'yarn2', x: 0, y: -4.6, z: 10, color: 0xFFFF00, vx: 0, vz: 0 };
+    io.emit('yarnState', yarnBalls);
+
     if (!wasGameOver) {
         mapBlocks = [];
         io.emit('initMap', mapBlocks);
@@ -266,6 +309,7 @@ io.on('connection', (socket) => {
         generateMap();
     }
     socket.emit('initMap', mapBlocks);
+    socket.emit('yarnState', yarnBalls); // Send initial yarn state to new player
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
 
@@ -309,6 +353,15 @@ io.on('connection', (socket) => {
                 players[socket.id].color = data.color;
             }
             io.emit('currentPlayers', players);
+        }
+    });
+
+    socket.on('kickYarn', (data) => {
+        let yarn = yarnBalls.find(y => y.id === data.id);
+        if (yarn && (gameState === 'LOBBY' || gameState === 'WAITING' || gameState === 'GAME_OVER')) {
+            let force = 0.4 + Math.random() * 0.4; // Enough force to send it 2 to 8 blocks
+            yarn.vx = data.dirX * force;
+            yarn.vz = data.dirZ * force;
         }
     });
 
