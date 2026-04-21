@@ -625,7 +625,6 @@ const activeHairballs = [];
 
 // YARN BALLS SETUP
 const localYarnBalls = {};
-const localMirrorYarnBalls = {};
 let lastYarnKickTime = {};
 
 let myWalkTime = 0; 
@@ -654,57 +653,69 @@ const tvCtx = tvCanvas.getContext('2d');
 const tvTex = new THREE.CanvasTexture(tvCanvas);
 tvTex.magFilter = THREE.NearestFilter; 
 
-let currentLeaderboardData = [];
 let currentMvpData = null;
 
 function renderBigTV() {
-    tvCtx.fillStyle = '#111'; tvCtx.fillRect(0, 0, 1024, 512);
+    // Bright glowing background!
+    tvCtx.fillStyle = '#EAF6FF'; 
+    tvCtx.fillRect(0, 0, 1024, 512);
 
-    // Left Side - Leaderboard
-    tvCtx.fillStyle = 'cyan';
-    tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
+    // Subtle grid pattern for aesthetics
+    tvCtx.strokeStyle = '#D0E8FF';
+    tvCtx.lineWidth = 2;
+    for(let i=0; i<1024; i+=32) { tvCtx.beginPath(); tvCtx.moveTo(i, 0); tvCtx.lineTo(i, 512); tvCtx.stroke(); }
+    for(let j=0; j<512; j+=32) { tvCtx.beginPath(); tvCtx.moveTo(0, j); tvCtx.lineTo(1024, j); tvCtx.stroke(); }
+
+    tvCtx.fillStyle = '#FF1493'; 
+    tvCtx.font = 'bold 72px "Press Start 2P", "Courier New", monospace';
     tvCtx.textAlign = 'center';
-    tvCtx.fillText('TOP SURVIVORS', 256, 80);
-
-    tvCtx.textAlign = 'left';
-    tvCtx.font = '24px "Press Start 2P", "Courier New", monospace';
-    if (currentLeaderboardData && currentLeaderboardData.length > 0) {
-        for(let i=0; i<Math.min(5, currentLeaderboardData.length); i++) {
-            let p = currentLeaderboardData[i];
-            tvCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
-            tvCtx.fillText(`${i+1}. ${p.name}`, 40, 160 + (i * 60));
-            tvCtx.textAlign = 'right';
-            tvCtx.fillText(`${p.score}s`, 472, 160 + (i * 60));
-            tvCtx.textAlign = 'left';
-        }
-    }
-
-    // Center Divider
-    tvCtx.strokeStyle = '#333';
-    tvCtx.lineWidth = 4;
-    tvCtx.beginPath(); tvCtx.moveTo(512, 40); tvCtx.lineTo(512, 472); tvCtx.stroke();
-
-    // Right Side - MVP
-    tvCtx.fillStyle = 'gold';
-    tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
-    tvCtx.textAlign = 'center';
-    tvCtx.fillText('RECENT MVP', 768, 120);
+    tvCtx.shadowColor = 'rgba(0,0,0,0.3)';
+    tvCtx.shadowBlur = 10;
+    tvCtx.fillText('✨ MVP ✨', 512, 100);
+    tvCtx.shadowBlur = 0; 
 
     if (currentMvpData) {
-        tvCtx.fillStyle = 'white';
-        tvCtx.font = '48px "Press Start 2P", "Courier New", monospace';
-        tvCtx.fillText(currentMvpData.name.toUpperCase(), 768, 260);
-        tvCtx.fillStyle = 'cyan';
+        tvCtx.fillStyle = '#111';
+        tvCtx.font = '40px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText(currentMvpData.name.toUpperCase(), 512, 420);
+
+        tvCtx.fillStyle = '#00BFFF';
         tvCtx.font = '24px "Press Start 2P", "Courier New", monospace';
-        tvCtx.fillText('SURVIVED: ' + currentMvpData.score + 's', 768, 340);
+        tvCtx.fillText('SURVIVED: ' + currentMvpData.score + 's', 512, 470);
+
+        // Draw Big Flat MVP Cat
+        tvCtx.save();
+        tvCtx.translate(512, 260); 
+        tvCtx.scale(1.5, 1.5); 
+        
+        let hexStr = '#' + (currentMvpData.color || 0xFFFFFF).toString(16).padStart(6, '0');
+        tvCtx.fillStyle = hexStr;
+        tvCtx.strokeStyle = '#000';
+        tvCtx.lineWidth = 6;
+        tvCtx.lineJoin = 'round';
+
+        // Cat Ears
+        tvCtx.beginPath(); tvCtx.moveTo(-45, -45); tvCtx.lineTo(-25, -80); tvCtx.lineTo(0, -45); tvCtx.fill(); tvCtx.stroke();
+        tvCtx.beginPath(); tvCtx.moveTo(45, -45); tvCtx.lineTo(25, -80); tvCtx.lineTo(0, -45); tvCtx.fill(); tvCtx.stroke();
+
+        // Cat Head
+        tvCtx.fillRect(-50, -50, 100, 100);
+        tvCtx.strokeRect(-50, -50, 100, 100);
+
+        // Face scaling 
+        tvCtx.save();
+        tvCtx.translate(-64, -64);
+        drawFaceOnCanvas(tvCtx, currentMvpData.face || 'normal');
+        tvCtx.restore();
+
+        tvCtx.restore();
+    } else {
+        tvCtx.fillStyle = '#888';
+        tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText('AWAITING NEXT MVP...', 512, 280);
     }
 
     tvTex.needsUpdate = true;
-}
-
-function updateLeaderboardTV(leaderboard) {
-    currentLeaderboardData = leaderboard;
-    renderBigTV();
 }
 
 function updateMVPDisplay(mvpData) {
@@ -1071,18 +1082,6 @@ scene.add(stars);
 const myCatData = createCatSculpt(); 
 myPlayerObject.add(myCatData.group);
 
-// --- ADD MIRROR CAT GLOBALLY ---
-const myMirrorCat = createCatSculpt();
-scene.add(myMirrorCat.group);
-myMirrorCat.group.visible = false;
-const mirrorZ = 25.5; // The front face of the Rainbow Wall at z=26.5
-
-let mBeam = myMirrorCat.group.getObjectByName('dBeam');
-if (mBeam) mBeam.visible = false; 
-
-const otherMirrorCats = {};
-// -------------------------------
-
 window.myBaseColor = 0xFFFFFF; 
 window.myFace = 'normal';
 window.myWardrobe = [null, null, null]; 
@@ -1162,7 +1161,6 @@ colors.forEach(c => {
     btn.onclick = () => { 
         window.myBaseColor = c.h; 
         previewCat.material.color.setHex(c.h);
-        myMirrorCat.material.color.setHex(c.h); 
         Array.from(colorPalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -1196,7 +1194,6 @@ faces.forEach(f => {
     btn.onclick = () => { 
         window.myFace = f.id; 
         previewCat.faceMesh.material.map = getFaceTexture(f.id);
-        myMirrorCat.faceMesh.material.map = getFaceTexture(f.id); 
         Array.from(facePalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -1243,7 +1240,6 @@ items.forEach(item => {
         window.myWardrobe[window.activeSlot] = { id: item.id, color: currentItemColor };
         slots[window.activeSlot].innerHTML = item.icon;
         applyWardrobeToCat(previewCat, window.myWardrobe);
-        applyWardrobeToCat(myMirrorCat, window.myWardrobe); 
     };
     itemRow.appendChild(btn);
 });
@@ -1255,7 +1251,6 @@ clearBtn.onclick = () => {
     window.myWardrobe[window.activeSlot] = null;
     slots[window.activeSlot].innerHTML = '+';
     applyWardrobeToCat(previewCat, window.myWardrobe);
-    applyWardrobeToCat(myMirrorCat, window.myWardrobe); 
 };
 itemRow.appendChild(clearBtn);
 wardrobeTab.appendChild(itemRow);
@@ -1270,7 +1265,6 @@ colors.forEach(c => {
         if (window.myWardrobe[window.activeSlot]) {
             window.myWardrobe[window.activeSlot].color = currentItemColor;
             applyWardrobeToCat(previewCat, window.myWardrobe);
-            applyWardrobeToCat(myMirrorCat, window.myWardrobe); 
         }
     };
     itemColorRow.appendChild(btn);
@@ -1527,9 +1521,6 @@ socket.on('gameStateUpdate', (data) => {
 
     updateRightBox(data.leaderboard);
     
-    if (data.lastLeaderboard !== undefined) {
-        updateLeaderboardTV(data.lastLeaderboard);
-    }
     if (data.lastMvp !== undefined) {
         updateMVPDisplay(data.lastMvp);
     }
@@ -1603,22 +1594,12 @@ socket.on('initMap', (mapBlocks) => {
         
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
-        // TALL RAINBOW WALL (Mirror layer at the bottom)
+        // TALL RAINBOW WALL (Mirror removed, back to pink base)
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
         for (let i = 0; i < 7; i++) {
             let h = 25 / 7;
             let y = -5 + (i * h) + (h / 2);
-            
-            if (i === 0) {
-                // Bottom Layer: Pink/Violet Tinted Mirror Glass
-                const glassGeo = new THREE.BoxGeometry(43, h, 2);
-                const glassMat = new THREE.MeshBasicMaterial({ color: 0xFF69B4, transparent: true, opacity: 0.35 });
-                const glass = new THREE.Mesh(glassGeo, glassMat);
-                glass.position.set(0, y, 26.5);
-                scene.add(glass); lobbyVisuals.push(glass); lobbyCollision.push(glass);
-            } else {
-                createWall(43, h, 2, 0, y, 26.5, rainbowColors[6 - i]); 
-            }
+            createWall(43, h, 2, 0, y, 26.5, i === 0 ? 0xFF69B4 : rainbowColors[6 - i]); 
         }
         
         // VOXEL TEXT FOR LOBBY
@@ -1781,7 +1762,6 @@ socket.on('currentPlayers', (players) => {
                 setNameLabel(otherPlayers[id], players[id].name);
                 
                 applyWardrobeToCat(otherPlayers[id], players[id].wardrobe);
-                if(otherMirrorCats[id]) applyWardrobeToCat(otherMirrorCats[id], players[id].wardrobe);
 
             } else { addOtherPlayer(id, players[id]); }
         }
@@ -1801,12 +1781,6 @@ socket.on('yarnState', (yarns) => {
             scene.add(mesh);
             lobbyVisuals.push(mesh);
             localYarnBalls[yData.id] = mesh;
-
-            const mMesh = new THREE.Mesh(geo, mat.clone());
-            mMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
-            mMesh.visible = false;
-            scene.add(mMesh);
-            localMirrorYarnBalls[yData.id] = mMesh;
         }
 
         localYarnBalls[yData.id].position.set(yData.x, yData.y, yData.z);
@@ -1850,10 +1824,6 @@ socket.on('playerDisconnected', (id) => {
         scene.remove(otherPlayers[id].group); 
         delete otherPlayers[id]; 
     } 
-    if (otherMirrorCats[id]) { 
-        scene.remove(otherMirrorCats[id].group); 
-        delete otherMirrorCats[id]; 
-    }
 });
 
 socket.on('playerStunned', (id) => {
@@ -1901,7 +1871,6 @@ socket.on('spawnHairball', (data) => {
 
 function addOtherPlayer(id, playerInfo) {
     if (otherPlayers[id]) scene.remove(otherPlayers[id].group);
-    if (otherMirrorCats[id]) scene.remove(otherMirrorCats[id].group); 
 
     const catData = createCatSculpt(playerInfo.color, playerInfo.face || 'normal');
     catData.group.position.set(playerInfo.x, playerInfo.y, playerInfo.z);
@@ -1922,14 +1891,6 @@ function addOtherPlayer(id, playerInfo) {
 
     scene.add(catData.group);
     otherPlayers[id] = catData;
-
-    const mCat = createCatSculpt(playerInfo.color, playerInfo.face || 'normal');
-    mCat.group.visible = false;
-    let omBeam = mCat.group.getObjectByName('dBeam');
-    if (omBeam) omBeam.visible = false;
-    applyWardrobeToCat(mCat, playerInfo.wardrobe);
-    scene.add(mCat.group);
-    otherMirrorCats[id] = mCat;
 }
 
 function checkCollision(pos) {
@@ -2059,6 +2020,7 @@ function resetCatPose(cat) {
     cat.legs.forEach(l => l.rotation.set(0,0,0));
     cat.tail.rotation.set(0, cat.tail.rotation.y, 0);
     cat.body.rotation.x = 0;
+    cat.body.rotation.y = 0; 
     cat.body.rotation.z = 0; 
     cat.body.position.y = 0; 
 }
@@ -2113,10 +2075,14 @@ function animateCat(cat, emote, walkTime) {
         cat.legs[3].rotation.x = Math.PI / 4;
         cat.tail.rotation.x = Math.PI / 4;
     } else if (emote === 4) { 
-        cat.head.rotation.x = -Math.PI / 6;
-        cat.legs[0].rotation.x = -Math.PI / 2 + Math.sin(walkTime * 3) * 0.8;
-        cat.body.position.y = 0.1;
-        cat.body.rotation.x = -Math.PI / 8;
+        // 360 Spin Dance!
+        cat.body.rotation.y = walkTime * 2; 
+        cat.body.position.y = Math.abs(Math.sin(walkTime * 4)) * 0.2; 
+        cat.head.rotation.x = -Math.PI / 8;
+        cat.legs[0].rotation.x = Math.sin(walkTime * 4) * 0.5;
+        cat.legs[1].rotation.x = -Math.sin(walkTime * 4) * 0.5;
+        cat.legs[2].rotation.x = -Math.sin(walkTime * 4) * 0.5;
+        cat.legs[3].rotation.x = Math.sin(walkTime * 4) * 0.5;
     } else if (emote === 5) { 
         cat.body.position.y = 0.3; 
         cat.body.rotation.x = Math.PI / 3; 
@@ -2183,7 +2149,7 @@ function animate() {
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
 
-    // --- YARN COLLISION AND MIRROR LOGIC ---
+    // --- YARN KICK LOGIC ---
     if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         Object.keys(localYarnBalls).forEach(id => {
             let yarn = localYarnBalls[id];
@@ -2201,95 +2167,11 @@ function animate() {
                 socket.emit('kickYarn', { id: id, dirX: dir.x, dirZ: dir.z });
                 playSound('pop'); 
             }
-
-            // Mirror Yarn Update
-            let mYarn = localMirrorYarnBalls[id];
-            if (mYarn) {
-                let distToMirror = mirrorZ - yarn.position.z;
-                // Changed distToMirror > -1.0 so hitting the wall doesn't turn off reflection
-                if (distToMirror > -1.0 && distToMirror <= 10.0 && Math.abs(yarn.position.x) < 21.5) {
-                    mYarn.visible = true;
-                    mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
-                    mYarn.quaternion.copy(yarn.quaternion); 
-                    
-                    mYarn.rotation.y = -mYarn.rotation.y;
-                    mYarn.rotation.z = -mYarn.rotation.z;
-
-                    let op = 1.0;
-                    if (distToMirror > 8.0) {
-                        op = 1.0 - ((distToMirror - 8.0) / 2.0); // Only starts fading far away
-                    }
-                    op = Math.max(0.0, Math.min(1.0, op));
-                    
-                    mYarn.material.transparent = true;
-                    mYarn.material.opacity = op;
-                    mYarn.children[0].material.transparent = true;
-                    mYarn.children[0].material.opacity = op * 0.3;
-                } else {
-                    mYarn.visible = false;
-                }
-            }
         });
     } else {
-        Object.keys(localMirrorYarnBalls).forEach(id => localMirrorYarnBalls[id].visible = false);
         Object.keys(localYarnBalls).forEach(id => localYarnBalls[id].visible = false);
     }
     // ---------------------------------------
-
-    // --- MIRROR LOGIC (LOCAL PLAYER) ---
-    if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
-        let distToMirror = mirrorZ - myPlayerObject.position.z;
-        
-        if (distToMirror > -1.0 && distToMirror <= 10.0 && Math.abs(myPlayerObject.position.x) < 21.5 && myPlayerObject.position.y < -1) {
-            myMirrorCat.group.visible = true;
-            
-            myMirrorCat.group.position.x = myPlayerObject.position.x;
-            myMirrorCat.group.position.y = myPlayerObject.position.y;
-            myMirrorCat.group.position.z = mirrorZ + distToMirror; 
-            
-            myMirrorCat.group.rotation.y = Math.PI - myPlayerObject.rotation.y;
-            
-            myMirrorCat.material.color.setHex(myCatData.material.color.getHex());
-            myMirrorCat.faceMesh.material.map = myCatData.faceMesh.material.map;
-            myMirrorCat.body.scale.copy(myCatData.body.scale);
-            if (myMirrorCat.nameSprite) myMirrorCat.nameSprite.visible = false;
-            
-            let mBeam = myMirrorCat.group.getObjectByName('dBeam');
-            if (mBeam) mBeam.visible = false; 
-            myMirrorCat.dBeamMat.opacity = 0;
-
-            let globalTime = performance.now() / 136;
-            let isBeaming = (serverGameState === 'BEAMING' && beamingPlayerIds.includes(socket.id));
-            
-            animateCat(myMirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
-            myMirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
-            
-            let op = 1.0;
-            if (distToMirror > 8.0) {
-                op = 1.0 - ((distToMirror - 8.0) / 2.0); // Only starts fading far away
-            }
-            op = Math.max(0.0, Math.min(1.0, op)); 
-            
-            myMirrorCat.group.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    child.material.transparent = true;
-                    child.material.opacity = op;
-                }
-                if (child.isLineSegments && child.material) {
-                    child.material.transparent = true;
-                    child.material.opacity = op * 0.3; 
-                }
-            });
-            
-            if (op <= 0) myMirrorCat.group.visible = false;
-            
-        } else {
-            myMirrorCat.group.visible = false;
-        }
-    } else {
-        myMirrorCat.group.visible = false;
-    }
-    // --------------------
 
     // Update Confetti Physics
     for (let i = confettiParticles.length - 1; i >= 0; i--) {
@@ -2656,7 +2538,6 @@ function animate() {
     Object.entries(otherPlayers).forEach(([id, p]) => {
         if (p.role === 'spectator') { 
             p.group.visible = false; 
-            if(otherMirrorCats[id]) otherMirrorCats[id].group.visible = false;
             return; 
         } else { 
             p.group.visible = true; 
@@ -2685,59 +2566,6 @@ function animate() {
         let isOtherDropping = (serverGameState === 'HIDING' && serverTime >= 8);
         let targetOtherOp = isOtherDropping ? 0.6 : 0;
         p.dBeamMat.opacity += (targetOtherOp - p.dBeamMat.opacity) * 0.1;
-
-        // --- MIRROR LOGIC (OTHER PLAYERS) ---
-        let oMirror = otherMirrorCats[id];
-        if (oMirror) {
-            if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
-                let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > -1.0 && distToMirror <= 10.0 && Math.abs(p.group.position.x) < 21.5 && p.group.position.y < -1) {
-                    oMirror.group.visible = true;
-                    
-                    oMirror.group.position.x = p.group.position.x;
-                    oMirror.group.position.y = p.group.position.y;
-                    oMirror.group.position.z = mirrorZ + distToMirror; 
-                    
-                    oMirror.group.rotation.y = Math.PI - p.group.rotation.y;
-                    
-                    oMirror.material.color.setHex(p.material.color.getHex());
-                    oMirror.faceMesh.material.map = p.faceMesh.material.map;
-                    oMirror.body.scale.copy(p.body.scale);
-                    if (oMirror.nameSprite) oMirror.nameSprite.visible = false;
-                    
-                    let omBeam = oMirror.group.getObjectByName('dBeam');
-                    if (omBeam) omBeam.visible = false; 
-                    oMirror.dBeamMat.opacity = 0;
-
-                    animateCat(oMirror, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
-                    oMirror.tail.rotation.y = -Math.sin(p.tailTime) * 0.3; 
-                    
-                    let op = 1.0;
-                    if (distToMirror > 8.0) {
-                        op = 1.0 - ((distToMirror - 8.0) / 2.0);
-                    }
-                    op = Math.max(0.0, Math.min(1.0, op)); 
-                    
-                    oMirror.group.traverse((child) => {
-                        if (child.isMesh && child.material) {
-                            child.material.transparent = true;
-                            child.material.opacity = op;
-                        }
-                        if (child.isLineSegments && child.material) {
-                            child.material.transparent = true;
-                            child.material.opacity = op * 0.3; 
-                        }
-                    });
-                    
-                    if (op <= 0) oMirror.group.visible = false;
-                    
-                } else {
-                    oMirror.group.visible = false;
-                }
-            } else {
-                oMirror.group.visible = false;
-            }
-        }
     });
 
     clouds.forEach(cloud => { cloud.position.x += 0.02; if (cloud.position.x > 60) cloud.position.x = -60; });
