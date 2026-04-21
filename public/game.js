@@ -1628,31 +1628,31 @@ socket.on('initMap', (mapBlocks) => {
         createWall(2, 2, 47, -20.5, -4, 3, 0x8B4513); 
         createWall(2, 2, 47, 20.5, -4, 3, 0x8B4513);  
 
-        // --- DRIVE-IN TV SCREEN (Positioned above the left wall: x = -20.5) ---
+        // --- DRIVE-IN TV SCREEN (Positioned on the RIGHT side: x = +20.25) ---
         // Big TV Housing
         const tvGroup = new THREE.Group();
         const screenGeo = new THREE.BoxGeometry(0.5, 12, 24); 
         const screenMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
         const bigTV = new THREE.Mesh(screenGeo, screenMat);
-        bigTV.position.set(-20.25, 8, 3); 
+        bigTV.position.set(20.25, 8, 3); // Right wall!
         scene.add(bigTV); lobbyVisuals.push(bigTV); lobbyCollision.push(bigTV);
 
         // Canvas Display Plane
         const displayPlane = new THREE.Mesh(new THREE.PlaneGeometry(23.5, 11.5), new THREE.MeshBasicMaterial({ map: tvTex }));
-        displayPlane.position.set(-19.99, 8, 3); // Slightly inside the TV face to prevent Z-fighting
-        displayPlane.rotation.y = Math.PI / 2; // Facing +x
+        displayPlane.position.set(19.99, 8, 3); // Slightly inside to prevent Z-fighting
+        displayPlane.rotation.y = -Math.PI / 2; // Facing the center of the room (-x)
         scene.add(displayPlane); lobbyVisuals.push(displayPlane);
 
-        // Poles for Drive-In TV
-        const poleGeo = new THREE.CylinderGeometry(0.4, 0.4, 15);
+        // Poles for Drive-In TV (Shortened to stop at the bottom of the screen)
+        const poleGeo = new THREE.CylinderGeometry(0.4, 0.4, 7);
         const poleMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
 
         const pole1 = new THREE.Mesh(poleGeo, poleMat);
-        pole1.position.set(-20.25, 0.5, 12);
+        pole1.position.set(20.25, -1.5, 12); // Centers at y=-1.5, stretches from y=-5 to y=2
         scene.add(pole1); lobbyVisuals.push(pole1); lobbyCollision.push(pole1);
 
         const pole2 = new THREE.Mesh(poleGeo, poleMat);
-        pole2.position.set(-20.25, 0.5, -6);
+        pole2.position.set(20.25, -1.5, -6);
         scene.add(pole2); lobbyVisuals.push(pole2); lobbyCollision.push(pole2);
         // ----------------------------------------------------------------------
 
@@ -2202,11 +2202,12 @@ function animate() {
                 playSound('pop'); 
             }
 
-            // Mirror Yarn Update - Starts showing when yarn is 4 units away across the full arena width
+            // Mirror Yarn Update
             let mYarn = localMirrorYarnBalls[id];
             if (mYarn) {
                 let distToMirror = mirrorZ - yarn.position.z;
-                if (distToMirror > 0 && distToMirror <= 4.0 && Math.abs(yarn.position.x) < 21.5) {
+                // Changed distToMirror > -1.0 so hitting the wall doesn't turn off reflection
+                if (distToMirror > -1.0 && distToMirror <= 10.0 && Math.abs(yarn.position.x) < 21.5) {
                     mYarn.visible = true;
                     mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
                     mYarn.quaternion.copy(yarn.quaternion); 
@@ -2214,8 +2215,12 @@ function animate() {
                     mYarn.rotation.y = -mYarn.rotation.y;
                     mYarn.rotation.z = -mYarn.rotation.z;
 
-                    let op = 1.0 - ((distToMirror - 3.0) / 1.0);
+                    let op = 1.0;
+                    if (distToMirror > 8.0) {
+                        op = 1.0 - ((distToMirror - 8.0) / 2.0); // Only starts fading far away
+                    }
                     op = Math.max(0.0, Math.min(1.0, op));
+                    
                     mYarn.material.transparent = true;
                     mYarn.material.opacity = op;
                     mYarn.children[0].material.transparent = true;
@@ -2235,8 +2240,7 @@ function animate() {
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        // Fades in starting from 4 blocks away across the entire wall
-        if (distToMirror > 0 && distToMirror <= 4.0 && Math.abs(myPlayerObject.position.x) < 21.5 && myPlayerObject.position.y < -1) {
+        if (distToMirror > -1.0 && distToMirror <= 10.0 && Math.abs(myPlayerObject.position.x) < 21.5 && myPlayerObject.position.y < -1) {
             myMirrorCat.group.visible = true;
             
             myMirrorCat.group.position.x = myPlayerObject.position.x;
@@ -2260,7 +2264,10 @@ function animate() {
             animateCat(myMirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
             myMirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
             
-            let op = 1.0 - ((distToMirror - 3.0) / 1.0);
+            let op = 1.0;
+            if (distToMirror > 8.0) {
+                op = 1.0 - ((distToMirror - 8.0) / 2.0); // Only starts fading far away
+            }
             op = Math.max(0.0, Math.min(1.0, op)); 
             
             myMirrorCat.group.traverse((child) => {
@@ -2684,7 +2691,7 @@ function animate() {
         if (oMirror) {
             if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
                 let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > 0 && distToMirror <= 4.0 && Math.abs(p.group.position.x) < 21.5 && p.group.position.y < -1) {
+                if (distToMirror > -1.0 && distToMirror <= 10.0 && Math.abs(p.group.position.x) < 21.5 && p.group.position.y < -1) {
                     oMirror.group.visible = true;
                     
                     oMirror.group.position.x = p.group.position.x;
@@ -2705,7 +2712,10 @@ function animate() {
                     animateCat(oMirror, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
                     oMirror.tail.rotation.y = -Math.sin(p.tailTime) * 0.3; 
                     
-                    let op = 1.0 - ((distToMirror - 3.0) / 1.0);
+                    let op = 1.0;
+                    if (distToMirror > 8.0) {
+                        op = 1.0 - ((distToMirror - 8.0) / 2.0);
+                    }
                     op = Math.max(0.0, Math.min(1.0, op)); 
                     
                     oMirror.group.traverse((child) => {
