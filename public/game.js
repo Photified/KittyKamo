@@ -366,7 +366,7 @@ function buildAccessory(type, colorHex) {
         addPart(new THREE.ConeGeometry(0.15, 0.4, 4), 0, 0.4, 0);
     }
     
-    return { meshGroup: group, target: targetPart, type: type };
+    return { meshGroup: group, target: targetPart, type: type, originalColor: colorHex };
 }
 
 function applyWardrobeToCat(cat, wardrobeArr) {
@@ -671,44 +671,17 @@ function renderBigTV() {
     tvCtx.textAlign = 'center';
     tvCtx.shadowColor = 'rgba(0,0,0,0.3)';
     tvCtx.shadowBlur = 10;
-    tvCtx.fillText('✨ MVP ✨', 512, 100);
+    tvCtx.fillText('✨ MVP ✨', 512, 120);
     tvCtx.shadowBlur = 0; 
 
     if (currentMvpData) {
         tvCtx.fillStyle = '#111';
-        tvCtx.font = '40px "Press Start 2P", "Courier New", monospace';
-        tvCtx.fillText(currentMvpData.name.toUpperCase(), 512, 420);
+        tvCtx.font = 'bold 64px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText(currentMvpData.name.toUpperCase(), 512, 280);
 
         tvCtx.fillStyle = '#00BFFF';
-        tvCtx.font = '24px "Press Start 2P", "Courier New", monospace';
-        tvCtx.fillText('SURVIVED: ' + currentMvpData.score + 's', 512, 470);
-
-        // Draw Big Flat MVP Cat
-        tvCtx.save();
-        tvCtx.translate(512, 260); 
-        tvCtx.scale(1.5, 1.5); 
-        
-        let hexStr = '#' + (currentMvpData.color || 0xFFFFFF).toString(16).padStart(6, '0');
-        tvCtx.fillStyle = hexStr;
-        tvCtx.strokeStyle = '#000';
-        tvCtx.lineWidth = 6;
-        tvCtx.lineJoin = 'round';
-
-        // Cat Ears
-        tvCtx.beginPath(); tvCtx.moveTo(-45, -45); tvCtx.lineTo(-25, -80); tvCtx.lineTo(0, -45); tvCtx.fill(); tvCtx.stroke();
-        tvCtx.beginPath(); tvCtx.moveTo(45, -45); tvCtx.lineTo(25, -80); tvCtx.lineTo(0, -45); tvCtx.fill(); tvCtx.stroke();
-
-        // Cat Head
-        tvCtx.fillRect(-50, -50, 100, 100);
-        tvCtx.strokeRect(-50, -50, 100, 100);
-
-        // Face scaling 
-        tvCtx.save();
-        tvCtx.translate(-64, -64);
-        drawFaceOnCanvas(tvCtx, currentMvpData.face || 'normal');
-        tvCtx.restore();
-
-        tvCtx.restore();
+        tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText('SURVIVED: ' + currentMvpData.score + 's', 512, 380);
     } else {
         tvCtx.fillStyle = '#888';
         tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
@@ -1593,12 +1566,13 @@ socket.on('initMap', (mapBlocks) => {
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        createWall(wX, 10, 2, (minX + maxX) / 2, 0, minZ - 0.5, 0x8B4513);
-        createWall(wX, 10, 2, (minX + maxX) / 2, 0, maxZ + 0.5, 0x8B4513);
+        // Fix Z-fighting by placing 1-unit thick walls that touch blocks, not overlap
+        createWall(wX, 10, 1, (minX + maxX) / 2, 0, minZ - 1.0, 0x8B4513);
+        createWall(wX, 10, 1, (minX + maxX) / 2, 0, maxZ + 1.0, 0x8B4513);
         
-        const sideDepth = (maxZ - minZ) - 1; 
-        createWall(2, 10, sideDepth, minX - 0.5, 0, (minZ + maxZ) / 2, 0x8B4513);
-        createWall(2, 10, sideDepth, maxX + 0.5, 0, (minZ + maxZ) / 2, 0x8B4513);
+        const sideDepth = (maxZ - minZ) + 1; 
+        createWall(1, 10, sideDepth, minX - 1.0, 0, (minZ + maxZ) / 2, 0x8B4513);
+        createWall(1, 10, sideDepth, maxX + 1.0, 0, (minZ + maxZ) / 2, 0x8B4513);
         
         createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, minZ - 0.5);
         createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
@@ -2494,25 +2468,37 @@ function animate() {
     }
 
     if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned && serverGameState === 'SEEKING') { 
-        let minDist = 2.0; let closestBlock = null;
+        let minDist = 2.0; let closestBlockColor = null;
         
         for (let i = 0; i < mapObjects.length; i++) {
-            let dist = myPlayerObject.position.distanceTo(mapObjects[i].position);
-            if (dist < minDist) { minDist = dist; closestBlock = mapObjects[i]; }
+            const bBox = new THREE.Box3().setFromObject(mapObjects[i]);
+            let dist = bBox.distanceToPoint(myPlayerObject.position);
+            if (dist < minDist) { minDist = dist; closestBlockColor = mapObjects[i].material.color.getHex(); }
         }
         
         for (let i = 0; i < walls.length; i++) {
             const wBox = new THREE.Box3().setFromObject(walls[i]);
             let dist = wBox.distanceToPoint(myPlayerObject.position);
-            if (dist < minDist) { minDist = dist; closestBlock = walls[i]; }
+            if (dist < minDist) { minDist = dist; closestBlockColor = walls[i].material.color.getHex(); }
         }
         
-        if (closestBlock) { targetColor = closestBlock.material.color.getHex(); }
+        if (closestBlockColor !== null) { targetColor = closestBlockColor; }
     }
     
     myCatData.material.color.setHex(targetColor);
     let cColor = (targetColor === 0xFFFFFF || targetColor === 0xFF0000) ? 0xFFD700 : targetColor;
     myCatData.crownMat.color.setHex(cColor);
+
+    let isCamoOrSeeker = (targetColor !== window.myBaseColor) || myRole === 'seeker';
+    if (myCatData.equippedAccessories) {
+        myCatData.equippedAccessories.forEach(acc => {
+            acc.meshGroup.children.forEach(mesh => {
+                if (mesh.isMesh) {
+                    mesh.material.color.setHex(isCamoOrSeeker ? targetColor : acc.originalColor);
+                }
+            });
+        });
+    }
 
     if (myCatData.nameSprite) { myCatData.nameSprite.visible = false; }
 
@@ -2567,6 +2553,18 @@ function animate() {
         }
         
         p.group.scale.set(1, 1, 1);
+
+        let pTargetColor = p.role === 'seeker' ? 0xFF0000 : p.material.color.getHex();
+        let isOtherCamoOrSeeker = (pTargetColor !== p.baseColor) || p.role === 'seeker';
+        if (p.equippedAccessories) {
+            p.equippedAccessories.forEach(acc => {
+                acc.meshGroup.children.forEach(mesh => {
+                    if (mesh.isMesh) {
+                        mesh.material.color.setHex(isOtherCamoOrSeeker ? pTargetColor : acc.originalColor);
+                    }
+                });
+            });
+        }
         
         p.tailTime = (p.tailTime || 0) + 0.22; p.tail.rotation.y = Math.sin(p.tailTime) * 0.3; 
         let rYDelta = p.group.rotation.y - (p.lastRY === undefined ? p.group.rotation.y : p.lastRY);
