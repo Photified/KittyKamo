@@ -576,6 +576,11 @@ const otherPlayers = {};
 const activeDecoys = {}; 
 const activeHairballs = [];
 
+// YARN BALLS SETUP
+const localYarnBalls = {};
+const localMirrorYarnBalls = {};
+let lastYarnKickTime = {};
+
 let myWalkTime = 0; 
 let lastStepTime = 0; 
 let myTailTime = 0; 
@@ -672,8 +677,8 @@ function createCatTree(x, z, type = 1) {
         addTreePart(new THREE.BoxGeometry(2.5, 0.2, 2.5), matBase, -1, -2.5, 1);
         addTreePart(new THREE.BoxGeometry(0.6, 4, 0.6), matPost, 1, -2.6, 0);
         addTreePart(new THREE.BoxGeometry(3, 0.2, 3), matBase, 1, -0.5, 0);
-        addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, 0, 0.6, -0.5); // FIXED
-        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.7, -0.5); // FIXED
+        addTreePart(new THREE.BoxGeometry(0.6, 2, 0.6), matPost, 0, 0.6, -0.5); 
+        addTreePart(new THREE.BoxGeometry(2, 0.2, 2), matBase, 0, 1.7, -0.5); 
     } else if (type === 2) {
         addTreePart(new THREE.BoxGeometry(3, 0.4, 3), matBase, 0, -4.8, 0);
         addTreePart(new THREE.BoxGeometry(0.6, 6, 0.6), matPost, 0, -1.8, 0);
@@ -711,22 +716,18 @@ function createCraftingTable(x, z) {
         if (isCollision) lobbyCollision.push(mesh);
     }
 
-    // Lowered Tabletop and Shortened Legs
     addPart(new THREE.BoxGeometry(3, 0.2, 1.2), matWood, 0, -4.2, 0, true);
     addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, -1.3, -4.6, -0.4, true);
     addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, 1.3, -4.6, -0.4, true);
     addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, -1.3, -4.6, 0.4, true);
     addPart(new THREE.BoxGeometry(0.2, 0.6, 0.2), matWood, 1.3, -4.6, 0.4, true);
 
-    // --- NEW SHELVES (Moved forward to Z: -0.4 so they don't clip into the wall!) ---
-    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.4), matWood, 0, -2.8, -0.4, true); // Bottom Shelf
-    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.4), matWood, 0, -1.6, -0.4, true); // Top Shelf
+    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.4), matWood, 0, -2.8, -0.4, true); 
+    addPart(new THREE.BoxGeometry(2.8, 0.1, 0.4), matWood, 0, -1.6, -0.4, true); 
 
-    // Lowered Papers
     addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, -0.5, -4.08, 0);
     addPart(new THREE.BoxGeometry(0.6, 0.05, 0.8), matPaper, 0.2, -4.08, 0.1);
 
-    // Lowered Crayons
     const cray1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), matCrayonR);
     cray1.position.set(0.8, -4.05, -0.2); cray1.rotation.y = 0.2; tableGroup.add(cray1);
     
@@ -741,7 +742,6 @@ function createCraftingTable(x, z) {
         c.castShadow = true; c.receiveShadow = true;
     });
 
-    // --- ADD WARDROBE PROPS (DESK) ---
     const hatProp = buildAccessory('topHat', 0x222222).meshGroup;
     hatProp.position.set(-1.0, -4.295, 0.1); 
     hatProp.rotation.y = 0.4;
@@ -762,19 +762,18 @@ function createCraftingTable(x, z) {
     boot2.rotation.y = -0.2;
     tableGroup.add(boot2);
 
-    // --- ADD WARDROBE PROPS (BOTTOM SHELF: Y = -2.75) ---
     const partyHat1 = buildAccessory('partyHat', 0xFF1493).meshGroup; 
     partyHat1.position.set(-1.2, -2.95, -0.4);
     partyHat1.rotation.y = 0.2;
     tableGroup.add(partyHat1);
 
     const bowTie1 = buildAccessory('bowTie', 0x00FFFF).meshGroup; 
-    bowTie1.position.set(-0.7, -3.25, 0.02); // 0.02 counteracts the internal chest anchor
+    bowTie1.position.set(-0.7, -3.25, 0.02); 
     bowTie1.rotation.y = -0.1;
     tableGroup.add(bowTie1);
 
     const monocle1 = buildAccessory('monocle', 0xFFD700).meshGroup; 
-    monocle1.position.set(-0.2, -2.6, -0.19); // counteracts the face anchor
+    monocle1.position.set(-0.2, -2.6, -0.19); 
     monocle1.rotation.y = 0.3;
     tableGroup.add(monocle1);
 
@@ -793,7 +792,6 @@ function createCraftingTable(x, z) {
     partyHat2.rotation.y = -0.3;
     tableGroup.add(partyHat2);
 
-    // --- ADD WARDROBE PROPS (TOP SHELF: Y = -1.55) ---
     const beanie1 = buildAccessory('beanie', 0x32CD32).meshGroup; 
     beanie1.position.set(-1.2, -1.675, -0.4);
     beanie1.rotation.y = -0.4;
@@ -961,21 +959,19 @@ myPlayerObject.add(myCatData.group);
 const myMirrorCat = createCatSculpt();
 scene.add(myMirrorCat.group);
 myMirrorCat.group.visible = false;
-const mirrorZ = 19.5; // The actual mirror glass Z-position
+const mirrorZ = 19.5; 
 
-// Guarantee NO spotlight/beam on the mirror cat
 let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
 
-// Store mirror cats for other players
 const otherMirrorCats = {};
 // -------------------------------
 
 window.myBaseColor = 0xFFFFFF; 
 window.myFace = 'normal';
-window.myWardrobe = [null, null, null]; // 3 Slots for Customization
+window.myWardrobe = [null, null, null]; 
 window.activeSlot = 0;
-let currentItemColor = 0xFF0000; // Default Red
+let currentItemColor = 0xFF0000; 
 
 const previewCat = createCatSculpt(window.myBaseColor, window.myFace);
 previewCat.group.position.set(0, 100, 0); 
@@ -996,7 +992,6 @@ logo.innerHTML = 'KITTY KAMO';
 logo.style.cssText = 'font-size: 48px; color: gold; text-shadow: 3px 3px 0 #000; margin: 0 0 10px 0; font-weight: 900; letter-spacing: 2px; text-align: center;';
 uiContainer.appendChild(logo);
 
-// TAB BUTTONS
 const tabRow = document.createElement('div');
 tabRow.style.cssText = 'display:flex; gap:10px; margin-bottom:15px;';
 const catTabBtn = document.createElement('button');
@@ -1012,7 +1007,6 @@ tabRow.appendChild(catTabBtn);
 tabRow.appendChild(wardrobeTabBtn);
 uiContainer.appendChild(tabRow);
 
-// TAB CONTAINERS
 const catTab = document.createElement('div');
 catTab.style.cssText = 'display:flex; flex-direction:column; align-items:center;';
 const wardrobeTab = document.createElement('div');
@@ -1021,7 +1015,6 @@ wardrobeTab.style.cssText = 'display:none; flex-direction:column; align-items:ce
 uiContainer.appendChild(catTab);
 uiContainer.appendChild(wardrobeTab);
 
-// 1. CAT TAB CONTENT
 const nameInput = document.createElement('input');
 nameInput.id = 'nameInput';
 nameInput.type = 'text';
@@ -1053,7 +1046,7 @@ colors.forEach(c => {
     btn.onclick = () => { 
         window.myBaseColor = c.h; 
         previewCat.material.color.setHex(c.h);
-        myMirrorCat.material.color.setHex(c.h); // MIRROR SYNC
+        myMirrorCat.material.color.setHex(c.h); 
         Array.from(colorPalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -1087,7 +1080,7 @@ faces.forEach(f => {
     btn.onclick = () => { 
         window.myFace = f.id; 
         previewCat.faceMesh.material.map = getFaceTexture(f.id);
-        myMirrorCat.faceMesh.material.map = getFaceTexture(f.id); // MIRROR SYNC
+        myMirrorCat.faceMesh.material.map = getFaceTexture(f.id); 
         Array.from(facePalette.children).forEach(child => child.style.borderColor = '#555');
         btn.style.borderColor = 'gold';
     };
@@ -1099,7 +1092,6 @@ facePalette.children[0].style.borderColor = 'gold';
 catTab.appendChild(facePalette);
 
 
-// 2. WARDROBE TAB CONTENT
 const slotRow = document.createElement('div');
 slotRow.style.cssText = 'display:flex; gap:15px; margin-bottom: 15px;';
 const slots = [];
@@ -1135,7 +1127,7 @@ items.forEach(item => {
         window.myWardrobe[window.activeSlot] = { id: item.id, color: currentItemColor };
         slots[window.activeSlot].innerHTML = item.icon;
         applyWardrobeToCat(previewCat, window.myWardrobe);
-        applyWardrobeToCat(myMirrorCat, window.myWardrobe); // MIRROR SYNC
+        applyWardrobeToCat(myMirrorCat, window.myWardrobe); 
     };
     itemRow.appendChild(btn);
 });
@@ -1147,12 +1139,11 @@ clearBtn.onclick = () => {
     window.myWardrobe[window.activeSlot] = null;
     slots[window.activeSlot].innerHTML = '+';
     applyWardrobeToCat(previewCat, window.myWardrobe);
-    applyWardrobeToCat(myMirrorCat, window.myWardrobe); // MIRROR SYNC
+    applyWardrobeToCat(myMirrorCat, window.myWardrobe); 
 };
 itemRow.appendChild(clearBtn);
 wardrobeTab.appendChild(itemRow);
 
-// Item Color Picker
 const itemColorRow = document.createElement('div');
 itemColorRow.style.cssText = 'display:flex; gap:5px; flex-wrap:wrap; justify-content:center; padding-top: 10px; border-top: 1px solid #555; width: 100%;';
 colors.forEach(c => {
@@ -1163,14 +1154,13 @@ colors.forEach(c => {
         if (window.myWardrobe[window.activeSlot]) {
             window.myWardrobe[window.activeSlot].color = currentItemColor;
             applyWardrobeToCat(previewCat, window.myWardrobe);
-            applyWardrobeToCat(myMirrorCat, window.myWardrobe); // MIRROR SYNC
+            applyWardrobeToCat(myMirrorCat, window.myWardrobe); 
         }
     };
     itemColorRow.appendChild(btn);
 });
 wardrobeTab.appendChild(itemColorRow);
 
-// Tab Toggle Logic
 catTabBtn.onclick = () => { catTab.style.display='flex'; wardrobeTab.style.display='none'; catTabBtn.style.borderColor='gold'; wardrobeTabBtn.style.borderColor='#555'; };
 wardrobeTabBtn.onclick = () => { catTab.style.display='none'; wardrobeTab.style.display='flex'; catTabBtn.style.borderColor='#555'; wardrobeTabBtn.style.borderColor='gold'; };
 
@@ -1469,7 +1459,6 @@ socket.on('initMap', (mapBlocks) => {
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        // Flush boundary walls 10 blocks high!
         createWall(wX, 10, 2, (minX + maxX) / 2, 0, minZ - 0.5, 0x8B4513);
         createWall(wX, 10, 2, (minX + maxX) / 2, 0, maxZ + 0.5, 0x8B4513);
         
@@ -1482,33 +1471,22 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, sideDepth, minX - 0.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
-        // FLAT LOBBY
-        // Expand the ground slightly to ensure the reflection room has a floor
         ground.scale.set(43, 50, 1);
         ground.position.set(0, -5, 3.5);
         ground.material.color.setHex(0x654321); 
         
-        // Front wall
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); 
         
-        // Back wall with gap cut out for the Mirror Room
-        createWall(18.5, 2, 2, -12.25, -4, 20.5, 0x8B4513); // Left side
-        createWall(18.5, 2, 2, 12.25, -4, 20.5, 0x8B4513);  // Right side
+        createWall(18.5, 2, 2, -12.25, -4, 20.5, 0x8B4513); 
+        createWall(18.5, 2, 2, 12.25, -4, 20.5, 0x8B4513);  
 
-        // --- MIRROR HOUSE (Building physical mirrored room) ---
-        // Left wall
         createWall(1, 4, 8, -2.5, -3, 21.5, 0x8B4513); 
-        // Right wall
         createWall(1, 4, 8, 2.5, -3, 21.5, 0x8B4513); 
-        // Roof
         createWall(7, 1, 10, 0, -0.5, 21.5, 0xAA4A44); 
-        // Far back wall to seal the reflection room nicely
         createWall(6, 4, 1, 0, -3, 25.5, 0x8B4513); 
         
-        // Invisible collision to stop player walking into the mirror glass
         createInvisibleWall(4, 4, 1, 0, -3, 19.5); 
         
-        // Mirror Glass (Scaled down slightly to 3.98x3.98 to avoid Z-fighting with floor/ceiling)
         const glassGeo = new THREE.PlaneGeometry(3.98, 3.98);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
@@ -1516,10 +1494,9 @@ socket.on('initMap', (mapBlocks) => {
         glass.rotation.y = Math.PI; 
         scene.add(glass);
         lobbyVisuals.push(glass);
-        // --------------------
 
-        createWall(2, 2, 39, -20.5, -4, 0, 0x8B4513); // Left Side Wall
-        createWall(2, 2, 39, 20.5, -4, 0, 0x8B4513);  // Right Side Wall
+        createWall(2, 2, 39, -20.5, -4, 0, 0x8B4513); 
+        createWall(2, 2, 39, 20.5, -4, 0, 0x8B4513);  
 
         createInvisibleWall(43, 40, 2, 0, 17, -20.5);
         createInvisibleWall(43, 40, 2, 0, 17, 20.5);
@@ -1544,13 +1521,12 @@ socket.on('initMap', (mapBlocks) => {
         createWall(1, 4, 4, 2.5, -3, -18, 0x8B4513); 
         createWall(7, 1, 6, 0, -0.5, -18.5, 0xAA4A44); 
 
-        // New Open-Front Crown MVP Podium structure
-        createWall(4, 1.5, 4, 17.5, -4.25, -17.5, 0xFFD700); // Base
-        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 - 1.6, 0xFFD700); // Back corner
-        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 + 1.6, 0xFFD700); // Right corner
-        createWall(0.8, 1.2, 0.8, 17.5 - 1.6, -2.9, -17.5 - 1.6, 0xFFD700); // Left corner
-        createWall(0.8, 0.6, 0.8, 17.5 + 1.6, -3.2, -17.5, 0xFFD700); // Back-right middle
-        createWall(0.8, 0.6, 0.8, 17.5, -3.2, -17.5 - 1.6, 0xFFD700); // Back-left middle
+        createWall(4, 1.5, 4, 17.5, -4.25, -17.5, 0xFFD700); 
+        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 - 1.6, 0xFFD700); 
+        createWall(0.8, 1.2, 0.8, 17.5 + 1.6, -2.9, -17.5 + 1.6, 0xFFD700); 
+        createWall(0.8, 1.2, 0.8, 17.5 - 1.6, -2.9, -17.5 - 1.6, 0xFFD700); 
+        createWall(0.8, 0.6, 0.8, 17.5 + 1.6, -3.2, -17.5, 0xFFD700); 
+        createWall(0.8, 0.6, 0.8, 17.5, -3.2, -17.5 - 1.6, 0xFFD700); 
 
         createCraftingTable(0, -18.4);
         
@@ -1600,7 +1576,6 @@ socket.on('currentPlayers', (players) => {
             setNameLabel(myCatData, myName); 
             myCatData.crown.visible = (id === serverWinnerId);
             
-            // WARDROBE APPLY FOR YOU
             applyWardrobeToCat(myCatData, players[id].wardrobe);
 
             updateRightBox(null);
@@ -1625,7 +1600,6 @@ socket.on('currentPlayers', (players) => {
                 
                 setNameLabel(otherPlayers[id], players[id].name);
                 
-                // WARDROBE APPLY FOR OTHER PLAYERS
                 applyWardrobeToCat(otherPlayers[id], players[id].wardrobe);
                 if(otherMirrorCats[id]) applyWardrobeToCat(otherMirrorCats[id], players[id].wardrobe);
 
@@ -1633,6 +1607,44 @@ socket.on('currentPlayers', (players) => {
         }
     });
     updateUI(); 
+});
+
+// YARN SOCKET LISTENER
+socket.on('yarnState', (yarns) => {
+    yarns.forEach(yData => {
+        if (!localYarnBalls[yData.id]) {
+            // Create main yarn ball
+            const geo = new THREE.SphereGeometry(0.5, 16, 16);
+            const mat = new THREE.MeshLambertMaterial({ color: yData.color });
+            const mesh = new THREE.Mesh(geo, mat);
+            // Add cartoon edges
+            mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            scene.add(mesh);
+            lobbyVisuals.push(mesh);
+            localYarnBalls[yData.id] = mesh;
+
+            // Create mirror yarn ball
+            const mMesh = new THREE.Mesh(geo, mat.clone());
+            mMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
+            mMesh.visible = false;
+            scene.add(mMesh);
+            localMirrorYarnBalls[yData.id] = mMesh;
+        }
+
+        // Update Position
+        localYarnBalls[yData.id].position.set(yData.x, yData.y, yData.z);
+        
+        // Add rolling rotation visually
+        let dist = Math.sqrt(yData.vx * yData.vx + yData.vz * yData.vz);
+        if (dist > 0.01) {
+            let axis = new THREE.Vector3(yData.vz, 0, -yData.vx).normalize();
+            localYarnBalls[yData.id].rotateOnWorldAxis(axis, dist / 0.5); 
+        }
+
+        let isLobby = (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER');
+        localYarnBalls[yData.id].visible = isLobby;
+    });
 });
 
 socket.on('inventoryUpdate', (data) => {
@@ -1714,7 +1726,7 @@ socket.on('spawnHairball', (data) => {
 
 function addOtherPlayer(id, playerInfo) {
     if (otherPlayers[id]) scene.remove(otherPlayers[id].group);
-    if (otherMirrorCats[id]) scene.remove(otherMirrorCats[id].group); // clean up existing mirror if needed
+    if (otherMirrorCats[id]) scene.remove(otherMirrorCats[id].group); 
 
     const catData = createCatSculpt(playerInfo.color, playerInfo.face || 'normal');
     catData.group.position.set(playerInfo.x, playerInfo.y, playerInfo.z);
@@ -1736,7 +1748,6 @@ function addOtherPlayer(id, playerInfo) {
     scene.add(catData.group);
     otherPlayers[id] = catData;
 
-    // Generate specific mirror cat for this player
     const mCat = createCatSculpt(playerInfo.color, playerInfo.face || 'normal');
     mCat.group.visible = false;
     let omBeam = mCat.group.getObjectByName('dBeam');
@@ -1771,7 +1782,6 @@ function checkCollision(pos) {
         if (pBox.intersectsBox(propBox)) return true;
     }
 
-    // Player-to-Player collision added here
     for (let id in otherPlayers) {
         let other = otherPlayers[id];
         if (other.role !== 'spectator') {
@@ -1781,7 +1791,7 @@ function checkCollision(pos) {
                 new THREE.Vector3(other.group.position.x, other.group.position.y + ((1.2 * oScaleY)/2), other.group.position.z),
                 new THREE.Vector3(0.5, 1.2 * oScaleY, 0.5)
             );
-            oBox.expandByScalar(-0.02); // Prevent permanent sticking
+            oBox.expandByScalar(-0.02); 
             if (pBox.intersectsBox(oBox)) return true;
         }
     }
@@ -1997,6 +2007,54 @@ function animate() {
 
     previewCat.group.visible = false;
     myCatData.group.visible = myRole !== 'spectator';
+
+    // --- YARN COLLISION AND MIRROR LOGIC ---
+    if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
+        Object.keys(localYarnBalls).forEach(id => {
+            let yarn = localYarnBalls[id];
+            if (!yarn.visible) return;
+            
+            // Player collision with yarn
+            let distToYarn = myPlayerObject.position.distanceTo(yarn.position);
+            if (distToYarn < 1.2 && (!lastYarnKickTime[id] || now - lastYarnKickTime[id] > 500)) {
+                lastYarnKickTime[id] = now;
+                
+                let dir = new THREE.Vector3().subVectors(yarn.position, myPlayerObject.position);
+                dir.y = 0;
+                dir.normalize();
+                
+                socket.emit('kickYarn', { id: id, dirX: dir.x, dirZ: dir.z });
+                playSound('pop'); 
+            }
+
+            // Mirror Yarn Update
+            let mYarn = localMirrorYarnBalls[id];
+            if (mYarn) {
+                let distToMirror = mirrorZ - yarn.position.z;
+                if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(yarn.position.x) < 4.0) {
+                    mYarn.visible = true;
+                    mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
+                    mYarn.quaternion.copy(yarn.quaternion); 
+                    
+                    mYarn.rotation.y = -mYarn.rotation.y;
+                    mYarn.rotation.z = -mYarn.rotation.z;
+
+                    let op = 1.0 - ((distToMirror - 1.0) / 4.0);
+                    op = Math.max(0.0, Math.min(1.0, op));
+                    mYarn.material.transparent = true;
+                    mYarn.material.opacity = op;
+                    mYarn.children[0].material.transparent = true;
+                    mYarn.children[0].material.opacity = op * 0.3;
+                } else {
+                    mYarn.visible = false;
+                }
+            }
+        });
+    } else {
+        Object.keys(localMirrorYarnBalls).forEach(id => localMirrorYarnBalls[id].visible = false);
+        Object.keys(localYarnBalls).forEach(id => localYarnBalls[id].visible = false);
+    }
+    // ---------------------------------------
 
     // --- MIRROR LOGIC (LOCAL PLAYER) ---
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
@@ -2412,7 +2470,6 @@ function animate() {
     myCatData.body.scale.set(finalScaleXZ, finalScaleY, finalScaleXZ);
     wasGroundedLastFrame = isGrounded; 
 
-    // Update Other Players visually AND THEIR MIRRORS!
     Object.entries(otherPlayers).forEach(([id, p]) => {
         if (p.role === 'spectator') { 
             p.group.visible = false; 
