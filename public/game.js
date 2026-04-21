@@ -773,10 +773,10 @@ function createCatBed(x, z, color) {
     const rimMat = new THREE.MeshLambertMaterial({ color: 0xDDDDDD });
 
     addBedPart(new THREE.BoxGeometry(2.6, 0.4, 2.6), baseMat, 0, -4.8, 0, true); 
-    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, -1.5, -4.7, 0, false); 
-    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, 1.5, -4.7, 0, false);  
-    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, -1.5, false); 
-    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, 1.5, false);  
+    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, -1.5, -4.7, 0, true); 
+    addBedPart(new THREE.BoxGeometry(0.4, 0.6, 3.4), rimMat, 1.5, -4.7, 0, true);  
+    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, -1.5, true); 
+    addBedPart(new THREE.BoxGeometry(2.6, 0.6, 0.4), rimMat, 0, -4.7, 1.5, true);  
 
     bedGroup.position.set(x, 0, z);
     scene.add(bedGroup);
@@ -1536,6 +1536,25 @@ socket.on('forceTeleport', (data) => {
     velocityY = 0;
 });
 
+// SOCCER GOAL SOCKET EVENT
+socket.on('goalScored', (data) => {
+    playSound('tag'); 
+    setTimeout(() => playSound('pop'), 150); 
+    
+    for (let i = 0; i < 40; i++) {
+        const geo = new THREE.PlaneGeometry(0.3, 0.3);
+        const mat = new THREE.MeshBasicMaterial({ color: confettiColors[Math.floor(Math.random() * confettiColors.length)], side: THREE.DoubleSide });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(data.x, data.y + 1, data.z);
+        mesh.rotation.set(Math.random(), Math.random(), Math.random());
+        mesh.vel = new THREE.Vector3((Math.random() - 0.5) * 0.3, Math.random() * 0.4 + 0.1, (Math.random() - 0.5) * 0.3);
+        mesh.rotVel = new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
+        mesh.isGameOverConfetti = false; 
+        scene.add(mesh);
+        confettiParticles.push(mesh);
+    }
+});
+
 socket.on('initMap', (mapBlocks) => {
     mapObjects.forEach(mesh => scene.remove(mesh)); mapObjects.length = 0;
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
@@ -2179,7 +2198,9 @@ function animate() {
         let p = confettiParticles[i];
         p.position.add(p.vel);
         p.rotation.x += p.rotVel.x; p.rotation.y += p.rotVel.y; p.rotation.z += p.rotVel.z;
-        if (p.position.y < -4.9 || !isGameOver) {
+        p.lifetime = (p.lifetime || 0) + 1;
+
+        if (p.position.y < -4.9 || (p.isGameOverConfetti && !isGameOver) || p.lifetime > 150) {
             scene.remove(p);
             confettiParticles.splice(i, 1);
         }
@@ -2194,6 +2215,7 @@ function animate() {
             mesh.rotation.set(Math.random(), Math.random(), Math.random());
             mesh.vel = new THREE.Vector3((Math.random() - 0.5) * 0.1, -0.1 - Math.random() * 0.1, (Math.random() - 0.5) * 0.1);
             mesh.rotVel = new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
+            mesh.isGameOverConfetti = true; 
             scene.add(mesh);
             confettiParticles.push(mesh);
         }
