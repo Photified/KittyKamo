@@ -35,11 +35,16 @@ let yarnBalls = [
 
 // Comprehensive list of all solid lobby objects so the ball bounces off them!
 const lobbyObstacles = [
-    // Mirror Room Walls (Shortened to exactly 4 blocks deep)
-    { x: -2.5, z: 19.5, w: 1, d: 4 }, // Left Wall
-    { x: 2.5, z: 19.5, w: 1, d: 4 },  // Right Wall
-    { x: 0, z: 21.5, w: 6, d: 1 },    // Back Solid Brown Wall
-    { x: 0, z: 21.0, w: 5, d: 0.5 },  // Mirror Glass (Collision so the ball bounces off!)
+    // Mirror Room (Real Part, 3 blocks deep)
+    { x: -2.5, z: 19.0, w: 1, d: 3 }, // Left Wall
+    { x: 2.5, z: 19.0, w: 1, d: 3 },  // Right Wall
+    
+    // Mirror Room (Reflection Part, 3 blocks deep)
+    { x: -2.5, z: 22.0, w: 1, d: 3 }, // Left Wall Reflection
+    { x: 2.5, z: 22.0, w: 1, d: 3 },  // Right Wall Reflection
+
+    { x: 0, z: 24.0, w: 6, d: 1 },    // Back Solid Brown Wall
+    { x: 0, z: 20.5, w: 5, d: 0.5 },  // Mirror Glass (Collision so the ball bounces off!)
 
     // Desk/Crafting Table
     { x: 0, z: -18.5, w: 5, d: 4 }, 
@@ -87,11 +92,11 @@ setInterval(() => {
             let nextZ = yarn.z + yarn.vz;
             let nextY = yarn.y + yarn.vy;
             
-            // Reverted outer boundaries back to the tight, original snug fit
+            // Tight original lobby boundaries
             if (nextX > 19.5) { yarn.vx *= -0.7; nextX = 19.5; }
             if (nextX < -19.5) { yarn.vx *= -0.7; nextX = -19.5; }
-            if (nextZ > 25.5) { yarn.vz *= -0.7; nextZ = 25.5; } // Bounces off Rainbow Wall
-            if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } // Front Wall
+            if (nextZ > 25.5) { yarn.vz *= -0.7; nextZ = 25.5; } // Bounces off Rainbow Wall (fallback)
+            if (nextZ < -19.5) { yarn.vz *= -0.7; nextZ = -19.5; } 
             
             if (nextY < -4.6) {
                 nextY = -4.6;
