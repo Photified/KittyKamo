@@ -1032,7 +1032,7 @@ for(let i=0; i<3; i++) {
 }
 blindfoldStage.visible = false; 
 
-// Perfectly sized floating platform
+// Base floating platform, perfectly matched to original walls
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0x4CAF50, side: THREE.DoubleSide }));
 ground.rotation.x = -Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; 
 scene.add(ground);
@@ -1065,7 +1065,7 @@ myPlayerObject.add(myCatData.group);
 const myMirrorCat = createCatSculpt();
 scene.add(myMirrorCat.group);
 myMirrorCat.group.visible = false;
-const mirrorZ = 31.0; 
+const mirrorZ = 21.0; 
 
 let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
@@ -1588,86 +1588,73 @@ socket.on('initMap', (mapBlocks) => {
         // FLAT LOBBY
         // Perfectly fitted floor (Floating platform aesthetic restored)
         ground.scale.set(43, 55, 1);
-        ground.position.set(0, -5, 6.0); // Center shifted to match the deeper back wall
+        ground.position.set(0, -5, 3.0); 
         ground.material.color.setHex(0x654321); 
         
         createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
-        // NEW TALL RAINBOW WALL Behind Mirror Room
-        // Split into Left and Right chunks to leave a hole for the mirror room tunnel
+        // Rainbow wall at the back
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
         for (let i = 0; i < 7; i++) {
             let h = 25 / 7;
             let y = -5 + (i * h) + (h / 2);
-            
-            // Left chunk (width 18.5, placed exactly between x=-21.5 and x=-3)
-            createWall(18.5, h, 2, -12.25, y, 32.5, rainbowColors[6 - i]); 
-            // Right chunk (width 18.5, placed exactly between x=3 and x=21.5)
-            createWall(18.5, h, 2, 12.25, y, 32.5, rainbowColors[6 - i]); 
-            
-            // Top chunk (above the tunnel hole)
-            if (y - h/2 >= 0) {
-                createWall(6, h, 2, 0, y, 32.5, rainbowColors[6 - i]);
-            } else if (y + h/2 > 0) {
-                let partialH = (y + h/2) - 0;
-                createWall(6, partialH, 2, 0, partialH / 2, 32.5, rainbowColors[6 - i]);
-            }
+            createWall(43, h, 2, 0, y, 26.5, rainbowColors[6 - i]); 
         }
         
         // VOXEL TEXT FOR LOBBY
-        buildVoxelText('KITTY KAMO', 18.5, 13, 31.4, 0.4);
+        buildVoxelText('KITTY KAMO', 18.5, 13, 25.4, 0.4);
 
         // Side Walls (Tightened back to original layout)
-        createWall(2, 2, 55, -20.5, -4, 6, 0x8B4513); 
-        createWall(2, 2, 55, 20.5, -4, 6, 0x8B4513);  
+        createWall(2, 2, 47, -20.5, -4, 3, 0x8B4513); 
+        createWall(2, 2, 47, 20.5, -4, 3, 0x8B4513);  
 
-        // Mirror Room Walls (Extended as a tunnel *through* the rainbow wall to prevent clipping)
-        createWall(1, 4, 12, -2.5, -3, 26.0, 0x8B4513); // Left Tunnel Wall
-        createWall(1, 4, 12, 2.5, -3, 26.0, 0x8B4513); // Right Tunnel Wall
-        createWall(7, 1, 12, 0, -0.5, 26.0, 0xAA4A44); // Tunnel Roof
-        // Intentionally no back wall so the tunnel extends into the void!
+        // Mirror Room Walls (Shortened to exactly 4 blocks deep)
+        createWall(1, 4, 4, -2.5, -3, 19.5, 0x8B4513); // Left 
+        createWall(1, 4, 4, 2.5, -3, 19.5, 0x8B4513); // Right 
+        createWall(7, 1, 4, 0, -0.5, 19.5, 0xAA4A44); // Roof
+        createWall(6, 4, 1, 0, -3, 21.5, 0x8B4513); // Back Wall restored directly behind mirror
         
-        // Mirror Glass (Sitting flush against the rainbow wall plane)
+        // Mirror Glass (Positioned just in front of back wall)
         const glassGeo = new THREE.PlaneGeometry(4.98, 3.98);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 31.0); 
+        glass.position.set(0, -3, 21.0); 
         glass.rotation.y = Math.PI; 
         scene.add(glass);
         lobbyVisuals.push(glass);
 
-        // Invisible wall behind the mirror so you can't walk through it
-        createInvisibleWall(5, 4, 1, 0, -3, 31.5);
+        // Invisible wall exactly behind the mirror so you can't walk through it
+        createInvisibleWall(5, 4, 1, 0, -3, 21.5);
         
         // Add TVs to Mirror Room Exterior (Thin & mounted flush to wall)
-        const tvGeo = new THREE.BoxGeometry(0.1, 2.4, 4.2);
+        const tvGeo = new THREE.BoxGeometry(0.1, 2.4, 3.6);
         const tvMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
         // Leaderboard TV (Left Side, outside wall is x=-3.0)
         const lbTV = new THREE.Mesh(tvGeo, tvMat);
-        lbTV.position.set(-3.05, -2.8, 23.0);
+        lbTV.position.set(-3.05, -2.8, 19.5);
         scene.add(lbTV); lobbyVisuals.push(lbTV); lobbyCollision.push(lbTV);
 
-        const lbScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 2.2), new THREE.MeshBasicMaterial({ map: lbTex }));
-        lbScreen.position.set(-3.11, -2.8, 23.0);
+        const lbScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 2.0), new THREE.MeshBasicMaterial({ map: lbTex }));
+        lbScreen.position.set(-3.11, -2.8, 19.5);
         lbScreen.rotation.y = -Math.PI / 2;
         scene.add(lbScreen); lobbyVisuals.push(lbScreen);
 
         // MVP TV (Right Side, outside wall is x=3.0)
         const mvpTV = new THREE.Mesh(tvGeo, tvMat);
-        mvpTV.position.set(3.05, -2.8, 23.0);
+        mvpTV.position.set(3.05, -2.8, 19.5);
         scene.add(mvpTV); lobbyVisuals.push(mvpTV); lobbyCollision.push(mvpTV);
 
-        const mvpScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 2.2), new THREE.MeshBasicMaterial({ map: mvpTex }));
-        mvpScreen.position.set(3.11, -2.8, 23.0);
+        const mvpScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 2.0), new THREE.MeshBasicMaterial({ map: mvpTex }));
+        mvpScreen.position.set(3.11, -2.8, 19.5);
         mvpScreen.rotation.y = Math.PI / 2;
         scene.add(mvpScreen); lobbyVisuals.push(mvpScreen);
 
-        // Invisible collision boundaries for the expanded space
-        createInvisibleWall(43, 40, 2, 0, 17, 32.5); // Back
+        // Invisible collision boundaries for the normal space
+        createInvisibleWall(43, 40, 2, 0, 17, 26.5); // Back
         createInvisibleWall(43, 40, 2, 0, 17, -20.5); // Front
-        createInvisibleWall(2, 40, 55, -20.5, 17, 6); // Left
-        createInvisibleWall(2, 40, 55, 20.5, 17, 6); // Right
+        createInvisibleWall(2, 40, 47, -20.5, 17, 3); // Left
+        createInvisibleWall(2, 40, 47, 20.5, 17, 3); // Right
 
         // Standard Beds
         createCatBed(15, 8, 0xFF69B4);
@@ -2208,11 +2195,11 @@ function animate() {
                 playSound('pop'); 
             }
 
-            // Mirror Yarn Update - Starts showing when yarn is 12 units away
+            // Mirror Yarn Update - Fades in up to 4 blocks away
             let mYarn = localMirrorYarnBalls[id];
             if (mYarn) {
                 let distToMirror = mirrorZ - yarn.position.z;
-                if (distToMirror > 0 && distToMirror <= 12.0 && yarn.position.z > 19.0 && yarn.position.z < 31.0 && Math.abs(yarn.position.x) < 2.0) {
+                if (distToMirror > 0 && distToMirror <= 4.0 && yarn.position.z > 17.0 && yarn.position.z < 21.0 && Math.abs(yarn.position.x) < 2.0) {
                     mYarn.visible = true;
                     mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
                     mYarn.quaternion.copy(yarn.quaternion); 
@@ -2220,7 +2207,7 @@ function animate() {
                     mYarn.rotation.y = -mYarn.rotation.y;
                     mYarn.rotation.z = -mYarn.rotation.z;
 
-                    let op = 1.0 - ((distToMirror - 1.0) / 11.0);
+                    let op = 1.0 - ((distToMirror - 1.0) / 3.0);
                     op = Math.max(0.0, Math.min(1.0, op));
                     mYarn.material.transparent = true;
                     mYarn.material.opacity = op;
@@ -2241,8 +2228,8 @@ function animate() {
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        // Fades in starting from 12 blocks away
-        if (distToMirror > 0 && distToMirror <= 12.0 && myPlayerObject.position.z > 19.0 && myPlayerObject.position.z < 31.0 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
+        // Fades in starting from 4 blocks away (within the room bounds)
+        if (distToMirror > 0 && distToMirror <= 4.0 && myPlayerObject.position.z > 17.0 && myPlayerObject.position.z < 21.0 && Math.abs(myPlayerObject.position.x) < 2.0 && myPlayerObject.position.y < -1) {
             myMirrorCat.group.visible = true;
             
             myMirrorCat.group.position.x = myPlayerObject.position.x;
@@ -2266,7 +2253,7 @@ function animate() {
             animateCat(myMirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
             myMirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
             
-            let op = 1.0 - ((distToMirror - 1.0) / 11.0);
+            let op = 1.0 - ((distToMirror - 1.0) / 3.0);
             op = Math.max(0.0, Math.min(1.0, op)); 
             
             myMirrorCat.group.traverse((child) => {
@@ -2690,7 +2677,7 @@ function animate() {
         if (oMirror) {
             if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
                 let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > 0 && distToMirror <= 12.0 && p.group.position.z > 19.0 && p.group.position.z < 31.0 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
+                if (distToMirror > 0 && distToMirror <= 4.0 && p.group.position.z > 17.0 && p.group.position.z < 21.0 && Math.abs(p.group.position.x) < 2.0 && p.group.position.y < -1) {
                     oMirror.group.visible = true;
                     
                     oMirror.group.position.x = p.group.position.x;
@@ -2711,7 +2698,7 @@ function animate() {
                     animateCat(oMirror, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
                     oMirror.tail.rotation.y = -Math.sin(p.tailTime) * 0.3; 
                     
-                    let op = 1.0 - ((distToMirror - 1.0) / 11.0);
+                    let op = 1.0 - ((distToMirror - 1.0) / 3.0);
                     op = Math.max(0.0, Math.min(1.0, op)); 
                     
                     oMirror.group.traverse((child) => {
