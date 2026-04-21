@@ -1519,11 +1519,12 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
     } else {
         // FLAT LOBBY
-        ground.scale.set(43, 50, 1);
-        ground.position.set(0, -5, 3.5);
+        // Floor expanded backward
+        ground.scale.set(43, 55, 1);
+        ground.position.set(0, -5, 3.0);
         ground.material.color.setHex(0x654321); 
         
-        createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); 
+        createWall(43, 2, 2, 0, -4, -20.5, 0x8B4513); // Front Wall
         
         // NEW TALL RAINBOW WALL Behind Mirror Room
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3];
@@ -1533,12 +1534,15 @@ socket.on('initMap', (mapBlocks) => {
             createWall(43, h, 2, 0, y, 26.5, rainbowColors[6 - i]); // Red on top
         }
         
-        // VOXEL TEXT FOR LOBBY - Double Wide, White, and Built Left-To-Right (Negative X Step)
-        buildVoxelText('KITTY KAMO', 16.8, 13, 25.4, 0.4);
+        // VOXEL TEXT FOR LOBBY
+        // Adjusted X position so it draws evenly across the back wall
+        buildVoxelText('KITTY KAMO', 18.5, 13, 25.4, 0.4);
 
-        createWall(18.5, 2, 2, -12.25, -4, 20.5, 0x8B4513); 
-        createWall(18.5, 2, 2, 12.25, -4, 20.5, 0x8B4513);  
+        // Extended Side Walls
+        createWall(2, 2, 47, -20.5, -4, 3, 0x8B4513); 
+        createWall(2, 2, 47, 20.5, -4, 3, 0x8B4513);  
 
+        // Mirror Room Walls
         createWall(1, 4, 8, -2.5, -3, 21.5, 0x8B4513); 
         createWall(1, 4, 8, 2.5, -3, 21.5, 0x8B4513); 
         createWall(7, 1, 10, 0, -0.5, 21.5, 0xAA4A44); 
@@ -1554,14 +1558,13 @@ socket.on('initMap', (mapBlocks) => {
         scene.add(glass);
         lobbyVisuals.push(glass);
 
-        createWall(2, 2, 39, -20.5, -4, 0, 0x8B4513); 
-        createWall(2, 2, 39, 20.5, -4, 0, 0x8B4513);  
+        // Invisible collision boundaries for the expanded space
+        createInvisibleWall(43, 40, 2, 0, 17, -20.5); // Front
+        createInvisibleWall(43, 40, 2, 0, 17, 26.5); // Back
+        createInvisibleWall(2, 40, 47, -20.5, 17, 3); // Left
+        createInvisibleWall(2, 40, 47, 20.5, 17, 3); // Right
 
-        createInvisibleWall(43, 40, 2, 0, 17, -20.5);
-        createInvisibleWall(43, 40, 2, 0, 17, 20.5);
-        createInvisibleWall(2, 40, 39, -20.5, 17, 0);
-        createInvisibleWall(2, 40, 39, 20.5, 17, 0);
-
+        // Standard Beds
         createCatBed(15, 8, 0xFF69B4);
         createCatBed(15, -8, 0x4169E1);
         createCatBed(-15, 8, 0xFFD700);
@@ -1570,18 +1573,23 @@ socket.on('initMap', (mapBlocks) => {
         createCatBed(-8, 15, 0xFF00FF);
         createCatBed(8, -15, 0xFF8C00);
         createCatBed(-8, -15, 0x00FF00);
+        
+        // NEW Rear Corner Beds
+        createCatBed(15, 22, 0x32CD32);
+        createCatBed(-15, 22, 0xFF4500);
 
         createCatTree(0, 0, 1);
         createCatTree(14, 14, 2);
         createCatTree(-14, -14, 3);
 
         // --- SOCCER NET START ---
+        // Moved off the wall to x=-18
         // Left post
-        createWall(0.4, 4, 0.4, -17.0, -2.8, -4.2, 0xFFFFFF); 
+        createWall(0.4, 4, 0.4, -18.0, -2.8, -4.2, 0xFFFFFF); 
         // Right post
-        createWall(0.4, 4, 0.4, -17.0, -2.8, 4.2, 0xFFFFFF);  
+        createWall(0.4, 4, 0.4, -18.0, -2.8, 4.2, 0xFFFFFF);  
         // Crossbar
-        createWall(0.4, 0.4, 8.8, -17.0, -0.6, 0, 0xFFFFFF); 
+        createWall(0.4, 0.4, 8.8, -18.0, -0.6, 0, 0xFFFFFF); 
         
         // Semi-transparent net walls
         const netMat = new THREE.MeshLambertMaterial({ color: 0xDDDDDD, transparent: true, opacity: 0.4 });
