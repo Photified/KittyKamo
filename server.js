@@ -188,52 +188,55 @@ function generateMap() {
                  occupiedColumns.add(colKey);
             }
 
-            if (!occupiedColumns.has(colKey) && Math.random() < 0.06) {
-                let type = Math.random();
+            // ADDED FIX: Only spawn multi-block decorations if we are away from the map edges!
+            if (x > -19 && x < 19 && z > -19 && z < 19) {
+                if (!occupiedColumns.has(colKey) && Math.random() < 0.06) {
+                    let type = Math.random();
 
-                if (type < 0.4) {
-                    for(let ty = 1; ty <= 3; ty++) {
-                        mapBlocks.push({ x: x, y: y + 0.5 + ty, z: z, color: 0x5C4033 });
-                    }
-                    const leafColor = 0x228B22;
-                    for(let lx = -1; lx <= 1; lx++) {
-                        for(let lz = -1; lz <= 1; lz++) {
-                            if (Math.abs(lx) === 1 && Math.abs(lz) === 1) continue; 
-                            mapBlocks.push({ x: x + lx, y: y + 3.5, z: z + lz, color: leafColor });
-                            occupiedColumns.add(`${x+lx},${z+lz}`);
+                    if (type < 0.4) {
+                        for(let ty = 1; ty <= 3; ty++) {
+                            mapBlocks.push({ x: x, y: y + 0.5 + ty, z: z, color: 0x5C4033 });
                         }
-                    }
-                    mapBlocks.push({ x: x, y: y + 4.5, z: z, color: leafColor }); 
-
-                } else if (type < 0.6) {
-                    const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; 
-                    const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
-                    for(let yx = 0; yx <= 1; yx++) {
-                        for(let yz = 0; yz <= 1; yz++) {
-                            for(let yy = 1; yy <= 2; yy++) {
-                                mapBlocks.push({ x: x + yx, y: y + 0.5 + yy, z: z + yz, color: yColor });
-                                occupiedColumns.add(`${x+yx},${z+yz}`);
+                        const leafColor = 0x228B22;
+                        for(let lx = -1; lx <= 1; lx++) {
+                            for(let lz = -1; lz <= 1; lz++) {
+                                if (Math.abs(lx) === 1 && Math.abs(lz) === 1) continue; 
+                                mapBlocks.push({ x: x + lx, y: y + 3.5, z: z + lz, color: leafColor });
+                                occupiedColumns.add(`${x+lx},${z+lz}`);
                             }
                         }
-                    }
+                        mapBlocks.push({ x: x, y: y + 4.5, z: z, color: leafColor }); 
 
-                } else if (type < 0.8) {
-                    const flowerColors = [0xFFFF00, 0xFF69B4, 0xFFFFFF]; 
-                    const fColor = flowerColors[Math.floor(Math.random() * flowerColors.length)];
-                    mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x32CD32 }); 
-                    mapBlocks.push({ x: x, y: y + 2.5, z: z, color: fColor }); 
-                    occupiedColumns.add(colKey);
+                    } else if (type < 0.6) {
+                        const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; 
+                        const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
+                        for(let yx = 0; yx <= 1; yx++) {
+                            for(let yz = 0; yz <= 1; yz++) {
+                                for(let yy = 1; yy <= 2; yy++) {
+                                    mapBlocks.push({ x: x + yx, y: y + 0.5 + yy, z: z + yz, color: yColor });
+                                    occupiedColumns.add(`${x+yx},${z+yz}`);
+                                }
+                            }
+                        }
 
-                } else {
-                    const boxColor = 0xC19A6B;
-                    for(let bx = -1; bx <= 1; bx++) {
-                        for(let bz = -1; bz <= 1; bz++) {
-                            if (bx === 0 && bz === 1) continue; 
-                            if (bx === 0 && bz === 0) continue; 
-                            
-                            mapBlocks.push({ x: x + bx, y: y + 1.5, z: z + bz, color: boxColor }); 
-                            mapBlocks.push({ x: x + bx, y: y + 2.5, z: z + bz, color: boxColor }); 
-                            occupiedColumns.add(`${x+bx},${z+bz}`);
+                    } else if (type < 0.8) {
+                        const flowerColors = [0xFFFF00, 0xFF69B4, 0xFFFFFF]; 
+                        const fColor = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+                        mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x32CD32 }); 
+                        mapBlocks.push({ x: x, y: y + 2.5, z: z, color: fColor }); 
+                        occupiedColumns.add(colKey);
+
+                    } else {
+                        const boxColor = 0xC19A6B;
+                        for(let bx = -1; bx <= 1; bx++) {
+                            for(let bz = -1; bz <= 1; bz++) {
+                                if (bx === 0 && bz === 1) continue; 
+                                if (bx === 0 && bz === 0) continue; 
+                                
+                                mapBlocks.push({ x: x + bx, y: y + 1.5, z: z + bz, color: boxColor }); 
+                                mapBlocks.push({ x: x + bx, y: y + 2.5, z: z + bz, color: boxColor }); 
+                                occupiedColumns.add(`${x+bx},${z+bz}`);
+                            }
                         }
                     }
                 }
