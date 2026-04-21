@@ -407,8 +407,8 @@ function createCrown() {
     const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.3), crownMat);
     const peak1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), crownMat); peak1.position.set(0.1, 0.1, 0.1);
     const peak2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), crownMat); peak2.position.set(-0.1, 0.1, 0.1);
-    const peak3 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), crownMat); peak3.position.set(0.1, 0.1, -0.1);
-    const peak4 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), crownMat); peak4.position.set(-0.1, 0.1, -0.1);
+    const peak3 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, -0.1), crownMat); peak3.position.set(0.1, 0.1, -0.1);
+    const peak4 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, -0.1), crownMat); peak4.position.set(-0.1, 0.1, -0.1);
     
     crownGroup.add(base, peak1, peak2, peak3, peak4);
     
@@ -572,26 +572,24 @@ const voxelFont = {
 };
 
 function buildVoxelText(text, x, y, z, scale) {
-    // We start from a POSITIVE x and subtract so it draws left-to-right from the camera's perspective
     let currX = x;
-    const charColor = 0xFFFFFF; // White
+    const charColor = 0xFFFFFF; 
     
     for (let i = 0; i < text.length; i++) {
         let char = text[i];
         let grid = voxelFont[char];
         if (!grid) continue;
         
-        let charWidth = grid[0].length * scale * 2; // Doubled width
+        let charWidth = grid[0].length * scale * 2; 
         
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
                 if (grid[r][c] === '1') {
-                    // Subtract X so it correctly draws left-to-right when facing the back wall (+Z)
                     let bx = currX - (c * scale * 2);
-                    let by = y + ((grid.length - 1 - r) * scale); // Build top-down
+                    let by = y + ((grid.length - 1 - r) * scale); 
                     let bz = z;
                     
-                    const geo = new THREE.BoxGeometry(scale * 2, scale, scale); // Double wide
+                    const geo = new THREE.BoxGeometry(scale * 2, scale, scale); 
                     const mat = new THREE.MeshLambertMaterial({ color: charColor });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })));
@@ -601,7 +599,7 @@ function buildVoxelText(text, x, y, z, scale) {
                 }
             }
         }
-        currX -= charWidth + (scale * 2); // Space between chars
+        currX -= charWidth + (scale * 2); 
     }
 }
 // -----------------------------------
@@ -646,6 +644,20 @@ let ignoreServerPositionUntil = 0;
 
 const myPlayerObject = new THREE.Object3D(); 
 scene.add(myPlayerObject);
+
+// --- LOBBY TV SCREENS ---
+const lbCanvas = document.createElement('canvas');
+lbCanvas.width = 512; lbCanvas.height = 256;
+const lbCtx = lbCanvas.getContext('2d');
+const lbTex = new THREE.CanvasTexture(lbCanvas);
+
+const mvpCanvas = document.createElement('canvas');
+mvpCanvas.width = 512; mvpCanvas.height = 256;
+const mvpCtx = mvpCanvas.getContext('2d');
+const mvpTex = new THREE.CanvasTexture(mvpCanvas);
+
+let mvpCatModel = null;
+// -------------------------
 
 // --- LOBBY BEAM VISUALS ---
 const beamGeo = new THREE.CylinderGeometry(6, 6, 100, 32, 1, true); 
@@ -1006,7 +1018,7 @@ myPlayerObject.add(myCatData.group);
 const myMirrorCat = createCatSculpt();
 scene.add(myMirrorCat.group);
 myMirrorCat.group.visible = false;
-const mirrorZ = 19.5; 
+const mirrorZ = 25.4; 
 
 let mBeam = myMirrorCat.group.getObjectByName('dBeam');
 if (mBeam) mBeam.visible = false; 
@@ -1438,6 +1450,56 @@ function updateRightBox(leaderboardData) {
     rightBox.innerHTML = invHTML + lbText;
 }
 
+function updateLeaderboardTV(leaderboard) {
+    lbCtx.fillStyle = '#111'; lbCtx.fillRect(0, 0, 512, 256);
+    lbCtx.fillStyle = 'cyan'; lbCtx.font = 'bold 36px "Segoe UI"'; lbCtx.textAlign = 'center';
+    lbCtx.fillText('🏆 TOP SURVIVORS 🏆', 256, 40);
+    
+    lbCtx.textAlign = 'left';
+    lbCtx.font = 'bold 28px "Segoe UI"';
+    if (!leaderboard || leaderboard.length === 0) {
+        lbCtx.fillStyle = '#777';
+        lbCtx.textAlign = 'center';
+        lbCtx.fillText('NO DATA YET', 256, 140);
+    } else {
+        for(let i=0; i<Math.min(5, leaderboard.length); i++) {
+            let p = leaderboard[i];
+            lbCtx.fillStyle = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'));
+            lbCtx.fillText(`${i+1}. ${p.name}`, 40, 90 + (i * 35));
+            lbCtx.textAlign = 'right';
+            lbCtx.fillText(`${p.score}s`, 472, 90 + (i * 35));
+            lbCtx.textAlign = 'left';
+        }
+    }
+    lbTex.needsUpdate = true;
+}
+
+function updateMVPDisplay(mvpData) {
+    mvpCtx.fillStyle = '#111'; mvpCtx.fillRect(0, 0, 512, 256);
+    mvpCtx.fillStyle = 'gold'; mvpCtx.font = 'bold 40px "Segoe UI"'; mvpCtx.textAlign = 'center';
+    if (!mvpData) {
+        mvpCtx.fillText('WAITING FOR MVP...', 256, 138);
+        if(mvpCatModel) mvpCatModel.group.visible = false;
+    } else {
+        mvpCtx.fillText('⭐ RECENT MVP ⭐', 256, 60);
+        mvpCtx.fillStyle = 'white'; mvpCtx.font = 'bold 48px "Segoe UI"';
+        mvpCtx.fillText(mvpData.name.toUpperCase(), 256, 130);
+        mvpCtx.fillStyle = 'cyan'; mvpCtx.font = 'bold 32px "Segoe UI"';
+        mvpCtx.fillText('SURVIVED: ' + mvpData.score + 's', 256, 200);
+        
+        if(mvpCatModel) {
+            mvpCatModel.group.visible = (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER');
+            mvpCatModel.material.color.setHex(mvpData.color);
+            mvpCatModel.faceMesh.material.map = getFaceTexture(mvpData.face || 'normal');
+            applyWardrobeToCat(mvpCatModel, mvpData.wardrobe);
+            mvpCatModel.crown.visible = true; 
+            let cColor = (mvpData.color === 0xFFFFFF || mvpData.color === 0xFF0000) ? 0xFFD700 : mvpData.color;
+            mvpCatModel.crownMat.color.setHex(cColor);
+        }
+    }
+    mvpTex.needsUpdate = true;
+}
+
 socket.on('gameStateUpdate', (data) => {
     let wasNotGameOver = serverGameState !== 'GAME_OVER';
     serverGameState = data.state;
@@ -1457,6 +1519,10 @@ socket.on('gameStateUpdate', (data) => {
     }
 
     updateRightBox(data.leaderboard);
+    updateLeaderboardTV(data.leaderboard);
+    if (data.lastMvp !== undefined) {
+        updateMVPDisplay(data.lastMvp);
+    }
 });
 
 socket.on('beamingPlayers', (ids) => {
@@ -1517,6 +1583,8 @@ socket.on('initMap', (mapBlocks) => {
         createInvisibleWall(wX, 40, 2, (minX + maxX) / 2, 25, maxZ + 0.5);
         createInvisibleWall(2, 40, sideDepth, minX - 0.5, 25, (minZ + maxZ) / 2);
         createInvisibleWall(2, 40, sideDepth, maxX + 0.5, 25, (minZ + maxZ) / 2);
+        
+        if (mvpCatModel) mvpCatModel.group.visible = false;
     } else {
         // FLAT LOBBY
         // Floor expanded backward
@@ -1535,7 +1603,6 @@ socket.on('initMap', (mapBlocks) => {
         }
         
         // VOXEL TEXT FOR LOBBY
-        // Adjusted X position so it draws evenly across the back wall
         buildVoxelText('KITTY KAMO', 18.5, 13, 25.4, 0.4);
 
         // Extended Side Walls
@@ -1545,18 +1612,52 @@ socket.on('initMap', (mapBlocks) => {
         // Mirror Room Walls
         createWall(1, 4, 8, -2.5, -3, 21.5, 0x8B4513); 
         createWall(1, 4, 8, 2.5, -3, 21.5, 0x8B4513); 
-        createWall(7, 1, 10, 0, -0.5, 21.5, 0xAA4A44); 
-        createWall(6, 4, 1, 0, -3, 25.5, 0x8B4513); 
+        createWall(7, 1, 10, 0, -0.5, 21.5, 0xAA4A44); // Roof
+        createWall(6, 4, 1, 0, -3, 25.5, 0x8B4513); // Back Wall
         
-        createInvisibleWall(4, 4, 1, 0, -3, 19.5); 
-        
-        const glassGeo = new THREE.PlaneGeometry(3.98, 3.98);
+        const glassGeo = new THREE.PlaneGeometry(4.98, 3.98);
         const glassMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
         const glass = new THREE.Mesh(glassGeo, glassMat);
-        glass.position.set(0, -3, 19.5); 
+        glass.position.set(0, -3, 25.4); // Moved mirror to back wall
         glass.rotation.y = Math.PI; 
         scene.add(glass);
         lobbyVisuals.push(glass);
+        
+        // Add TVs to Mirror Room Exterior
+        const tvGeo = new THREE.BoxGeometry(0.2, 3, 5);
+        const tvMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+
+        // Leaderboard TV (Left Side)
+        const lbTV = new THREE.Mesh(tvGeo, tvMat);
+        lbTV.position.set(-3.1, -2, 21.5);
+        scene.add(lbTV); lobbyVisuals.push(lbTV); lobbyCollision.push(lbTV);
+
+        const lbScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 2.8), new THREE.MeshBasicMaterial({ map: lbTex }));
+        lbScreen.position.set(-3.21, -2, 21.5);
+        lbScreen.rotation.y = -Math.PI / 2;
+        scene.add(lbScreen); lobbyVisuals.push(lbScreen);
+
+        // MVP TV (Right Side)
+        const mvpTV = new THREE.Mesh(tvGeo, tvMat);
+        mvpTV.position.set(3.1, -2, 21.5);
+        scene.add(mvpTV); lobbyVisuals.push(mvpTV); lobbyCollision.push(mvpTV);
+
+        const mvpScreen = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 2.8), new THREE.MeshBasicMaterial({ map: mvpTex }));
+        mvpScreen.position.set(3.21, -2, 21.5);
+        mvpScreen.rotation.y = Math.PI / 2;
+        scene.add(mvpScreen); lobbyVisuals.push(mvpScreen);
+
+        if (!mvpCatModel) {
+            mvpCatModel = createCatSculpt(0xFFFFFF, 'normal');
+        }
+        mvpCatModel.group.position.set(4.5, -3.5, 21.5);
+        mvpCatModel.group.rotation.y = -Math.PI / 2;
+        scene.add(mvpCatModel.group);
+        lobbyVisuals.push(mvpCatModel.group);
+        
+        const podium = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.5, 16), new THREE.MeshLambertMaterial({color: 0xFFD700}));
+        podium.position.set(4.5, -4.75, 21.5);
+        scene.add(podium); lobbyVisuals.push(podium);
 
         // Invisible collision boundaries for the expanded space
         createInvisibleWall(43, 40, 2, 0, 17, -20.5); // Front
@@ -1583,15 +1684,10 @@ socket.on('initMap', (mapBlocks) => {
         createCatTree(-14, -14, 3);
 
         // --- SOCCER NET START ---
-        // Moved off the wall to x=-18
-        // Left post
-        createWall(0.4, 4, 0.4, -18.0, -2.8, -4.2, 0xFFFFFF); 
-        // Right post
-        createWall(0.4, 4, 0.4, -18.0, -2.8, 4.2, 0xFFFFFF);  
-        // Crossbar
-        createWall(0.4, 0.4, 8.8, -18.0, -0.6, 0, 0xFFFFFF); 
+        createWall(0.4, 4, 0.4, -17.0, -2.8, -4.2, 0xFFFFFF); // Left post
+        createWall(0.4, 4, 0.4, -17.0, -2.8, 4.2, 0xFFFFFF);  // Right post
+        createWall(0.4, 0.4, 8.8, -17.0, -0.6, 0, 0xFFFFFF);  // Crossbar
         
-        // Semi-transparent net walls
         const netMat = new THREE.MeshLambertMaterial({ color: 0xDDDDDD, transparent: true, opacity: 0.4 });
         
         const netBack = new THREE.Mesh(new THREE.BoxGeometry(0.4, 4, 8.8), netMat);
@@ -1628,7 +1724,7 @@ socket.on('initMap', (mapBlocks) => {
         scene.add(pad);
         lobbyVisuals.push(pad);
 
-        // Right side boxes (kept)
+        // Right side boxes
         createClosedBox(1.5, 1.5, 1.5, -4.5, -4.25, 0, Math.PI/6); 
         createClosedBox(1.5, 1.5, 1.5, 11.5, -4.25, 14, -Math.PI/8);
         createOpenBox(3.5, 1.5, 3.5, 10, -4.25, -6, 0);
@@ -2112,7 +2208,7 @@ function animate() {
             let mYarn = localMirrorYarnBalls[id];
             if (mYarn) {
                 let distToMirror = mirrorZ - yarn.position.z;
-                if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(yarn.position.x) < 4.0) {
+                if (distToMirror > 0 && distToMirror <= 8.0 && Math.abs(yarn.position.x) < 2.5) {
                     mYarn.visible = true;
                     mYarn.position.set(yarn.position.x, yarn.position.y, mirrorZ + distToMirror);
                     mYarn.quaternion.copy(yarn.quaternion); 
@@ -2120,7 +2216,7 @@ function animate() {
                     mYarn.rotation.y = -mYarn.rotation.y;
                     mYarn.rotation.z = -mYarn.rotation.z;
 
-                    let op = 1.0 - ((distToMirror - 1.0) / 4.0);
+                    let op = 1.0 - ((distToMirror - 1.0) / 7.0);
                     op = Math.max(0.0, Math.min(1.0, op));
                     mYarn.material.transparent = true;
                     mYarn.material.opacity = op;
@@ -2137,11 +2233,18 @@ function animate() {
     }
     // ---------------------------------------
 
+    // --- MVP CAT ANIMATION ---
+    if (mvpCatModel && mvpCatModel.group.visible) {
+        mvpCatModel.group.rotation.y += 0.02;
+        animateCat(mvpCatModel, 2, performance.now() / 136);
+        mvpCatModel.tail.rotation.y = Math.sin(performance.now() / 136) * 0.3;
+    }
+
     // --- MIRROR LOGIC (LOCAL PLAYER) ---
     if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
         let distToMirror = mirrorZ - myPlayerObject.position.z;
         
-        if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(myPlayerObject.position.x) < 4.0 && myPlayerObject.position.y < -1) {
+        if (distToMirror > 0 && distToMirror <= 8.0 && Math.abs(myPlayerObject.position.x) < 2.5 && myPlayerObject.position.y < -1) {
             myMirrorCat.group.visible = true;
             
             myMirrorCat.group.position.x = myPlayerObject.position.x;
@@ -2165,7 +2268,7 @@ function animate() {
             animateCat(myMirrorCat, isBeaming ? 3 : myEmote, (myEmote > 0 || isBeaming) ? globalTime : myWalkTime);
             myMirrorCat.tail.rotation.y = -Math.sin(myTailTime) * 0.3; 
             
-            let op = 1.0 - ((distToMirror - 1.0) / 4.0);
+            let op = 1.0 - ((distToMirror - 1.0) / 7.0);
             op = Math.max(0.0, Math.min(1.0, op)); 
             
             myMirrorCat.group.traverse((child) => {
@@ -2589,7 +2692,7 @@ function animate() {
         if (oMirror) {
             if ((serverGameState === 'LOBBY' || serverGameState === 'WAITING')) {
                 let distToMirror = mirrorZ - p.group.position.z;
-                if (distToMirror > 0 && distToMirror <= 5.0 && Math.abs(p.group.position.x) < 4.0 && p.group.position.y < -1) {
+                if (distToMirror > 0 && distToMirror <= 8.0 && Math.abs(p.group.position.x) < 2.5 && p.group.position.y < -1) {
                     oMirror.group.visible = true;
                     
                     oMirror.group.position.x = p.group.position.x;
@@ -2610,7 +2713,7 @@ function animate() {
                     animateCat(oMirror, isOtherBeaming ? 3 : p.emote, (p.emote > 0 || isOtherBeaming) ? globalTime : (p.moving ? p.walkTime : 0));
                     oMirror.tail.rotation.y = -Math.sin(p.tailTime) * 0.3; 
                     
-                    let op = 1.0 - ((distToMirror - 1.0) / 4.0);
+                    let op = 1.0 - ((distToMirror - 1.0) / 7.0);
                     op = Math.max(0.0, Math.min(1.0, op)); 
                     
                     oMirror.group.traverse((child) => {
