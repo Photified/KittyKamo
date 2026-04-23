@@ -452,8 +452,17 @@ function startRound() {
             players[id].role = (id === seekerId) ? 'seeker' : 'hider';
             players[id].color = (id === seekerId) ? 0xFF0000 : players[id].baseColor;
             players[id].y = 25; 
-            players[id].x = (Math.random() * 30) - 15; 
-            players[id].z = (Math.random() * 30) - 15;
+            
+            // Spawn directly over a confirmed map block
+            if (mapBlocks.length > 0) {
+                let randomBlock = mapBlocks[Math.floor(Math.random() * mapBlocks.length)];
+                players[id].x = randomBlock.x;
+                players[id].z = randomBlock.z;
+            } else {
+                players[id].x = 0;
+                players[id].z = 0;
+            }
+            
             players[id].score = 0; 
         } else {
             players[id].role = 'spectator';
