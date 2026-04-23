@@ -1067,6 +1067,8 @@ const stars = new THREE.Points(starGeo, starMat);
 scene.add(stars);
 
 const myCatData = createCatSculpt(); 
+myCatData.upsideDown = false;
+myCatData.respawnBeam = false;
 myPlayerObject.add(myCatData.group);
 
 window.myBaseColor = 0xFFFFFF; 
@@ -1724,6 +1726,8 @@ socket.on('currentPlayers', (players) => {
             myHairballs = players[id].hairballs;
             myDecoys = players[id].decoys;
             amIStunned = players[id].stunned;
+            myCatData.upsideDown = players[id].upsideDown;
+            myCatData.respawnBeam = players[id].respawnBeam;
 
             myCatData.material.color.setHex(players[id].color);
             myCatData.faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
@@ -1748,6 +1752,8 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].role = players[id].role;
                 otherPlayers[id].material.color.setHex(players[id].color);
                 otherPlayers[id].stunned = players[id].stunned;
+                otherPlayers[id].upsideDown = players[id].upsideDown;
+                otherPlayers[id].respawnBeam = players[id].respawnBeam;
                 otherPlayers[id].baseColor = players[id].baseColor;
                 otherPlayers[id].faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
                 otherPlayers[id].faceStr = players[id].face || 'normal'; 
@@ -1808,6 +1814,8 @@ socket.on('playerMoved', (data) => {
         otherPlayers[data.id].material.color.setHex(data.color); 
         otherPlayers[data.id].emote = data.emote;
         otherPlayers[data.id].stunned = data.stunned;
+        otherPlayers[data.id].upsideDown = data.upsideDown;
+        otherPlayers[data.id].respawnBeam = data.respawnBeam;
         
         let oColor = (data.color === 0xFFFFFF || data.color === 0xFF0000) ? 0xFFD700 : data.color;
         otherPlayers[data.id].crownMat.color.setHex(oColor);
@@ -1831,6 +1839,16 @@ socket.on('playerStunned', (id) => {
 socket.on('playerUnstunned', (id) => {
     if (id === socket.id) amIStunned = false;
     else if (otherPlayers[id]) otherPlayers[id].stunned = false;
+});
+
+socket.on('playerUpsideDown', (data) => {
+    if (data.id === socket.id) {
+        myCatData.upsideDown = data.state;
+        myCatData.respawnBeam = data.state;
+    } else if (otherPlayers[data.id]) {
+        otherPlayers[data.id].upsideDown = data.state;
+        otherPlayers[data.id].respawnBeam = data.state;
+    }
 });
 
 socket.on('playerTaunted', (taunterId) => {
@@ -1885,6 +1903,8 @@ function addOtherPlayer(id, playerInfo) {
     catData.role = playerInfo.role; 
     catData.emote = playerInfo.emote || 0;
     catData.stunned = playerInfo.stunned || false;
+    catData.upsideDown = playerInfo.upsideDown || false;
+    catData.respawnBeam = playerInfo.respawnBeam || false;
     catData.baseColor = playerInfo.baseColor || 0xFFFFFF; 
     catData.faceStr = playerInfo.face || 'normal';
 
@@ -2036,9 +2056,14 @@ function animateCat(cat, emote, walkTime) {
     resetCatPose(cat);
 
     if (cat.stunned) {
-        cat.body.rotation.z = Math.sin(performance.now() / 20) * 0.2;
+        if (cat.upsideDown) {
+            cat.body.rotation.z = Math.PI;
+            cat.body.position.y = 0.4; 
+        } else {
+            cat.body.rotation.z = Math.sin(performance.now() / 20) * 0.2;
+        }
         cat.head.rotation.x = Math.sin(performance.now() / 30) * 0.5;
-        cat.legs.forEach(l => l.rotation.x = (Math.random() - 0.5) * 1);
+        cat.legs.forEach(l => l.rotation.x = (Math.random() - 0.5) * 1.5);
         return; 
     }
 
@@ -2564,7 +2589,9 @@ function animate() {
     if (isGrounded && serverGameState === 'HIDING') {
         window.initialDropLanded = true;
     }
+    
     let targetOp = (serverGameState === 'HIDING' && !window.initialDropLanded) ? 0.6 : 0;
+    if (myCatData.respawnBeam) targetOp = 0.8; // Override if respawning from lava
     myCatData.dBeamMat.opacity += (targetOp - myCatData.dBeamMat.opacity) * 0.1;
 
     let finalScaleY = 1; let finalScaleXZ = 1;
@@ -2632,6 +2659,7 @@ function animate() {
         p.lastDropY = p.group.position.y;
 
         let targetOtherOp = (serverGameState === 'HIDING' && !p.initialDropLanded) ? 0.6 : 0;
+        if (p.respawnBeam) targetOtherOp = 0.8;
         p.dBeamMat.opacity += (targetOtherOp - p.dBeamMat.opacity) * 0.1;
     });
 
