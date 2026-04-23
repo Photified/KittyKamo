@@ -20,9 +20,9 @@ const tempVec1 = new THREE.Vector3();
 const tempVec2 = new THREE.Vector3();
 // ----------------------------------------------------------
 
-const colorDay = new THREE.Color(0x87CEEB);   
-const colorSunset = new THREE.Color(0xFF7E47); 
-const colorNight = new THREE.Color(0x020211); 
+let colorDay = new THREE.Color(0x87CEEB);   
+let colorSunset = new THREE.Color(0xFF7E47); 
+let colorNight = new THREE.Color(0x020211); 
 
 let volumeState = 1; 
 const VOL_EMOJIS = { 2: '🔊', 1: '🔉', 0: '🔇' };
@@ -1553,6 +1553,14 @@ socket.on('initMap', (payload) => {
     let mapBlocksData = Array.isArray(payload) ? payload : payload.blocks;
     let currentWallColor = payload.wallColor !== undefined ? payload.wallColor : 0x8B4513;
 
+    let sDay = payload.skyDay !== undefined ? payload.skyDay : 0x87CEEB;
+    let sSunset = payload.skySunset !== undefined ? payload.skySunset : 0xFF7E47;
+    let sNight = payload.skyNight !== undefined ? payload.skyNight : 0x020211;
+
+    colorDay.setHex(sDay);
+    colorSunset.setHex(sSunset);
+    colorNight.setHex(sNight);
+
     mapObjects.forEach(mesh => scene.remove(mesh)); mapObjects.length = 0;
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
     invisibleWalls.forEach(mesh => scene.remove(mesh)); invisibleWalls.length = 0;
@@ -1586,7 +1594,7 @@ socket.on('initMap', (payload) => {
         
         ground.scale.set(blockSpanX + 10, blockSpanZ + 10, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
-        ground.material.color.setHex(0x4CAF50); 
+        ground.material.color.setHex(0xFF0000); 
 
         createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5, currentWallColor);
         createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5, currentWallColor);
