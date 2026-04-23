@@ -372,7 +372,7 @@ function startLobby() {
             let hidersLeft = false;
             activePlayers.forEach(id => {
                 if (players[id] && players[id].role === 'hider') {
-                    players[id].score += 1; 
+                    players[id].score += 1; // +1 Point per second survived
                     hidersLeft = true;
                 }
             });
@@ -382,13 +382,14 @@ function startLobby() {
                 timeRemaining = 5; 
                 winReason = hidersLeft ? 'HIDERS SURVIVE!' : 'SEEKERS WIN!';
                 
+                // UNIFIED MVP LOGIC: Purely based on highest SCORE
                 let sortedIds = activePlayers.filter(id => players[id]).sort((a,b) => players[b].score - players[a].score);
                 currentWinnerId = sortedIds.length > 0 ? sortedIds[0] : null;
 
                 // Capture MVP details for TV persistence
                 if (currentWinnerId && players[currentWinnerId]) {
                     let w = players[currentWinnerId];
-                    lastMvp = { name: w.name, score: w.score, face: w.face, color: w.baseColor };
+                    lastMvp = { name: w.name, score: w.score, face: w.face, color: w.baseColor, role: w.role };
                 }
                 lastLeaderboard = sortedIds.map(id => ({ name: players[id].name, score: players[id].score }));
 
@@ -537,7 +538,8 @@ io.on('connection', (socket) => {
                 players[targetId].role = 'seeker';
                 players[targetId].color = 0xFF0000;
                 
-                players[socket.id].score += 15;
+                // SPEEDRUN BONUS: 50 base points + remaining time
+                players[socket.id].score += (50 + timeRemaining);
                 
                 io.emit('currentPlayers', players); 
             }
@@ -559,7 +561,7 @@ io.on('connection', (socket) => {
 
     socket.on('taunt', () => {
         if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING') {
-            players[socket.id].score += 15; 
+            players[socket.id].score += 5; // 5 Points for Meowing
             socket.broadcast.emit('playerTaunted', socket.id);
         }
     });
@@ -578,7 +580,7 @@ io.on('connection', (socket) => {
         if (players[socket.id] && players[socket.id].role === 'seeker') {
             const ownerId = activeDecoys[decoyId];
             if (ownerId && players[ownerId] && players[ownerId].role === 'hider') {
-                players[ownerId].score += 15;
+                players[ownerId].score += 20; // 20 Points for baiting a Seeker
             }
             io.emit('decoyPopped', decoyId);
             delete activeDecoys[decoyId]; 
@@ -605,7 +607,7 @@ io.on('connection', (socket) => {
         if (players[targetId] && players[targetId].role === 'seeker' && !players[targetId].stunned) {
             
             if (players[socket.id] && players[socket.id].role === 'hider') {
-                players[socket.id].score += 15;
+                players[socket.id].score += 20; // 20 Points for landing a stun
             }
 
             players[targetId].stunned = true;
