@@ -626,9 +626,15 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('trampolineBounce', () => {
+    socket.on('lavaFall', () => {
         if (gameState === 'SEEKING' || gameState === 'HIDING') {
-            io.emit('playerBounced', socket.id);
+            if (players[socket.id] && players[socket.id].role === 'hider') {
+                players[socket.id].role = 'seeker';
+                players[socket.id].color = 0xFF0000;
+                
+                io.emit('currentPlayers', players);
+                io.emit('playerLavaDeath', socket.id);
+            }
         }
     });
 
