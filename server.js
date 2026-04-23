@@ -131,6 +131,7 @@ setInterval(() => {
                 }
             });
 
+            // Soccer Goal Detection
             if (nextX < -17.5 && nextX > -19.5 && nextZ > -4.0 && nextZ < 4.0 && nextY < -2.0) {
                 if (!yarn.inGoal) {
                     yarn.inGoal = true;
@@ -173,69 +174,62 @@ function generateMap() {
     const layouts = ['hills', 'islands', 'city', 'blocks'];
     const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
 
-    // The universal lowest floor level
-    const BASE_Y = -3;
+    // Generate 2-3 "lakes" (clustered void zones)
+    const numLakes = Math.floor(Math.random() * 2) + 2;
+    const lakes = [];
+    for (let i = 0; i < numLakes; i++) {
+        lakes.push({
+            x: (Math.random() * 30) - 15,
+            z: (Math.random() * 30) - 15,
+            radius: 3 + Math.random() * 4 // Radius between 3 and 7 blocks
+        });
+    }
 
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
             let y = 0;
+            let shouldSpawn = true;
             let colKey = `${x},${z}`;
-            let isBasement = false;
 
-            // 15% of the map randomly cuts away to reveal the basement floor underneath
-            if (Math.random() < 0.15) {
-                isBasement = true; 
+            // Check if this coordinate falls within any of the generated lakes
+            for (let lake of lakes) {
+                let distSq = (x - lake.x) * (x - lake.x) + (z - lake.z) * (z - lake.z);
+                if (distSq < lake.radius * lake.radius) {
+                    shouldSpawn = false;
+                    break;
+                }
             }
 
             if (currentLayout === 'hills') {
                 y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
             } else if (currentLayout === 'islands') {
                 y = Math.floor(Math.sin((x + offset) / 3.5) * 3 + Math.cos((z + offset) / 3.5) * 3);
-                if (y < -1) isBasement = true; // Natural dips and valleys become basement
             } else if (currentLayout === 'city') {
                 let chunkX = Math.floor(x / 5);
                 let chunkZ = Math.floor(z / 5);
                 let pseudoRandom = Math.abs(Math.sin(chunkX * 12.9898 + chunkZ * 78.233) * 43758.5453);
                 y = -1 + Math.floor((pseudoRandom - Math.floor(pseudoRandom)) * 6);
-                if (x % 5 === 0 || z % 5 === 0) isBasement = true; // Streets are basement level
             } else if (currentLayout === 'blocks') {
                 y = Math.floor(Math.random() * 4) - 1;
             }
 
-            if (isBasement) {
-                // Generate the flat floor underneath
-                mapBlocks.push({ x: x, y: BASE_Y + 0.5, z: z, color: currentBiome.top }); 
-                mapBlocks.push({ x: x, y: BASE_Y - 0.5, z: z, color: currentBiome.bottom }); 
-                
-                // Occasional stepping stones so they can jump out of high areas easily
-                if (Math.random() < 0.1) {
-                     mapBlocks.push({ x: x, y: BASE_Y + 1.5, z: z, color: currentBiome.top }); 
-                }
-            } else {
-                // Generate normal upper terrain
+            if (shouldSpawn) {
                 mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
                 mapBlocks.push({ x: x, y: y - 0.5, z: z, color: currentBiome.bottom }); 
-                
-                // Fill down one more block so it looks thick
-                if (y > -1) {
-                    mapBlocks.push({ x: x, y: y - 1.5, z: z, color: currentBiome.bottom }); 
-                }
 
-                if (y <= 0 && Math.random() < 0.2 && currentLayout === 'hills') {
+                if (y < -1 && Math.random() < 0.2 && currentLayout === 'hills') {
                      mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.liquid }); 
                      occupiedColumns.add(colKey);
                 }
 
-                // Decorations (Only spawn on the upper platforms)
                 if (x > -19 && x < 19 && z > -19 && z < 19) {
-                    if (!occupiedColumns.has(colKey) && Math.random() < 0.05) {
+                    if (!occupiedColumns.has(colKey) && Math.random() < 0.04) {
                         let type = Math.random();
 
                         if (type < 0.4) {
                             for(let ty = 1; ty <= 3; ty++) {
                                 mapBlocks.push({ x: x, y: y + 0.5 + ty, z: z, color: currentBiome.trunk });
                             }
-                            // Reduced leaf blocks to save rendering memory
                             mapBlocks.push({ x: x+1, y: y + 3.5, z: z, color: currentBiome.leaf });
                             mapBlocks.push({ x: x-1, y: y + 3.5, z: z, color: currentBiome.leaf });
                             mapBlocks.push({ x: x, y: y + 3.5, z: z+1, color: currentBiome.leaf });
@@ -613,7 +607,7 @@ io.on('connection', (socket) => {
     socket.on('lavaFall', () => {
         if (gameState === 'SEEKING' || gameState === 'HIDING') {
             if (players[socket.id] && players[socket.id].role === 'hider') {
-                // Hiders are now stunned, beamed, and flipped upside down for 5 seconds instead of dying!
+                // Hiders are now stunned, beamed, and flipped upside down for 5 seconds instead of dying
                 players[socket.id].stunned = true;
                 players[socket.id].upsideDown = true;
                 players[socket.id].respawnBeam = true;
