@@ -626,6 +626,12 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('trampolineBounce', () => {
+        if (gameState === 'SEEKING' || gameState === 'HIDING') {
+            io.emit('playerBounced', socket.id);
+        }
+    });
+
     socket.on('disconnect', () => {
         delete players[socket.id];
         io.emit('playerDisconnected', socket.id);
