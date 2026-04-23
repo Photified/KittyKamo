@@ -20,20 +20,18 @@ let nextHairballId = 0;
 let activePlayers = []; 
 let lastMvp = null; 
 let lastLeaderboard = []; 
+let currentMapWallColor = 0x8B4513; // Default Lobby Wall Color
 
-// Coordinates for all 10 cat beds in the lobby
 const catBeds = [
     {x: 15, z: 8}, {x: 15, z: -8}, {x: -15, z: 8}, {x: -15, z: -8},
     {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15},
     {x: 15, z: 22}, {x: -15, z: 22} 
 ];
 
-// Single Yarn Ball for Soccer
 let yarnBalls = [
     { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFF0000, vx: 0, vy: 0, vz: 0, inGoal: false }
 ];
 
-// Comprehensive list of all solid lobby objects so the ball bounces off them!
 const lobbyObstacles = [
     { x: 0, z: -18.5, w: 5, d: 4 }, 
     { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, 
@@ -55,7 +53,6 @@ const lobbyObstacles = [
     { x: -4.5, z: 0, w: 2.2, d: 2.2 }
 ];
 
-// Bouncy physics loop for the yarn ball (Runs at 30fps)
 setInterval(() => {
     if (gameState !== 'LOBBY' && gameState !== 'WAITING' && gameState !== 'GAME_OVER') return;
     
@@ -131,7 +128,6 @@ setInterval(() => {
                 }
             });
 
-            // Soccer Goal Detection
             if (nextX < -17.5 && nextX > -19.5 && nextZ > -4.0 && nextZ < 4.0 && nextY < -2.0) {
                 if (!yarn.inGoal) {
                     yarn.inGoal = true;
@@ -159,10 +155,10 @@ setInterval(() => {
 }, 33);
 
 const BIOMES = [
-    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0xFF0000, trunk: 0x5C4033, leaf: 0x228B22 },
-    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0xFF0000, trunk: 0x8B4513, leaf: 0xFFFFFF },
-    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF0000, trunk: 0x00FFFF, leaf: 0x32CD32 },
-    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0xFF0000, trunk: 0xFFD700, leaf: 0xFF1493 }
+    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0xFF0000, trunk: 0x5C4033, leaf: 0x228B22, minCoverage: 0.95, maxCoverage: 1.0, wall: 0x2E8B57 },
+    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0xFF0000, trunk: 0x8B4513, leaf: 0xFFFFFF, minCoverage: 0.90, maxCoverage: 0.95, wall: 0x4682B4 },
+    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF0000, trunk: 0x00FFFF, leaf: 0x32CD32, minCoverage: 0.92, maxCoverage: 0.98, wall: 0x4B0082 },
+    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0xFF0000, trunk: 0xFFD700, leaf: 0xFF1493, minCoverage: 0.90, maxCoverage: 1.0, wall: 0xFF69B4 }
 ];
 
 function generateMap() {
@@ -171,20 +167,12 @@ function generateMap() {
     let occupiedColumns = new Set(); 
 
     const currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
-    // Brought back the 'blocks' layout
+    currentMapWallColor = currentBiome.wall; // Set the specific wall color!
+    
     const layouts = ['hills', 'islands', 'city', 'blocks'];
     const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
 
-    // Generate 2-3 "lakes" (clustered void zones)
-    const numLakes = Math.floor(Math.random() * 2) + 2;
-    const lakes = [];
-    for (let i = 0; i < numLakes; i++) {
-        lakes.push({
-            x: (Math.random() * 30) - 15,
-            z: (Math.random() * 30) - 15,
-            radius: 3 + Math.random() * 4 
-        });
-    }
+    const targetCoverage = currentBiome.minCoverage + (Math.random() * (currentBiome.maxCoverage - currentBiome.minCoverage));
 
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
@@ -192,12 +180,8 @@ function generateMap() {
             let shouldSpawn = true;
             let colKey = `${x},${z}`;
 
-            for (let lake of lakes) {
-                let distSq = (x - lake.x) * (x - lake.x) + (z - lake.z) * (z - lake.z);
-                if (distSq < lake.radius * lake.radius) {
-                    shouldSpawn = false;
-                    break;
-                }
+            if (Math.random() > targetCoverage) {
+                shouldSpawn = false; 
             }
 
             if (currentLayout === 'hills') {
@@ -209,18 +193,17 @@ function generateMap() {
                 let chunkZ = Math.floor(z / 5);
                 let pseudoRandom = Math.abs(Math.sin(chunkX * 12.9898 + chunkZ * 78.233) * 43758.5453);
                 y = -1 + Math.floor((pseudoRandom - Math.floor(pseudoRandom)) * 6);
+                if (x % 5 === 0 || z % 5 === 0) y = -2; 
             } else if (currentLayout === 'blocks') {
                 y = Math.floor(Math.random() * 4) - 1;
             }
 
-            // Elevate the entire map by 2 blocks to prevent clipping with the lava floor (y = -5)
             y += 2;
 
             if (shouldSpawn) {
                 mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
                 mapBlocks.push({ x: x, y: y - 0.5, z: z, color: currentBiome.bottom }); 
 
-                // Updated liquid threshold because we shifted the map up by 2
                 if (y < 1 && Math.random() < 0.2 && currentLayout === 'hills') {
                      mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.liquid }); 
                      occupiedColumns.add(colKey);
@@ -241,7 +224,7 @@ function generateMap() {
                             mapBlocks.push({ x: x, y: y + 4.5, z: z, color: currentBiome.leaf }); 
 
                         } else if (type < 0.6) {
-                            const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; 
+                            const yarnColors = [0xFF1493, 0x00BFFF, 0xFFA500, 0x9400D3]; // Changed the 0xFF4500 red box to 0xFFA500 bright orange!
                             const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
                             mapBlocks.push({ x: x, y: y + 1.5, z: z, color: yColor });
                         } else if (type < 0.8) {
@@ -273,14 +256,15 @@ function startLobby() {
     let wasGameOver = (gameState === 'GAME_OVER');
     gameState = 'LOBBY';
     timeRemaining = 60; 
+    currentMapWallColor = 0x8B4513; // Reset to wood color in lobby
     
     yarnBalls[0] = { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFF0000, vx: 0, vy: 0, vz: 0, inGoal: false };
     io.emit('yarnState', yarnBalls);
 
     if (!wasGameOver) {
         mapBlocks = [];
-        io.emit('initMap', mapBlocks);
-
+        io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
+        
         ids.forEach(id => {
             let bed = catBeds[Math.floor(Math.random() * catBeds.length)];
             players[id].x = bed.x + (Math.random() > 0.5 ? 0.6 : -0.6);
@@ -362,7 +346,8 @@ function startLobby() {
                 lastLeaderboard = sortedIds.map(id => ({ name: players[id].name, score: players[id].score }));
 
                 mapBlocks = [];
-                io.emit('initMap', mapBlocks);
+                currentMapWallColor = 0x8B4513; 
+                io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
                 
                 activePlayers.forEach(id => {
                     players[id].role = 'hider';
@@ -413,7 +398,7 @@ function startRound() {
     activeDecoys = {};
 
     generateMap();
-    io.emit('initMap', mapBlocks);
+    io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
 
     const seekerId = activePlayers[Math.floor(Math.random() * activePlayers.length)];
     
@@ -454,7 +439,7 @@ io.on('connection', (socket) => {
     if (mapBlocks.length === 0 && (gameState === 'HIDING' || gameState === 'SEEKING')) {
         generateMap();
     }
-    socket.emit('initMap', mapBlocks);
+    socket.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
     socket.emit('yarnState', yarnBalls); 
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
@@ -650,12 +635,12 @@ io.on('connection', (socket) => {
             gameState = 'WAITING';
             timeRemaining = 0;
             mapBlocks = [];
-            io.emit('initMap', mapBlocks);
+            io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
             if (gameTimer) clearInterval(gameTimer);
             io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastLeaderboard: lastLeaderboard, lastMvp: lastMvp });
         } else if (gameState === 'WAITING' && Object.keys(players).length < 2) {
             mapBlocks = [];
-            io.emit('initMap', mapBlocks);
+            io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
             if (gameTimer) clearInterval(gameTimer);
             io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastLeaderboard: lastLeaderboard, lastMvp: lastMvp });
         }
