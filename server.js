@@ -19,7 +19,7 @@ let nextDecoyId = 0;
 let nextHairballId = 0;
 let activePlayers = []; 
 let lastMvp = null; 
-let lastLeaderboard = []; // Stores the final results of the previous round for the TV
+let lastLeaderboard = []; 
 
 // Coordinates for all 10 cat beds in the lobby
 const catBeds = [
@@ -35,30 +35,19 @@ let yarnBalls = [
 
 // Comprehensive list of all solid lobby objects so the ball bounces off them!
 const lobbyObstacles = [
-    // Desk/Crafting Table
     { x: 0, z: -18.5, w: 5, d: 4 }, 
-    
-    // Podium
     { x: 17.5, z: -17.5, w: 4.5, d: 4.5 }, 
-
-    // Soccer Net (Built as a U-Shape so the ball goes IN)
-    { x: -18.0, z: -4.2, w: 2, d: 0.4 },  // Left net side
-    { x: -18.0, z: 4.2, w: 2, d: 0.4 },   // Right net side
-    { x: -19.0, z: 0, w: 0.4, d: 8.8 },   // Back of net
-
-    // Cat Trees 
+    { x: -18.0, z: -4.2, w: 2, d: 0.4 },  
+    { x: -18.0, z: 4.2, w: 2, d: 0.4 },   
+    { x: -19.0, z: 0, w: 0.4, d: 8.8 },   
     { x: 0, z: 0, w: 4.5, d: 4.5 }, 
     { x: 14, z: 14, w: 4.5, d: 4.5 }, 
     { x: -14, z: -14, w: 4.5, d: 4.5 },  
-
-    // Cat Beds
     { x: 15, z: 8, w: 3.4, d: 3.4 }, { x: 15, z: -8, w: 3.4, d: 3.4 }, 
     { x: -15, z: 8, w: 3.4, d: 3.4 }, { x: -15, z: -8, w: 3.4, d: 3.4 },
     { x: 8, z: 15, w: 3.4, d: 3.4 }, { x: -8, z: 15, w: 3.4, d: 3.4 }, 
     { x: 8, z: -15, w: 3.4, d: 3.4 }, { x: -8, z: -15, w: 3.4, d: 3.4 },
     { x: 15, z: 22, w: 3.4, d: 3.4 }, { x: -15, z: 22, w: 3.4, d: 3.4 },
-
-    // Open/Closed Boxes (Right Side Only)
     { x: 10, z: -6, w: 3.5, d: 3.5 },
     { x: 11.5, z: 14, w: 2.2, d: 2.2 },
     { x: 13, z: -4, w: 1.8, d: 1.8 },
@@ -81,7 +70,6 @@ setInterval(() => {
             let nextZ = yarn.z + yarn.vz;
             let nextY = yarn.y + yarn.vy;
             
-           // Tight original lobby boundaries (adjusted for ball radius)
             if (nextX > 19.0) { yarn.vx *= -0.7; nextX = 19.0; }
             if (nextX < -19.0) { yarn.vx *= -0.7; nextX = -19.0; }
             if (nextZ > 25.0) { yarn.vz *= -0.7; nextZ = 25.0; } 
@@ -143,7 +131,6 @@ setInterval(() => {
                 }
             });
 
-            // Soccer Goal Detection
             if (nextX < -17.5 && nextX > -19.5 && nextZ > -4.0 && nextZ < 4.0 && nextY < -2.0) {
                 if (!yarn.inGoal) {
                     yarn.inGoal = true;
@@ -172,14 +159,10 @@ setInterval(() => {
 
 // --- MAP GENERATION DICTIONARY ---
 const BIOMES = [
-    // Classic Kitty Kamo
-    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0x1E90FF, trunk: 0x5C4033, leaf: 0x228B22 },
-    // Hard for dark cats
-    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0x00BFFF, trunk: 0x8B4513, leaf: 0xFFFFFF },
-    // Crazy contrast, great for brightly colored players
-    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF00FF, trunk: 0x00FFFF, leaf: 0x32CD32 },
-    // Pastel nightmare
-    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0x00FFFF, trunk: 0xFFD700, leaf: 0xFF1493 }
+    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0x1E90FF, trunk: 0x5C4033, leaf: 0x228B22, minCoverage: 0.95, maxCoverage: 1.0 },
+    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0x00BFFF, trunk: 0x8B4513, leaf: 0xFFFFFF, minCoverage: 0.90, maxCoverage: 0.95 },
+    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF00FF, trunk: 0x00FFFF, leaf: 0x32CD32, minCoverage: 0.92, maxCoverage: 0.98 },
+    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0x00FFFF, trunk: 0xFFD700, leaf: 0xFF1493, minCoverage: 0.90, maxCoverage: 1.0 }
 ];
 
 function generateMap() {
@@ -187,10 +170,12 @@ function generateMap() {
     let offset = Math.random() * 100; 
     let occupiedColumns = new Set(); 
 
-    // 1. Pick a random Biome and Layout
     const currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
     const layouts = ['hills', 'islands', 'city'];
     const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
+
+    // Calculate a dynamic target coverage based on the biome's configured limits
+    const targetCoverage = currentBiome.minCoverage + (Math.random() * (currentBiome.maxCoverage - currentBiome.minCoverage));
 
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
@@ -198,46 +183,37 @@ function generateMap() {
             let shouldSpawn = true;
             let colKey = `${x},${z}`;
 
-            // 2. Calculate height based on Layout Archetype
+            // E.g., if targetCoverage is 0.92, there's an 8% chance to drop the block
+            if (Math.random() > targetCoverage) {
+                shouldSpawn = false; 
+            }
+
             if (currentLayout === 'hills') {
-                // Classic smooth rolling hills
                 y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
-            } 
-            else if (currentLayout === 'islands') {
-                // Steeper waves, but delete blocks below a certain height to create pits/water
+            } else if (currentLayout === 'islands') {
                 y = Math.floor(Math.sin((x + offset) / 3.5) * 3 + Math.cos((z + offset) / 3.5) * 3);
-                if (y < -1) shouldSpawn = false; 
-            } 
-            else if (currentLayout === 'city') {
-                // Group coordinates into 5x5 "chunks" to create blocky skyscrapers
+            } else if (currentLayout === 'city') {
                 let chunkX = Math.floor(x / 5);
                 let chunkZ = Math.floor(z / 5);
-                // Simple seeded randomizer to give each chunk a random height (0 to 6)
                 let pseudoRandom = Math.abs(Math.sin(chunkX * 12.9898 + chunkZ * 78.233) * 43758.5453);
                 y = -2 + Math.floor((pseudoRandom - Math.floor(pseudoRandom)) * 7);
-                
-                // Add "streets" between the chunks
                 if (x % 5 === 0 || z % 5 === 0) y = -2; 
             }
 
-            // 3. Spawn the ground blocks
             if (shouldSpawn) {
                 mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
                 mapBlocks.push({ x: x, y: y - 0.5, z: z, color: currentBiome.bottom }); 
 
-                // Spawn liquids in low areas (mostly for hills)
                 if (y < -1 && Math.random() < 0.2 && currentLayout === 'hills') {
                      mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.liquid }); 
                      occupiedColumns.add(colKey);
                 }
 
-                // 4. Spawn Decorations (Trees, Flowers, Boxes) away from edges
                 if (x > -19 && x < 19 && z > -19 && z < 19) {
                     if (!occupiedColumns.has(colKey) && Math.random() < 0.06) {
                         let type = Math.random();
 
                         if (type < 0.4) {
-                            // Tree (using Biome colors)
                             for(let ty = 1; ty <= 3; ty++) {
                                 mapBlocks.push({ x: x, y: y + 0.5 + ty, z: z, color: currentBiome.trunk });
                             }
@@ -251,7 +227,6 @@ function generateMap() {
                             mapBlocks.push({ x: x, y: y + 4.5, z: z, color: currentBiome.leaf }); 
 
                         } else if (type < 0.6) {
-                            // Yarn Boxes (unchanged, acts as neutral cover)
                             const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; 
                             const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
                             for(let yx = 0; yx <= 1; yx++) {
@@ -262,17 +237,13 @@ function generateMap() {
                                     }
                                 }
                             }
-
                         } else if (type < 0.8) {
-                            // Flowers
                             const flowerColors = [0xFFFF00, 0xFF69B4, 0xFFFFFF]; 
                             const fColor = flowerColors[Math.floor(Math.random() * flowerColors.length)];
-                            mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.leaf }); // Stem matches leaves
+                            mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.leaf }); 
                             mapBlocks.push({ x: x, y: y + 2.5, z: z, color: fColor }); 
                             occupiedColumns.add(colKey);
-
                         } else {
-                            // Cardboard Boxes (unchanged, acts as neutral cover)
                             const boxColor = 0xC19A6B;
                             for(let bx = -1; bx <= 1; bx++) {
                                 for(let bz = -1; bz <= 1; bz++) {
@@ -305,7 +276,6 @@ function startLobby() {
     gameState = 'LOBBY';
     timeRemaining = 60; 
     
-    // Reset ball to starting position
     yarnBalls[0] = { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFF0000, vx: 0, vy: 0, vz: 0, inGoal: false };
     io.emit('yarnState', yarnBalls);
 
@@ -331,6 +301,8 @@ function startLobby() {
         players[id].decoys = 3; 
         players[id].hairballs = 10; 
         players[id].stunned = false;
+        players[id].upsideDown = false;
+        players[id].respawnBeam = false;
         players[id].emote = 0; 
     });
     
@@ -372,7 +344,7 @@ function startLobby() {
             let hidersLeft = false;
             activePlayers.forEach(id => {
                 if (players[id] && players[id].role === 'hider') {
-                    players[id].score += 1; // +1 Point per second survived
+                    players[id].score += 1; 
                     hidersLeft = true;
                 }
             });
@@ -382,11 +354,9 @@ function startLobby() {
                 timeRemaining = 5; 
                 winReason = hidersLeft ? 'HIDERS SURVIVE!' : 'SEEKERS WIN!';
                 
-                // UNIFIED MVP LOGIC: Purely based on highest SCORE
                 let sortedIds = activePlayers.filter(id => players[id]).sort((a,b) => players[b].score - players[a].score);
                 currentWinnerId = sortedIds.length > 0 ? sortedIds[0] : null;
 
-                // Capture MVP details for TV persistence
                 if (currentWinnerId && players[currentWinnerId]) {
                     let w = players[currentWinnerId];
                     lastMvp = { name: w.name, score: w.score, face: w.face, color: w.baseColor, role: w.role };
@@ -400,6 +370,8 @@ function startLobby() {
                     players[id].role = 'hider';
                     players[id].color = players[id].baseColor;
                     players[id].stunned = false;
+                    players[id].upsideDown = false;
+                    players[id].respawnBeam = false;
                     
                     if (id === currentWinnerId) {
                         players[id].x = 17.5;
@@ -429,7 +401,7 @@ function startLobby() {
             state: gameState, 
             time: timeRemaining, 
             leaderboard: leaderboardData,
-            lastLeaderboard: lastLeaderboard, // Persistent data
+            lastLeaderboard: lastLeaderboard, 
             winnerId: currentWinnerId,
             winReason: winReason,
             lastMvp: lastMvp 
@@ -453,7 +425,6 @@ function startRound() {
             players[id].color = (id === seekerId) ? 0xFF0000 : players[id].baseColor;
             players[id].y = 25; 
             
-            // Spawn directly over a confirmed map block
             if (mapBlocks.length > 0) {
                 let randomBlock = mapBlocks[Math.floor(Math.random() * mapBlocks.length)];
                 players[id].x = randomBlock.x;
@@ -471,6 +442,8 @@ function startRound() {
         players[id].decoys = 3; 
         players[id].hairballs = 10; 
         players[id].stunned = false;
+        players[id].upsideDown = false;
+        players[id].respawnBeam = false;
         players[id].emote = 0; 
         
         io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
@@ -503,7 +476,7 @@ io.on('connection', (socket) => {
         y: startY, 
         z: startZ,
         rY: startRY, moving: false, role: joinRole, color: 0xFFFFFF, baseColor: 0xFFFFFF,
-        decoys: 3, hairballs: 10, stunned: false, emote: 0, face: 'normal',
+        decoys: 3, hairballs: 10, stunned: false, upsideDown: false, respawnBeam: false, emote: 0, face: 'normal',
         wardrobe: [null, null, null]
     };
 
@@ -534,10 +507,10 @@ io.on('connection', (socket) => {
     socket.on('kickYarn', (data) => {
         let yarn = yarnBalls.find(y => y.id === data.id);
         if (yarn && (gameState === 'LOBBY' || gameState === 'WAITING' || gameState === 'GAME_OVER')) {
-            let force = 0.4 + Math.random() * 0.3; // Kick strength
+            let force = 0.4 + Math.random() * 0.3; 
             yarn.vx = data.dirX * force;
             yarn.vz = data.dirZ * force;
-            yarn.vy = 0.35 + Math.random() * 0.2;  // Upward arc
+            yarn.vy = 0.35 + Math.random() * 0.2;  
         }
     });
 
@@ -547,7 +520,6 @@ io.on('connection', (socket) => {
                 players[targetId].role = 'seeker';
                 players[targetId].color = 0xFF0000;
                 
-                // SPEEDRUN BONUS: 50 base points + remaining time
                 players[socket.id].score += (50 + timeRemaining);
                 
                 io.emit('currentPlayers', players); 
@@ -564,13 +536,14 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('playerMoved', { 
             id: socket.id, x: movementData.x, y: movementData.y, z: movementData.z, 
             rY: movementData.rY, moving: movementData.moving, color: movementData.color, role: players[socket.id].role,
-            emote: movementData.emote, stunned: players[socket.id].stunned
+            emote: movementData.emote, stunned: players[socket.id].stunned,
+            upsideDown: players[socket.id].upsideDown, respawnBeam: players[socket.id].respawnBeam
         });
     });
 
     socket.on('taunt', () => {
         if (players[socket.id] && players[socket.id].role === 'hider' && gameState === 'SEEKING') {
-            players[socket.id].score += 5; // 5 Points for Meowing
+            players[socket.id].score += 5; 
             socket.broadcast.emit('playerTaunted', socket.id);
         }
     });
@@ -589,7 +562,7 @@ io.on('connection', (socket) => {
         if (players[socket.id] && players[socket.id].role === 'seeker') {
             const ownerId = activeDecoys[decoyId];
             if (ownerId && players[ownerId] && players[ownerId].role === 'hider') {
-                players[ownerId].score += 20; // 20 Points for baiting a Seeker
+                players[ownerId].score += 20; 
             }
             io.emit('decoyPopped', decoyId);
             delete activeDecoys[decoyId]; 
@@ -616,7 +589,7 @@ io.on('connection', (socket) => {
         if (players[targetId] && players[targetId].role === 'seeker' && !players[targetId].stunned) {
             
             if (players[socket.id] && players[socket.id].role === 'hider') {
-                players[socket.id].score += 20; // 20 Points for landing a stun
+                players[socket.id].score += 20; 
             }
 
             players[targetId].stunned = true;
@@ -640,10 +613,26 @@ io.on('connection', (socket) => {
     socket.on('lavaFall', () => {
         if (gameState === 'SEEKING' || gameState === 'HIDING') {
             if (players[socket.id] && players[socket.id].role === 'hider') {
-                players[socket.id].role = 'seeker';
-                players[socket.id].color = 0xFF0000;
+                // Hiders are now stunned, beamed, and flipped upside down for 5 seconds instead of dying
+                players[socket.id].stunned = true;
+                players[socket.id].upsideDown = true;
+                players[socket.id].respawnBeam = true;
                 
-                io.emit('currentPlayers', players);
+                io.emit('playerStunned', socket.id);
+                io.emit('playerUpsideDown', { id: socket.id, state: true });
+
+                setTimeout(() => {
+                    if (players[socket.id]) {
+                        players[socket.id].stunned = false;
+                        players[socket.id].upsideDown = false;
+                        players[socket.id].respawnBeam = false;
+                        
+                        io.emit('playerUnstunned', socket.id);
+                        io.emit('playerUpsideDown', { id: socket.id, state: false });
+                    }
+                }, 5000);
+            } else if (players[socket.id] && players[socket.id].role === 'seeker') {
+                // Seekers just fall and naturally respawn without a major penalty
                 io.emit('playerLavaDeath', socket.id);
             }
         }
