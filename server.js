@@ -171,7 +171,7 @@ function generateMap() {
     let occupiedColumns = new Set(); 
 
     const currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
-    const layouts = ['hills', 'islands', 'city', 'blocks'];
+    const layouts = ['hills', 'islands', 'city'];
     const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
 
     // Generate 2-3 "lakes" (clustered void zones)
@@ -181,7 +181,7 @@ function generateMap() {
         lakes.push({
             x: (Math.random() * 30) - 15,
             z: (Math.random() * 30) - 15,
-            radius: 3 + Math.random() * 4 // Radius between 3 and 7 blocks
+            radius: 3 + Math.random() * 4 
         });
     }
 
@@ -191,7 +191,6 @@ function generateMap() {
             let shouldSpawn = true;
             let colKey = `${x},${z}`;
 
-            // Check if this coordinate falls within any of the generated lakes
             for (let lake of lakes) {
                 let distSq = (x - lake.x) * (x - lake.x) + (z - lake.z) * (z - lake.z);
                 if (distSq < lake.radius * lake.radius) {
@@ -209,15 +208,17 @@ function generateMap() {
                 let chunkZ = Math.floor(z / 5);
                 let pseudoRandom = Math.abs(Math.sin(chunkX * 12.9898 + chunkZ * 78.233) * 43758.5453);
                 y = -1 + Math.floor((pseudoRandom - Math.floor(pseudoRandom)) * 6);
-            } else if (currentLayout === 'blocks') {
-                y = Math.floor(Math.random() * 4) - 1;
             }
+
+            // Elevate the entire map by 2 blocks to prevent clipping with the lava floor (y = -5)
+            y += 2;
 
             if (shouldSpawn) {
                 mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
                 mapBlocks.push({ x: x, y: y - 0.5, z: z, color: currentBiome.bottom }); 
 
-                if (y < -1 && Math.random() < 0.2 && currentLayout === 'hills') {
+                // Updated liquid threshold because we shifted the map up by 2
+                if (y < 1 && Math.random() < 0.2 && currentLayout === 'hills') {
                      mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.liquid }); 
                      occupiedColumns.add(colKey);
                 }
@@ -607,7 +608,6 @@ io.on('connection', (socket) => {
     socket.on('lavaFall', () => {
         if (gameState === 'SEEKING' || gameState === 'HIDING') {
             if (players[socket.id] && players[socket.id].role === 'hider') {
-                // Hiders are now stunned, beamed, and flipped upside down for 5 seconds instead of dying
                 players[socket.id].stunned = true;
                 players[socket.id].upsideDown = true;
                 players[socket.id].respawnBeam = true;
@@ -626,7 +626,6 @@ io.on('connection', (socket) => {
                     }
                 }, 5000);
             } else if (players[socket.id] && players[socket.id].role === 'seeker') {
-                // Seekers just fall and naturally respawn without a major penalty
                 io.emit('playerLavaDeath', socket.id);
             }
         }
