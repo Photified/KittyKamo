@@ -20,7 +20,10 @@ let nextHairballId = 0;
 let activePlayers = []; 
 let lastMvp = null; 
 let lastLeaderboard = []; 
-let currentMapWallColor = 0x8B4513; // Default Lobby Wall Color
+let currentMapWallColor = 0x8B4513; 
+let currentMapSkyDay = 0x87CEEB;
+let currentMapSkySunset = 0xFF7E47;
+let currentMapSkyNight = 0x020211;
 
 const catBeds = [
     {x: 15, z: 8}, {x: 15, z: -8}, {x: -15, z: 8}, {x: -15, z: -8},
@@ -155,10 +158,10 @@ setInterval(() => {
 }, 33);
 
 const BIOMES = [
-    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0xFF0000, trunk: 0x5C4033, leaf: 0x228B22, minCoverage: 0.95, maxCoverage: 1.0, wall: 0x2E8B57 },
-    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0xFF0000, trunk: 0x8B4513, leaf: 0xFFFFFF, minCoverage: 0.90, maxCoverage: 0.95, wall: 0x4682B4 },
-    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF0000, trunk: 0x00FFFF, leaf: 0x32CD32, minCoverage: 0.92, maxCoverage: 0.98, wall: 0x4B0082 },
-    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0xFF0000, trunk: 0xFFD700, leaf: 0xFF1493, minCoverage: 0.90, maxCoverage: 1.0, wall: 0xFF69B4 }
+    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0xFF0000, trunk: 0x5C4033, leaf: 0x228B22, minCoverage: 0.95, maxCoverage: 1.0, wall: 0x2E8B57, skyDay: 0x87CEEB, skySunset: 0xFF7E47, skyNight: 0x020211 },
+    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0xFF0000, trunk: 0x8B4513, leaf: 0xFFFFFF, minCoverage: 0.90, maxCoverage: 0.95, wall: 0x4682B4, skyDay: 0xCAE1FF, skySunset: 0xDDA0DD, skyNight: 0x000033 },
+    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF0000, trunk: 0x00FFFF, leaf: 0x32CD32, minCoverage: 0.92, maxCoverage: 0.98, wall: 0x4B0082, skyDay: 0x1A0B2E, skySunset: 0x4B0082, skyNight: 0x050011 },
+    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0xFF0000, trunk: 0xFFD700, leaf: 0xFF1493, minCoverage: 0.90, maxCoverage: 1.0, wall: 0xFF69B4, skyDay: 0xFFB6C1, skySunset: 0xFFFFE0, skyNight: 0x9370DB }
 ];
 
 function generateMap() {
@@ -167,7 +170,10 @@ function generateMap() {
     let occupiedColumns = new Set(); 
 
     const currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
-    currentMapWallColor = currentBiome.wall; // Set the specific wall color!
+    currentMapWallColor = currentBiome.wall; 
+    currentMapSkyDay = currentBiome.skyDay;
+    currentMapSkySunset = currentBiome.skySunset;
+    currentMapSkyNight = currentBiome.skyNight;
     
     const layouts = ['hills', 'islands', 'city', 'blocks'];
     const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
@@ -224,7 +230,7 @@ function generateMap() {
                             mapBlocks.push({ x: x, y: y + 4.5, z: z, color: currentBiome.leaf }); 
 
                         } else if (type < 0.6) {
-                            const yarnColors = [0xFF1493, 0x00BFFF, 0xFFA500, 0x9400D3]; // Changed the 0xFF4500 red box to 0xFFA500 bright orange!
+                            const yarnColors = [0xFF1493, 0x00BFFF, 0xFFA500, 0x9400D3]; 
                             const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
                             mapBlocks.push({ x: x, y: y + 1.5, z: z, color: yColor });
                         } else if (type < 0.8) {
@@ -256,14 +262,17 @@ function startLobby() {
     let wasGameOver = (gameState === 'GAME_OVER');
     gameState = 'LOBBY';
     timeRemaining = 60; 
-    currentMapWallColor = 0x8B4513; // Reset to wood color in lobby
+    currentMapWallColor = 0x8B4513; 
+    currentMapSkyDay = 0x87CEEB;
+    currentMapSkySunset = 0xFF7E47;
+    currentMapSkyNight = 0x020211;
     
     yarnBalls[0] = { id: 'yarn0', x: -8, y: -4.6, z: 0, color: 0xFF0000, vx: 0, vy: 0, vz: 0, inGoal: false };
     io.emit('yarnState', yarnBalls);
 
     if (!wasGameOver) {
         mapBlocks = [];
-        io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
+        io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor, skyDay: currentMapSkyDay, skySunset: currentMapSkySunset, skyNight: currentMapSkyNight });
         
         ids.forEach(id => {
             let bed = catBeds[Math.floor(Math.random() * catBeds.length)];
@@ -347,7 +356,10 @@ function startLobby() {
 
                 mapBlocks = [];
                 currentMapWallColor = 0x8B4513; 
-                io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
+                currentMapSkyDay = 0x87CEEB;
+                currentMapSkySunset = 0xFF7E47;
+                currentMapSkyNight = 0x020211;
+                io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor, skyDay: currentMapSkyDay, skySunset: currentMapSkySunset, skyNight: currentMapSkyNight });
                 
                 activePlayers.forEach(id => {
                     players[id].role = 'hider';
@@ -398,7 +410,7 @@ function startRound() {
     activeDecoys = {};
 
     generateMap();
-    io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
+    io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor, skyDay: currentMapSkyDay, skySunset: currentMapSkySunset, skyNight: currentMapSkyNight });
 
     const seekerId = activePlayers[Math.floor(Math.random() * activePlayers.length)];
     
@@ -439,7 +451,7 @@ io.on('connection', (socket) => {
     if (mapBlocks.length === 0 && (gameState === 'HIDING' || gameState === 'SEEKING')) {
         generateMap();
     }
-    socket.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
+    socket.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor, skyDay: currentMapSkyDay, skySunset: currentMapSkySunset, skyNight: currentMapSkyNight });
     socket.emit('yarnState', yarnBalls); 
 
     let joinRole = (gameState === 'WAITING' || gameState === 'LOBBY' || Object.keys(players).length < 1) ? 'hider' : 'spectator';
@@ -635,12 +647,12 @@ io.on('connection', (socket) => {
             gameState = 'WAITING';
             timeRemaining = 0;
             mapBlocks = [];
-            io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
+            io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor, skyDay: currentMapSkyDay, skySunset: currentMapSkySunset, skyNight: currentMapSkyNight });
             if (gameTimer) clearInterval(gameTimer);
             io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastLeaderboard: lastLeaderboard, lastMvp: lastMvp });
         } else if (gameState === 'WAITING' && Object.keys(players).length < 2) {
             mapBlocks = [];
-            io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor });
+            io.emit('initMap', { blocks: mapBlocks, wallColor: currentMapWallColor, skyDay: currentMapSkyDay, skySunset: currentMapSkySunset, skyNight: currentMapSkyNight });
             if (gameTimer) clearInterval(gameTimer);
             io.emit('gameStateUpdate', { state: gameState, time: 0, leaderboard: [], lastLeaderboard: lastLeaderboard, lastMvp: lastMvp });
         }
