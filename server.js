@@ -159,10 +159,10 @@ setInterval(() => {
 }, 33);
 
 const BIOMES = [
-    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0x1E90FF, trunk: 0x5C4033, leaf: 0x228B22 },
-    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0x00BFFF, trunk: 0x8B4513, leaf: 0xFFFFFF },
-    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF00FF, trunk: 0x00FFFF, leaf: 0x32CD32 },
-    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0x00FFFF, trunk: 0xFFD700, leaf: 0xFF1493 }
+    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0xFF0000, trunk: 0x5C4033, leaf: 0x228B22 },
+    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0xFF0000, trunk: 0x8B4513, leaf: 0xFFFFFF },
+    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF0000, trunk: 0x00FFFF, leaf: 0x32CD32 },
+    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0xFF0000, trunk: 0xFFD700, leaf: 0xFF1493 }
 ];
 
 function generateMap() {
@@ -171,7 +171,8 @@ function generateMap() {
     let occupiedColumns = new Set(); 
 
     const currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
-    const layouts = ['hills', 'islands', 'city'];
+    // Brought back the 'blocks' layout
+    const layouts = ['hills', 'islands', 'city', 'blocks'];
     const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
 
     // Generate 2-3 "lakes" (clustered void zones)
@@ -208,6 +209,8 @@ function generateMap() {
                 let chunkZ = Math.floor(z / 5);
                 let pseudoRandom = Math.abs(Math.sin(chunkX * 12.9898 + chunkZ * 78.233) * 43758.5453);
                 y = -1 + Math.floor((pseudoRandom - Math.floor(pseudoRandom)) * 6);
+            } else if (currentLayout === 'blocks') {
+                y = Math.floor(Math.random() * 4) - 1;
             }
 
             // Elevate the entire map by 2 blocks to prevent clipping with the lava floor (y = -5)
