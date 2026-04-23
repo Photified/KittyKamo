@@ -14,7 +14,6 @@ let lastRenderTime = 0;
 const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
 // --- GLOBAL TEMPORARY VARIABLES FOR MEMORY OPTIMIZATION ---
-// Reusing these prevents the browser's Garbage Collector from freezing the game mid-round
 const tempBox1 = new THREE.Box3();
 const tempBox2 = new THREE.Box3();
 const tempVec1 = new THREE.Vector3();
@@ -106,6 +105,13 @@ function playSound(type) {
         gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    } else if (type === 'bounce') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.8 * v, audioCtx.currentTime); 
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.6);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.6);
     }
 }
 
@@ -689,7 +695,7 @@ function renderBigTV() {
 
         tvCtx.fillStyle = '#00BFFF';
         tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
-        tvCtx.fillText('SURVIVED: ' + currentMvpData.score + 's', 512, 380);
+        tvCtx.fillText('SCORE: ' + currentMvpData.score + ' PTS', 512, 380);
     } else {
         tvCtx.fillStyle = '#888';
         tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
@@ -1382,16 +1388,16 @@ helpModal.innerHTML = `
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
             <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
-                <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Meowing
+                <b style="font-size: 14px; margin-bottom: 2px;">+1/sec</b> Surviving
             </div>
             <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
-                <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Decoy Hit
+                <b style="font-size: 14px; margin-bottom: 2px;">+5</b> Meowing
             </div>
             <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
-                <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Tagging
+                <b style="font-size: 14px; margin-bottom: 2px;">+20</b> Decoy/Hairball Hit
             </div>
             <div style="background: rgba(100, 255, 100, 0.15); border: 1px solid #6f6; border-radius: 6px; padding: 6px 2px; text-align: center; color: #aaffaa; font-size: 10px; display: flex; flex-direction: column; justify-content: center;">
-                <b style="font-size: 14px; margin-bottom: 2px;">+15s</b> Hairball Hit
+                <b style="font-size: 14px; margin-bottom: 2px;">50+Time</b> Tagging
             </div>
         </div>
 
@@ -1449,27 +1455,27 @@ function updateRightBox(leaderboardData) {
         </div>
     `;
 
-    let lbText = `<div style="text-align:right; flex:1;"><div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">SURVIVAL TIME</div>`;
+    let lbText = `<div style="text-align:right; flex:1;"><div style="font-weight:900; font-size:10px; margin-bottom:2px; color:#ddd;">POINTS</div>`;
     
     if (leaderboardData && leaderboardData.length > 0) {
         let p1 = leaderboardData[0];
         let c1 = (p1.id === serverWinnerId) ? '👑 ' : '';
-        lbText += `<div style="font-size:9px; line-height:1.4;">1. ${c1}${p1.name} : <b style="color:gold;">${p1.score}s</b></div>`;
+        lbText += `<div style="font-size:9px; line-height:1.4;">1. ${c1}${p1.name} : <b style="color:gold;">${p1.score} PTS</b></div>`;
 
         if (leaderboardData.length > 1) {
             let myRank = leaderboardData.findIndex(p => p.id === socket.id);
             if (myRank === 0) {
                 let p2 = leaderboardData[1];
                 let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
-                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
+                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score} PTS</b></div>`;
             } else if (myRank > 0) {
                 let myP = leaderboardData[myRank];
                 let myC = (myP.id === serverWinnerId) ? '👑 ' : '';
-                lbText += `<div style="font-size:9px; line-height:1.4;">${myRank + 1}. ${myC}${myP.name} : <b style="color:gold;">${myP.score}s</b></div>`;
+                lbText += `<div style="font-size:9px; line-height:1.4;">${myRank + 1}. ${myC}${myP.name} : <b style="color:gold;">${myP.score} PTS</b></div>`;
             } else {
                 let p2 = leaderboardData[1];
                 let c2 = (p2.id === serverWinnerId) ? '👑 ' : '';
-                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score}s</b></div>`;
+                lbText += `<div style="font-size:9px; line-height:1.4;">2. ${c2}${p2.name} : <b style="color:gold;">${p2.score} PTS</b></div>`;
             }
         } else {
             lbText += `<div style="font-size:9px; line-height:1.4; color:#777;">...</div>`;
@@ -1502,7 +1508,6 @@ socket.on('gameStateUpdate', (data) => {
     if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         ground.material.color.setHex(0x654321); 
     } else {
-        // Turn the floor into LAVA!
         ground.material.color.setHex(0xFF3300); 
     }
 
@@ -1837,7 +1842,6 @@ socket.on('playerTaunted', (taunterId) => {
 socket.on('playerLavaDeath', (playerId) => {
     playSound('tag'); 
     
-    // Find the cat that fell and make them meow/explode red
     let targetCat = (playerId === socket.id) ? myCatData : otherPlayers[playerId];
     if (targetCat) {
         playCatMeow(targetCat);
@@ -1896,7 +1900,6 @@ function addOtherPlayer(id, playerInfo) {
     otherPlayers[id] = catData;
 }
 
-// OPTIMIZATION: Updated checkCollision to recycle global variables instead of creating new ones
 function checkCollision(pos) {
     const currentScaleY = myCatData.body.scale.y; 
     
@@ -2256,7 +2259,6 @@ function animate() {
         if (p.scale.x < 0.01) { scene.remove(p); particles.splice(i, 1); }
     }
 
-    // OPTIMIZATION: Updated Hairball loop to recycle memory variables
     for (let i = activeHairballs.length - 1; i >= 0; i--) {
         let hb = activeHairballs[i];
         
@@ -2432,10 +2434,8 @@ function animate() {
             isGrounded = false; 
         }
 
-        // LAVA FLOOR LOGIC
         if (myPlayerObject.position.y <= -4.9) { 
             if (serverGameState === 'SEEKING' || serverGameState === 'HIDING') {
-                // Teleport the player high into the sky above the map
                 myPlayerObject.position.set((Math.random() * 30) - 15, 25, (Math.random() * 30) - 15);
                 velocityY = 0;
                 isGrounded = false;
@@ -2450,7 +2450,6 @@ function animate() {
         }
     }
 
-    // OPTIMIZATION: Updated Seeker tag detection to recycle global variables
     if (myRole === 'seeker' && serverGameState === 'SEEKING' && !amIStunned) {
         let closestDist = 999;
         let closestHider = null;
@@ -2494,7 +2493,6 @@ function animate() {
         }
     }
 
-    // OPTIMIZATION: Updated Hider Color-Copy calculation to recycle variables
     if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned && serverGameState === 'SEEKING') { 
         let minDist = 2.0; let closestBlockColor = null;
         
