@@ -1510,7 +1510,7 @@ socket.on('gameStateUpdate', (data) => {
     if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         ground.material.color.setHex(0x654321); 
     } else {
-        ground.material.color.setHex(0xFF3300); 
+        ground.material.color.setHex(0xFF0000); 
     }
 
     updateRightBox(data.leaderboard);
@@ -1549,7 +1549,10 @@ socket.on('goalScored', (data) => {
     }
 });
 
-socket.on('initMap', (mapBlocks) => {
+socket.on('initMap', (payload) => {
+    let mapBlocksData = Array.isArray(payload) ? payload : payload.blocks;
+    let currentWallColor = payload.wallColor !== undefined ? payload.wallColor : 0x8B4513;
+
     mapObjects.forEach(mesh => scene.remove(mesh)); mapObjects.length = 0;
     walls.forEach(mesh => scene.remove(mesh)); walls.length = 0;
     invisibleWalls.forEach(mesh => scene.remove(mesh)); invisibleWalls.length = 0;
@@ -1559,7 +1562,6 @@ socket.on('initMap', (mapBlocks) => {
     lobbyCollision.length = 0;
 
     customizationZone = null;
-
     myDecoyUsed = false; 
     
     Object.keys(activeDecoys).forEach(dId => {
@@ -1569,15 +1571,15 @@ socket.on('initMap', (mapBlocks) => {
     activeHairballs.forEach(hb => scene.remove(hb.mesh));
     activeHairballs.length = 0;
 
-    mapBlocks.forEach(b => createBlock(b.x, b.y, b.z, b.color));
+    mapBlocksData.forEach(b => createBlock(b.x, b.y, b.z, b.color));
 
     scene.updateMatrixWorld(true);
 
-    if (mapBlocks.length > 0) {
-        const minX = Math.min(...mapBlocks.map(b => b.x));
-        const maxX = Math.max(...mapBlocks.map(b => b.x));
-        const minZ = Math.min(...mapBlocks.map(b => b.z));
-        const maxZ = Math.max(...mapBlocks.map(b => b.z));
+    if (mapBlocksData.length > 0) {
+        const minX = Math.min(...mapBlocksData.map(b => b.x));
+        const maxX = Math.max(...mapBlocksData.map(b => b.x));
+        const minZ = Math.min(...mapBlocksData.map(b => b.z));
+        const maxZ = Math.max(...mapBlocksData.map(b => b.z));
 
         const blockSpanX = (maxX - minX) + 1; 
         const blockSpanZ = (maxZ - minZ) + 1; 
@@ -1586,11 +1588,11 @@ socket.on('initMap', (mapBlocks) => {
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         ground.material.color.setHex(0x4CAF50); 
 
-        createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5, 0x8B4513);
-        createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5, 0x8B4513);
+        createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5, currentWallColor);
+        createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5, currentWallColor);
         
-        createWall(2, 10, blockSpanZ, minX - 1.5, 0, (minZ + maxZ) / 2, 0x8B4513);
-        createWall(2, 10, blockSpanZ, maxX + 1.5, 0, (minZ + maxZ) / 2, 0x8B4513);
+        createWall(2, 10, blockSpanZ, minX - 1.5, 0, (minZ + maxZ) / 2, currentWallColor);
+        createWall(2, 10, blockSpanZ, maxX + 1.5, 0, (minZ + maxZ) / 2, currentWallColor);
         
         createInvisibleWall(blockSpanX + 4, 100, 2, (minX + maxX) / 2, 45, minZ - 1.5);
         createInvisibleWall(blockSpanX + 4, 100, 2, (minX + maxX) / 2, 45, maxZ + 1.5);
@@ -2591,7 +2593,7 @@ function animate() {
     }
     
     let targetOp = (serverGameState === 'HIDING' && !window.initialDropLanded) ? 0.6 : 0;
-    if (myCatData.respawnBeam) targetOp = 0.8; // Override if respawning from lava
+    if (myCatData.respawnBeam) targetOp = 0.8; 
     myCatData.dBeamMat.opacity += (targetOp - myCatData.dBeamMat.opacity) * 0.1;
 
     let finalScaleY = 1; let finalScaleXZ = 1;
