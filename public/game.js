@@ -2344,7 +2344,13 @@ function animate() {
         unstuckUI.style.display = 'block';
         unstuckFill.style.width = Math.min(100, (qPressTime / 3000) * 100) + '%';
         if (qPressTime >= 3000) {
-            myPlayerObject.position.set((Math.random() * 30) - 15, 20, (Math.random() * 30) - 15);
+            let spawnX = 0, spawnZ = 0;
+            if (mapObjects.length > 0) {
+                let randomBlock = mapObjects[Math.floor(Math.random() * mapObjects.length)];
+                spawnX = randomBlock.position.x;
+                spawnZ = randomBlock.position.z;
+            }
+            myPlayerObject.position.set(spawnX, 20, spawnZ);
             qPressTime = 0;
             isQPressed = false;
             unstuckUI.style.display = 'none';
@@ -2436,7 +2442,13 @@ function animate() {
 
         if (myPlayerObject.position.y <= -4.9) { 
             if (serverGameState === 'SEEKING' || serverGameState === 'HIDING') {
-                myPlayerObject.position.set((Math.random() * 30) - 15, 25, (Math.random() * 30) - 15);
+                let spawnX = 0, spawnZ = 0;
+                if (mapObjects.length > 0) {
+                    let randomBlock = mapObjects[Math.floor(Math.random() * mapObjects.length)];
+                    spawnX = randomBlock.position.x;
+                    spawnZ = randomBlock.position.z;
+                }
+                myPlayerObject.position.set(spawnX, 25, spawnZ);
                 velocityY = 0;
                 isGrounded = false;
                 
