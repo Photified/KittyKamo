@@ -106,14 +106,6 @@ function playSound(type) {
         gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    } else if (type === 'bounce') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.6);
-        // Make this one extra loud to alert the Seeker!
-        gain.gain.setValueAtTime(0.8 * v, audioCtx.currentTime); 
-        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.6);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.6);
     }
 }
 
@@ -1510,7 +1502,8 @@ socket.on('gameStateUpdate', (data) => {
     if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         ground.material.color.setHex(0x654321); 
     } else {
-        ground.material.color.setHex(0x4CAF50); 
+        // Turn the floor into LAVA!
+        ground.material.color.setHex(0xFF3300); 
     }
 
     updateRightBox(data.leaderboard);
@@ -1841,15 +1834,14 @@ socket.on('playerTaunted', (taunterId) => {
     }
 });
 
-socket.on('playerBounced', (playerId) => {
-    playSound('bounce'); 
+socket.on('playerLavaDeath', (playerId) => {
+    playSound('tag'); 
     
+    // Find the cat that fell and make them meow/explode red
     let targetCat = (playerId === socket.id) ? myCatData : otherPlayers[playerId];
     if (targetCat) {
         playCatMeow(targetCat);
-        setTimeout(() => { if(targetCat) playCatMeow(targetCat); }, 150);
-        setTimeout(() => { if(targetCat) playCatMeow(targetCat); }, 300);
-        setTimeout(() => { if(targetCat) playCatMeow(targetCat); }, 450);
+        explodeParticles(targetCat.group.position, true);
     }
 });
 
@@ -2440,16 +2432,18 @@ function animate() {
             isGrounded = false; 
         }
 
-        // TRAMPOLINE FLOOR LOGIC
-        if (myPlayerObject.position.y <= -5) { 
-            myPlayerObject.position.y = -5; 
-            
-            // Only make the floor bouncy during the actual game rounds
+        // LAVA FLOOR LOGIC
+        if (myPlayerObject.position.y <= -4.9) { 
             if (serverGameState === 'SEEKING' || serverGameState === 'HIDING') {
-                velocityY = 1.0; // Normal jump is 0.35, so this LAUNCHES them
+                // Teleport the player high into the sky above the map
+                myPlayerObject.position.set((Math.random() * 30) - 15, 25, (Math.random() * 30) - 15);
+                velocityY = 0;
                 isGrounded = false;
-                socket.emit('trampolineBounce');
+                
+                socket.emit('lavaFall');
+                playSound('pop'); 
             } else {
+                myPlayerObject.position.y = -5;
                 velocityY = 0; 
                 isGrounded = true; 
             }
