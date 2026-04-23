@@ -106,6 +106,14 @@ function playSound(type) {
         gain.gain.setValueAtTime(0.1 * v, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.1);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    } else if (type === 'bounce') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.6);
+        // Make this one extra loud to alert the Seeker!
+        gain.gain.setValueAtTime(0.8 * v, audioCtx.currentTime); 
+        gain.gain.exponentialRampToValueAtTime(endV, audioCtx.currentTime + 0.6);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.6);
     }
 }
 
@@ -1833,6 +1841,18 @@ socket.on('playerTaunted', (taunterId) => {
     }
 });
 
+socket.on('playerBounced', (playerId) => {
+    playSound('bounce'); 
+    
+    let targetCat = (playerId === socket.id) ? myCatData : otherPlayers[playerId];
+    if (targetCat) {
+        playCatMeow(targetCat);
+        setTimeout(() => { if(targetCat) playCatMeow(targetCat); }, 150);
+        setTimeout(() => { if(targetCat) playCatMeow(targetCat); }, 300);
+        setTimeout(() => { if(targetCat) playCatMeow(targetCat); }, 450);
+    }
+});
+
 socket.on('spawnDecoy', (data) => {
     const decoy = createCatSculpt(data.color, data.face);
     decoy.group.position.set(data.x, data.y, data.z);
@@ -2419,7 +2439,21 @@ function animate() {
         } else { 
             isGrounded = false; 
         }
-        if (myPlayerObject.position.y <= -5) { myPlayerObject.position.y = -5; velocityY = 0; isGrounded = true; }
+
+        // TRAMPOLINE FLOOR LOGIC
+        if (myPlayerObject.position.y <= -5) { 
+            myPlayerObject.position.y = -5; 
+            
+            // Only make the floor bouncy during the actual game rounds
+            if (serverGameState === 'SEEKING' || serverGameState === 'HIDING') {
+                velocityY = 1.0; // Normal jump is 0.35, so this LAUNCHES them
+                isGrounded = false;
+                socket.emit('trampolineBounce');
+            } else {
+                velocityY = 0; 
+                isGrounded = true; 
+            }
+        }
     }
 
     // OPTIMIZATION: Updated Seeker tag detection to recycle global variables
