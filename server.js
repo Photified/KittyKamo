@@ -170,72 +170,119 @@ setInterval(() => {
     }
 }, 33);
 
+// --- MAP GENERATION DICTIONARY ---
+const BIOMES = [
+    // Classic Kitty Kamo
+    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0x1E90FF, trunk: 0x5C4033, leaf: 0x228B22 },
+    // Hard for dark cats
+    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0x00BFFF, trunk: 0x8B4513, leaf: 0xFFFFFF },
+    // Crazy contrast, great for brightly colored players
+    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF00FF, trunk: 0x00FFFF, leaf: 0x32CD32 },
+    // Pastel nightmare
+    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0x00FFFF, trunk: 0xFFD700, leaf: 0xFF1493 }
+];
+
 function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
     let occupiedColumns = new Set(); 
 
+    // 1. Pick a random Biome and Layout
+    const currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
+    const layouts = ['hills', 'islands', 'city'];
+    const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
+
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
-            let y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
+            let y = 0;
+            let shouldSpawn = true;
             let colKey = `${x},${z}`;
 
-            mapBlocks.push({ x: x, y: y + 0.5, z: z, color: 0x556B2F }); 
-            mapBlocks.push({ x: x, y: y - 0.5, z: z, color: 0x654321 }); 
-
-            if (y < -1 && Math.random() < 0.2) {
-                 mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x1E90FF }); 
-                 occupiedColumns.add(colKey);
+            // 2. Calculate height based on Layout Archetype
+            if (currentLayout === 'hills') {
+                // Classic smooth rolling hills
+                y = Math.floor(Math.sin((x + offset) / 4) * 2 + Math.cos((z + offset) / 4) * 2);
+            } 
+            else if (currentLayout === 'islands') {
+                // Steeper waves, but delete blocks below a certain height to create pits/water
+                y = Math.floor(Math.sin((x + offset) / 3.5) * 3 + Math.cos((z + offset) / 3.5) * 3);
+                if (y < -1) shouldSpawn = false; 
+            } 
+            else if (currentLayout === 'city') {
+                // Group coordinates into 5x5 "chunks" to create blocky skyscrapers
+                let chunkX = Math.floor(x / 5);
+                let chunkZ = Math.floor(z / 5);
+                // Simple seeded randomizer to give each chunk a random height (0 to 6)
+                let pseudoRandom = Math.abs(Math.sin(chunkX * 12.9898 + chunkZ * 78.233) * 43758.5453);
+                y = -2 + Math.floor((pseudoRandom - Math.floor(pseudoRandom)) * 7);
+                
+                // Add "streets" between the chunks
+                if (x % 5 === 0 || z % 5 === 0) y = -2; 
             }
 
-            // ADDED FIX: Only spawn multi-block decorations if we are away from the map edges!
-            if (x > -19 && x < 19 && z > -19 && z < 19) {
-                if (!occupiedColumns.has(colKey) && Math.random() < 0.06) {
-                    let type = Math.random();
+            // 3. Spawn the ground blocks
+            if (shouldSpawn) {
+                mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
+                mapBlocks.push({ x: x, y: y - 0.5, z: z, color: currentBiome.bottom }); 
 
-                    if (type < 0.4) {
-                        for(let ty = 1; ty <= 3; ty++) {
-                            mapBlocks.push({ x: x, y: y + 0.5 + ty, z: z, color: 0x5C4033 });
-                        }
-                        const leafColor = 0x228B22;
-                        for(let lx = -1; lx <= 1; lx++) {
-                            for(let lz = -1; lz <= 1; lz++) {
-                                if (Math.abs(lx) === 1 && Math.abs(lz) === 1) continue; 
-                                mapBlocks.push({ x: x + lx, y: y + 3.5, z: z + lz, color: leafColor });
-                                occupiedColumns.add(`${x+lx},${z+lz}`);
+                // Spawn liquids in low areas (mostly for hills)
+                if (y < -1 && Math.random() < 0.2 && currentLayout === 'hills') {
+                     mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.liquid }); 
+                     occupiedColumns.add(colKey);
+                }
+
+                // 4. Spawn Decorations (Trees, Flowers, Boxes) away from edges
+                if (x > -19 && x < 19 && z > -19 && z < 19) {
+                    if (!occupiedColumns.has(colKey) && Math.random() < 0.06) {
+                        let type = Math.random();
+
+                        if (type < 0.4) {
+                            // Tree (using Biome colors)
+                            for(let ty = 1; ty <= 3; ty++) {
+                                mapBlocks.push({ x: x, y: y + 0.5 + ty, z: z, color: currentBiome.trunk });
                             }
-                        }
-                        mapBlocks.push({ x: x, y: y + 4.5, z: z, color: leafColor }); 
-
-                    } else if (type < 0.6) {
-                        const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; 
-                        const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
-                        for(let yx = 0; yx <= 1; yx++) {
-                            for(let yz = 0; yz <= 1; yz++) {
-                                for(let yy = 1; yy <= 2; yy++) {
-                                    mapBlocks.push({ x: x + yx, y: y + 0.5 + yy, z: z + yz, color: yColor });
-                                    occupiedColumns.add(`${x+yx},${z+yz}`);
+                            for(let lx = -1; lx <= 1; lx++) {
+                                for(let lz = -1; lz <= 1; lz++) {
+                                    if (Math.abs(lx) === 1 && Math.abs(lz) === 1) continue; 
+                                    mapBlocks.push({ x: x + lx, y: y + 3.5, z: z + lz, color: currentBiome.leaf });
+                                    occupiedColumns.add(`${x+lx},${z+lz}`);
                                 }
                             }
-                        }
+                            mapBlocks.push({ x: x, y: y + 4.5, z: z, color: currentBiome.leaf }); 
 
-                    } else if (type < 0.8) {
-                        const flowerColors = [0xFFFF00, 0xFF69B4, 0xFFFFFF]; 
-                        const fColor = flowerColors[Math.floor(Math.random() * flowerColors.length)];
-                        mapBlocks.push({ x: x, y: y + 1.5, z: z, color: 0x32CD32 }); 
-                        mapBlocks.push({ x: x, y: y + 2.5, z: z, color: fColor }); 
-                        occupiedColumns.add(colKey);
+                        } else if (type < 0.6) {
+                            // Yarn Boxes (unchanged, acts as neutral cover)
+                            const yarnColors = [0xFF1493, 0x00BFFF, 0xFF4500, 0x9400D3]; 
+                            const yColor = yarnColors[Math.floor(Math.random() * yarnColors.length)];
+                            for(let yx = 0; yx <= 1; yx++) {
+                                for(let yz = 0; yz <= 1; yz++) {
+                                    for(let yy = 1; yy <= 2; yy++) {
+                                        mapBlocks.push({ x: x + yx, y: y + 0.5 + yy, z: z + yz, color: yColor });
+                                        occupiedColumns.add(`${x+yx},${z+yz}`);
+                                    }
+                                }
+                            }
 
-                    } else {
-                        const boxColor = 0xC19A6B;
-                        for(let bx = -1; bx <= 1; bx++) {
-                            for(let bz = -1; bz <= 1; bz++) {
-                                if (bx === 0 && bz === 1) continue; 
-                                if (bx === 0 && bz === 0) continue; 
-                                
-                                mapBlocks.push({ x: x + bx, y: y + 1.5, z: z + bz, color: boxColor }); 
-                                mapBlocks.push({ x: x + bx, y: y + 2.5, z: z + bz, color: boxColor }); 
-                                occupiedColumns.add(`${x+bx},${z+bz}`);
+                        } else if (type < 0.8) {
+                            // Flowers
+                            const flowerColors = [0xFFFF00, 0xFF69B4, 0xFFFFFF]; 
+                            const fColor = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+                            mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.leaf }); // Stem matches leaves
+                            mapBlocks.push({ x: x, y: y + 2.5, z: z, color: fColor }); 
+                            occupiedColumns.add(colKey);
+
+                        } else {
+                            // Cardboard Boxes (unchanged, acts as neutral cover)
+                            const boxColor = 0xC19A6B;
+                            for(let bx = -1; bx <= 1; bx++) {
+                                for(let bz = -1; bz <= 1; bz++) {
+                                    if (bx === 0 && bz === 1) continue; 
+                                    if (bx === 0 && bz === 0) continue; 
+                                    
+                                    mapBlocks.push({ x: x + bx, y: y + 1.5, z: z + bz, color: boxColor }); 
+                                    mapBlocks.push({ x: x + bx, y: y + 2.5, z: z + bz, color: boxColor }); 
+                                    occupiedColumns.add(`${x+bx},${z+bz}`);
+                                }
                             }
                         }
                     }
