@@ -1510,7 +1510,8 @@ socket.on('gameStateUpdate', (data) => {
     if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         ground.material.color.setHex(0x654321); 
     } else {
-        ground.material.color.setHex(0xFF0000); 
+        // Change from 0xFF0000 to a dark void color to fix red square artifacts showing underneath gaps in map blocks
+        ground.material.color.setHex(0x111111); 
     }
 
     updateRightBox(data.leaderboard);
@@ -1594,7 +1595,9 @@ socket.on('initMap', (payload) => {
         
         ground.scale.set(blockSpanX + 10, blockSpanZ + 10, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
-        ground.material.color.setHex(0xFF0000); 
+        
+        // Removed 0xFF0000 (red) to stop empty holes showing up as red squares. Set to dark void instead.
+        ground.material.color.setHex(0x111111); 
 
         createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5, currentWallColor);
         createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, maxZ + 1.5, currentWallColor);
