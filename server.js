@@ -158,16 +158,15 @@ setInterval(() => {
 }, 33);
 
 const BIOMES = [
-    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, liquid: 0xFF0000, trunk: 0x5C4033, leaf: 0x228B22, wall: 0x2E8B57, skyDay: 0x87CEEB, skySunset: 0xFF7E47, skyNight: 0x020211 },
-    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, liquid: 0xFF0000, trunk: 0x8B4513, leaf: 0xFFFFFF, wall: 0x4682B4, skyDay: 0xCAE1FF, skySunset: 0xDDA0DD, skyNight: 0x000033 },
-    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, liquid: 0xFF0000, trunk: 0x00FFFF, leaf: 0x32CD32, wall: 0x4B0082, skyDay: 0x1A0B2E, skySunset: 0x4B0082, skyNight: 0x050011 },
-    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, liquid: 0xFF0000, trunk: 0xFFD700, leaf: 0xFF1493, wall: 0xFF69B4, skyDay: 0xFFB6C1, skySunset: 0xFFFFE0, skyNight: 0x9370DB }
+    { name: 'Forest', top: 0x556B2F, bottom: 0x654321, trunk: 0x5C4033, leaf: 0x228B22, wall: 0x2E8B57, skyDay: 0x87CEEB, skySunset: 0xFF7E47, skyNight: 0x020211 },
+    { name: 'Winter', top: 0xFFFAFA, bottom: 0xADD8E6, trunk: 0x8B4513, leaf: 0xFFFFFF, wall: 0x4682B4, skyDay: 0xCAE1FF, skySunset: 0xDDA0DD, skyNight: 0x000033 },
+    { name: 'Neon Arcade', top: 0x111111, bottom: 0x000000, trunk: 0x00FFFF, leaf: 0x32CD32, wall: 0x4B0082, skyDay: 0x1A0B2E, skySunset: 0x4B0082, skyNight: 0x050011 },
+    { name: 'Candy Land', top: 0xFFB6C1, bottom: 0xFF69B4, trunk: 0xFFD700, leaf: 0xFF1493, wall: 0xFF69B4, skyDay: 0xFFB6C1, skySunset: 0xFFFFE0, skyNight: 0x9370DB }
 ];
 
 function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
-    let occupiedColumns = new Set(); 
 
     const currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
     currentMapWallColor = currentBiome.wall; 
@@ -177,17 +176,6 @@ function generateMap() {
     
     const layouts = ['hills', 'islands', 'city', 'blocks'];
     const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
-
-    // GENERATE LAVA POOLS (2-3 localized clusters)
-    let pools = [];
-    let numPools = Math.floor(Math.random() * 2) + 2; 
-    for(let i = 0; i < numPools; i++) {
-        pools.push({
-            x: Math.floor(Math.random() * 32) - 16,
-            z: Math.floor(Math.random() * 32) - 16,
-            radiusSq: Math.random() * 12 + 6 // Radius roughly 2.4 to 4.2 -> compact clusters
-        });
-    }
 
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
@@ -210,33 +198,17 @@ function generateMap() {
 
             y += 2;
 
-            // Check if this coordinate falls inside one of our pools
-            let isPool = false;
-            for (let p of pools) {
-                let dx = x - p.x;
-                let dz = z - p.z;
-                if (dx * dx + dz * dz <= p.radiusSq) {
-                    isPool = true;
-                    break;
-                }
+            // Generate shell to significantly cut down on mesh count and fix lag
+            mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
+            mapBlocks.push({ x: x, y: y - 0.5, z: z, color: currentBiome.bottom }); 
+            
+            // Add one extra block downwards for steeper layouts to hide gaps, keeping performance high
+            if (currentLayout === 'city' || currentLayout === 'islands') {
+                mapBlocks.push({ x: x, y: y - 1.5, z: z, color: currentBiome.bottom }); 
             }
 
-            // Fill columns completely downward to prevent any dark gaps or holes!
-            for(let fillY = y; fillY >= -2; fillY--) {
-                if (fillY === y) {
-                    if (isPool) {
-                        mapBlocks.push({ x: x, y: fillY + 0.5, z: z, color: currentBiome.liquid });
-                        occupiedColumns.add(colKey);
-                    } else {
-                        mapBlocks.push({ x: x, y: fillY + 0.5, z: z, color: currentBiome.top });
-                    }
-                } else {
-                    mapBlocks.push({ x: x, y: fillY + 0.5, z: z, color: currentBiome.bottom });
-                }
-            }
-
-            if (!isPool && x > -19 && x < 19 && z > -19 && z < 19) {
-                if (!occupiedColumns.has(colKey) && Math.random() < 0.04) {
+            if (x > -19 && x < 19 && z > -19 && z < 19) {
+                if (Math.random() < 0.04) {
                     let type = Math.random();
 
                     if (type < 0.4) {
