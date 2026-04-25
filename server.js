@@ -180,6 +180,17 @@ function generateMap() {
 
     const targetCoverage = currentBiome.minCoverage + (Math.random() * (currentBiome.maxCoverage - currentBiome.minCoverage));
 
+    // GENERATE LAVA POOLS (2-3 localized clusters)
+    let pools = [];
+    let numPools = Math.floor(Math.random() * 2) + 2; 
+    for(let i = 0; i < numPools; i++) {
+        pools.push({
+            x: Math.floor(Math.random() * 32) - 16,
+            z: Math.floor(Math.random() * 32) - 16,
+            radiusSq: Math.random() * 12 + 6 // Radius roughly 2.4 to 4.2 -> compact clusters
+        });
+    }
+
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
             let y = 0;
@@ -210,7 +221,18 @@ function generateMap() {
                 mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
                 mapBlocks.push({ x: x, y: y - 0.5, z: z, color: currentBiome.bottom }); 
 
-                if (y < 1 && Math.random() < 0.2 && currentLayout === 'hills') {
+                // Check if this coordinate falls inside one of our pools
+                let isPool = false;
+                for (let p of pools) {
+                    let dx = x - p.x;
+                    let dz = z - p.z;
+                    if (dx * dx + dz * dz <= p.radiusSq) {
+                        isPool = true;
+                        break;
+                    }
+                }
+
+                if (isPool) {
                      mapBlocks.push({ x: x, y: y + 1.5, z: z, color: currentBiome.liquid }); 
                      occupiedColumns.add(colKey);
                 }
