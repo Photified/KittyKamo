@@ -197,11 +197,19 @@ function generateMap() {
 
             y += 2;
 
-            // Generate single layer for performance optimization
+            // Render a surface block and one directly below it
             mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
+            mapBlocks.push({ x: x, y: y - 0.5, z: z, color: currentBiome.top }); 
             
+            // Add extra deeper skirts for steep layouts to hide the void
+            if (currentLayout === 'city' || currentLayout === 'islands') {
+                mapBlocks.push({ x: x, y: y - 1.5, z: z, color: currentBiome.top }); 
+                mapBlocks.push({ x: x, y: y - 2.5, z: z, color: currentBiome.top }); 
+            }
+
             if (x > -19 && x < 19 && z > -19 && z < 19) {
-                if (Math.random() < 0.04) {
+                // Significantly increased prop spawn rate from 4% to 15%
+                if (Math.random() < 0.15) {
                     let type = Math.random();
 
                     if (type < 0.4) {
