@@ -28,6 +28,7 @@ let volumeState = 1;
 const VOL_EMOJIS = { 2: '🔊', 1: '🔉', 0: '🔇' };
 
 window.musicEnabled = true;
+window.currentCamJumpOffset = 0; // Tracks camera panning during jumps
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -2561,7 +2562,7 @@ function animate() {
         }
     }
 
-    if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned && serverGameState === 'SEEKING') { 
+    if (myRole === 'hider' && !moved && isGrounded && myEmote === 0 && !amIStunned && (serverGameState === 'SEEKING' || serverGameState === 'HIDING')) { 
         let minDist = 2.0; let closestBlockColor = null;
         
         for (let i = 0; i < mapObjects.length; i++) {
@@ -2721,9 +2722,22 @@ function animate() {
 
     focusObject.updateMatrixWorld(); 
     
-    let idealOffset = new THREE.Vector3(0, 1.5, 3);
+    // NEW CAMERA JUMP LOGIC
+    let targetCamJump = 0;
+    if (focusObject === myPlayerObject && !isGrounded && !isBeaming && !isMVPGameOver && myRole !== 'spectator') {
+        if (velocityY > -0.1) {
+            targetCamJump = 3.5; // Pan up smoothly while jumping up or near apex
+        } else {
+            targetCamJump = 0; // Ease back down as you begin to fall quickly
+        }
+    }
+    
+    window.currentCamJumpOffset = (window.currentCamJumpOffset || 0);
+    window.currentCamJumpOffset += (targetCamJump - window.currentCamJumpOffset) * 0.1;
+
+    let idealOffset = new THREE.Vector3(0, 1.5 + window.currentCamJumpOffset, 3 - (window.currentCamJumpOffset * 0.15));
     if (isMobile && window.innerHeight > window.innerWidth) {
-        idealOffset.set(0, 2.5, 4); 
+        idealOffset.set(0, 2.5 + window.currentCamJumpOffset, 4 - (window.currentCamJumpOffset * 0.15)); 
     }
 
     let cameraTargetPos = idealOffset.applyMatrix4(focusObject.matrixWorld);
@@ -2835,14 +2849,14 @@ if (isMobile) {
     
     const dpad = document.createElement('div');
     dpad.style.cssText = 'position:relative; width:50px; height:110px;';
-    dpad.appendChild(createBtn('▲', 0, 0, 'w'));               
-    dpad.appendChild(createBtn('▼', 0, 60, 's'));             
+    dpad.appendChild(createBtn('▲', 0, 0, 'ArrowUp'));               
+    dpad.appendChild(createBtn('▼', 0, 60, 'ArrowDown'));             
     
     const actions = document.createElement('div');
     actions.style.cssText = 'position:relative; width:290px; height:110px;';
     
-    actions.appendChild(createBtn('◀', 60, 0, 'a'));       
-    actions.appendChild(createBtn('▶', 120, 0, 'd'));      
+    actions.appendChild(createBtn('◀', 60, 0, 'ArrowLeft'));       
+    actions.appendChild(createBtn('▶', 120, 0, 'ArrowRight'));      
     
     actions.appendChild(createBtn('EMOTE', 0, 60, 'emote'));         
     actions.appendChild(createBtn('MEOW', 60, 60, 'f'));         
