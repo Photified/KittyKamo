@@ -1510,7 +1510,6 @@ socket.on('gameStateUpdate', (data) => {
     if (serverGameState === 'LOBBY' || serverGameState === 'WAITING' || serverGameState === 'GAME_OVER') {
         ground.material.color.setHex(0x654321); 
     } else {
-        // Change from 0xFF0000 to a dark void color to fix red square artifacts showing underneath gaps in map blocks
         ground.material.color.setHex(0x111111); 
     }
 
@@ -1596,7 +1595,6 @@ socket.on('initMap', (payload) => {
         ground.scale.set(blockSpanX + 10, blockSpanZ + 10, 1);
         ground.position.set((minX + maxX) / 2, -5, (minZ + maxZ) / 2);
         
-        // Removed 0xFF0000 (red) to stop empty holes showing up as red squares. Set to dark void instead.
         ground.material.color.setHex(0x111111); 
 
         createWall(blockSpanX + 4, 10, 2, (minX + maxX) / 2, 0, minZ - 1.5, currentWallColor);
@@ -1746,8 +1744,13 @@ socket.on('currentPlayers', (players) => {
             myCatData.faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
             myCatData.faceStr = players[id].face || 'normal'; 
             
-            let cColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
-            myCatData.crownMat.color.setHex(cColor);
+            if (players[id].role === 'seeker') {
+                myCatData.crownMat.color.setHex(0xFF0000);
+            } else if (players[id].color !== players[id].baseColor) {
+                myCatData.crownMat.color.setHex(players[id].color);
+            } else {
+                myCatData.crownMat.color.setHex(0xFFD700);
+            }
 
             setNameLabel(myCatData, myName); 
             myCatData.crown.visible = (id === serverWinnerId);
@@ -1771,8 +1774,13 @@ socket.on('currentPlayers', (players) => {
                 otherPlayers[id].faceMesh.material.map = getFaceTexture(players[id].face || 'normal');
                 otherPlayers[id].faceStr = players[id].face || 'normal'; 
                 
-                let oColor = (players[id].color === 0xFFFFFF || players[id].color === 0xFF0000) ? 0xFFD700 : players[id].color;
-                otherPlayers[id].crownMat.color.setHex(oColor);
+                if (players[id].role === 'seeker') {
+                    otherPlayers[id].crownMat.color.setHex(0xFF0000);
+                } else if (players[id].color !== players[id].baseColor) {
+                    otherPlayers[id].crownMat.color.setHex(players[id].color);
+                } else {
+                    otherPlayers[id].crownMat.color.setHex(0xFFD700);
+                }
 
                 otherPlayers[id].crown.visible = (id === serverWinnerId);
                 
@@ -1830,8 +1838,13 @@ socket.on('playerMoved', (data) => {
         otherPlayers[data.id].upsideDown = data.upsideDown;
         otherPlayers[data.id].respawnBeam = data.respawnBeam;
         
-        let oColor = (data.color === 0xFFFFFF || data.color === 0xFF0000) ? 0xFFD700 : data.color;
-        otherPlayers[data.id].crownMat.color.setHex(oColor);
+        if (data.role === 'seeker') {
+            otherPlayers[data.id].crownMat.color.setHex(0xFF0000);
+        } else if (data.color !== otherPlayers[data.id].baseColor) {
+            otherPlayers[data.id].crownMat.color.setHex(data.color);
+        } else {
+            otherPlayers[data.id].crownMat.color.setHex(0xFFD700);
+        }
 
         otherPlayers[data.id].role = data.role; 
     }
@@ -1924,8 +1937,13 @@ function addOtherPlayer(id, playerInfo) {
     setNameLabel(catData, playerInfo.name); 
     catData.crown.visible = (id === serverWinnerId);
     
-    let oColor = (playerInfo.color === 0xFFFFFF || playerInfo.color === 0xFF0000) ? 0xFFD700 : playerInfo.color;
-    catData.crownMat.color.setHex(oColor);
+    if (playerInfo.role === 'seeker') {
+        catData.crownMat.color.setHex(0xFF0000);
+    } else if (playerInfo.color !== playerInfo.baseColor) {
+        catData.crownMat.color.setHex(playerInfo.color);
+    } else {
+        catData.crownMat.color.setHex(0xFFD700);
+    }
 
     applyWardrobeToCat(catData, playerInfo.wardrobe);
 
@@ -2562,8 +2580,15 @@ function animate() {
     }
     
     myCatData.material.color.setHex(targetColor);
-    let cColor = (targetColor === 0xFFFFFF || targetColor === 0xFF0000) ? 0xFFD700 : targetColor;
-    myCatData.crownMat.color.setHex(cColor);
+    
+    // MVP CROWN CAMOUFLAGE LOGIC
+    if (myRole === 'seeker') {
+        myCatData.crownMat.color.setHex(0xFF0000);
+    } else if (targetColor !== window.myBaseColor) {
+        myCatData.crownMat.color.setHex(targetColor);
+    } else {
+        myCatData.crownMat.color.setHex(0xFFD700); 
+    }
 
     let isCamoOrSeeker = (targetColor !== window.myBaseColor) || myRole === 'seeker';
     if (myCatData.equippedAccessories) {
@@ -2635,6 +2660,16 @@ function animate() {
         p.group.scale.set(1, 1, 1);
 
         let pTargetColor = p.role === 'seeker' ? 0xFF0000 : p.material.color.getHex();
+        
+        // MVP CROWN CAMOUFLAGE LOGIC FOR OTHER PLAYERS
+        if (p.role === 'seeker') {
+            p.crownMat.color.setHex(0xFF0000);
+        } else if (pTargetColor !== p.baseColor) {
+            p.crownMat.color.setHex(pTargetColor);
+        } else {
+            p.crownMat.color.setHex(0xFFD700);
+        }
+
         let isOtherCamoOrSeeker = (pTargetColor !== p.baseColor) || p.role === 'seeker';
         if (p.equippedAccessories) {
             p.equippedAccessories.forEach(acc => {
