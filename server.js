@@ -201,8 +201,8 @@ function generateMap() {
             mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
 
             if (x > -19 && x < 19 && z > -19 && z < 19) {
-                // 12% prop spawn rate
-                if (Math.random() < 0.12) { 
+                // Reduced prop rate from 12% to 6% to fix rendering lag
+                if (Math.random() < 0.06) { 
                     let type = Math.random();
 
                     if (type < 0.4) {
@@ -273,6 +273,7 @@ function startLobby() {
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
+        // Keep players[id].score = 0 removed to persist scores across rounds
         players[id].decoys = 3; 
         players[id].hairballs = 10; 
         players[id].stunned = false;
