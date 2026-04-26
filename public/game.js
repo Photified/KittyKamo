@@ -681,26 +681,39 @@ function renderBigTV() {
     for(let i=0; i<1024; i+=32) { tvCtx.beginPath(); tvCtx.moveTo(i, 0); tvCtx.lineTo(i, 512); tvCtx.stroke(); }
     for(let j=0; j<512; j+=32) { tvCtx.beginPath(); tvCtx.moveTo(0, j); tvCtx.lineTo(1024, j); tvCtx.stroke(); }
 
-    tvCtx.fillStyle = '#FF1493'; 
-    tvCtx.font = 'bold 72px "Press Start 2P", "Courier New", monospace';
     tvCtx.textAlign = 'center';
     tvCtx.shadowColor = 'rgba(0,0,0,0.3)';
     tvCtx.shadowBlur = 10;
-    tvCtx.fillText('✨ MVP ✨', 512, 120);
-    tvCtx.shadowBlur = 0; 
+
+    // Welcome Text
+    tvCtx.fillStyle = '#00BFFF';
+    tvCtx.font = 'bold 32px "Press Start 2P", "Courier New", monospace';
+    tvCtx.fillText('KITTY KAMO WELCOMES', 512, 70);
+
+    // MR. SHANE GAMES
+    tvCtx.fillStyle = '#FF1493';
+    tvCtx.font = 'bold 56px "Press Start 2P", "Courier New", monospace';
+    tvCtx.fillText('MR. SHANE GAMES!', 512, 150);
+
+    // MVP Header
+    tvCtx.fillStyle = '#FFD700'; // Gold
+    tvCtx.font = 'bold 40px "Press Start 2P", "Courier New", monospace';
+    tvCtx.fillText('✨ MVP ✨', 512, 270);
+
+    tvCtx.shadowBlur = 0; // Turn off shadow for dynamic text to keep it crisp
 
     if (currentMvpData) {
         tvCtx.fillStyle = '#111';
-        tvCtx.font = 'bold 64px "Press Start 2P", "Courier New", monospace';
-        tvCtx.fillText(currentMvpData.name.toUpperCase(), 512, 280);
+        tvCtx.font = 'bold 48px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText(currentMvpData.name.toUpperCase(), 512, 360);
 
         tvCtx.fillStyle = '#00BFFF';
-        tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
-        tvCtx.fillText('SCORE: ' + currentMvpData.score + ' PTS', 512, 380);
+        tvCtx.font = '32px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText('SCORE: ' + currentMvpData.score + ' PTS', 512, 440);
     } else {
         tvCtx.fillStyle = '#888';
-        tvCtx.font = '36px "Press Start 2P", "Courier New", monospace';
-        tvCtx.fillText('AWAITING NEXT MVP...', 512, 280);
+        tvCtx.font = '28px "Press Start 2P", "Courier New", monospace';
+        tvCtx.fillText('AWAITING NEXT MVP...', 512, 360);
     }
 
     tvTex.needsUpdate = true;
