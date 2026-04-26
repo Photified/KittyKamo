@@ -25,6 +25,10 @@ let currentMapSkyDay = 0x87CEEB;
 let currentMapSkySunset = 0xFF7E47;
 let currentMapSkyNight = 0x020211;
 
+// Cooldown trackers for map generation
+let recentBiomes = [];
+let recentLayouts = [];
+
 const catBeds = [
     {x: 15, z: 8}, {x: 15, z: -8}, {x: -15, z: 8}, {x: -15, z: -8},
     {x: 8, z: 15}, {x: -8, z: 15}, {x: 8, z: -15}, {x: -8, z: -15},
@@ -168,14 +172,27 @@ function generateMap() {
     mapBlocks = [];
     let offset = Math.random() * 100; 
 
-    const currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
+    // FILTER BIOMES USING COOLDOWN
+    let availableBiomes = BIOMES.filter(b => !recentBiomes.includes(b.name));
+    if (availableBiomes.length === 0) availableBiomes = BIOMES; // Failsafe
+    const currentBiome = availableBiomes[Math.floor(Math.random() * availableBiomes.length)];
+    
+    recentBiomes.push(currentBiome.name);
+    if (recentBiomes.length > 2) recentBiomes.shift(); // Remember the last 2 biomes
+
     currentMapWallColor = currentBiome.wall; 
     currentMapSkyDay = currentBiome.skyDay;
     currentMapSkySunset = currentBiome.skySunset;
     currentMapSkyNight = currentBiome.skyNight;
     
+    // FILTER LAYOUTS USING COOLDOWN
     const layouts = ['hills', 'islands', 'city', 'blocks'];
-    const currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
+    let availableLayouts = layouts.filter(l => !recentLayouts.includes(l));
+    if (availableLayouts.length === 0) availableLayouts = layouts; // Failsafe
+    const currentLayout = availableLayouts[Math.floor(Math.random() * availableLayouts.length)];
+    
+    recentLayouts.push(currentLayout);
+    if (recentLayouts.length > 2) recentLayouts.shift(); // Remember the last 2 layouts
 
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
@@ -201,7 +218,7 @@ function generateMap() {
             mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
 
             if (x > -19 && x < 19 && z > -19 && z < 19) {
-                // Reduced prop rate from 12% to 6% to fix rendering lag
+                // 12% prop spawn rate - dense but highly optimized
                 if (Math.random() < 0.06) { 
                     let type = Math.random();
 
@@ -273,7 +290,6 @@ function startLobby() {
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
-        // Keep players[id].score = 0 removed to persist scores across rounds
         players[id].decoys = 3; 
         players[id].hairballs = 10; 
         players[id].stunned = false;
