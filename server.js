@@ -165,7 +165,11 @@ const BIOMES = [
     { name: 'Forest', top: 0x556B2F, trunk: 0x5C4033, leaf: 0x228B22, wall: 0x2E8B57, skyDay: 0x87CEEB, skySunset: 0xFF7E47, skyNight: 0x020211 },
     { name: 'Winter', top: 0xFFFAFA, trunk: 0x8B4513, leaf: 0xFFFFFF, wall: 0x4682B4, skyDay: 0xCAE1FF, skySunset: 0xDDA0DD, skyNight: 0x000033 },
     { name: 'Neon Arcade', top: 0x818589, trunk: 0x00FFFF, leaf: 0x32CD32, wall: 0x4B0082, skyDay: 0x1A0B2E, skySunset: 0x4B0082, skyNight: 0x050011 },
-    { name: 'Desert', top: 0x9C661F, trunk: 0x8B4513, leaf: 0x2E8B57, wall: 0x5C4033, skyDay: 0x87CEEB, skySunset: 0xFF4500, skyNight: 0x000022 } 
+    { name: 'Desert', top: 0x9C661F, trunk: 0x8B4513, leaf: 0x2E8B57, wall: 0x5C4033, skyDay: 0x87CEEB, skySunset: 0xFF4500, skyNight: 0x000022 },
+    { name: 'Autumn Grove', top: 0xCD853F, trunk: 0x3E2723, leaf: 0xFF4500, wall: 0x8B4513, skyDay: 0x87CEEB, skySunset: 0xFF8C00, skyNight: 0x191970 },
+    { name: 'Cherry Blossom', top: 0x9ACD32, trunk: 0x5C4033, leaf: 0xFFB7C5, wall: 0x8FBC8F, skyDay: 0xE0FFFF, skySunset: 0xFF69B4, skyNight: 0x2C1030 },
+    { name: 'Moon Base', top: 0x999999, trunk: 0x555555, leaf: 0xCCCCCC, wall: 0x333333, skyDay: 0x000000, skySunset: 0x1A1A24, skyNight: 0x050511 }, 
+    { name: 'Glacier', top: 0xAEEEEE, trunk: 0x4682B4, leaf: 0xF0FFFF, wall: 0x5F9EA0, skyDay: 0x87CEFA, skySunset: 0xB0C4DE, skyNight: 0x000080 }
 ];
 
 function generateMap() {
@@ -178,7 +182,7 @@ function generateMap() {
     const currentBiome = availableBiomes[Math.floor(Math.random() * availableBiomes.length)];
     
     recentBiomes.push(currentBiome.name);
-    if (recentBiomes.length > 2) recentBiomes.shift(); // Remember the last 2 biomes
+    if (recentBiomes.length > 4) recentBiomes.shift(); // Increased to 4 to support 8 biomes
 
     currentMapWallColor = currentBiome.wall; 
     currentMapSkyDay = currentBiome.skyDay;
@@ -186,13 +190,21 @@ function generateMap() {
     currentMapSkyNight = currentBiome.skyNight;
     
     // FILTER LAYOUTS USING COOLDOWN
-    const layouts = ['hills', 'islands', 'city', 'blocks'];
+    const layouts = ['hills', 'islands', 'city', 'blocks', 'craters'];
     let availableLayouts = layouts.filter(l => !recentLayouts.includes(l));
     if (availableLayouts.length === 0) availableLayouts = layouts; // Failsafe
-    const currentLayout = availableLayouts[Math.floor(Math.random() * availableLayouts.length)];
+    let currentLayout = availableLayouts[Math.floor(Math.random() * availableLayouts.length)];
     
+    // FORCE CRATERS IF MOON BASE
+    if (currentBiome.name === 'Moon Base') {
+        currentLayout = 'craters';
+    } else if (currentLayout === 'craters') {
+        // Prevent craters from rolling naturally for other biomes
+        currentLayout = 'hills'; 
+    }
+
     recentLayouts.push(currentLayout);
-    if (recentLayouts.length > 2) recentLayouts.shift(); // Remember the last 2 layouts
+    if (recentLayouts.length > 2) recentLayouts.shift(); // Kept at 2 out of 5 to avoid burning through the layouts
 
     for (let x = -20; x <= 20; x++) {
         for (let z = -20; z <= 20; z++) {
@@ -210,6 +222,19 @@ function generateMap() {
                 if (x % 5 === 0 || z % 5 === 0) y = -2; 
             } else if (currentLayout === 'blocks') {
                 y = Math.floor(Math.random() * 4) - 1;
+            } else if (currentLayout === 'craters') {
+                // Generate a repeating grid of craters using modulo
+                let gridX = (x + Math.floor(offset) + 100) % 16 - 8;
+                let gridZ = (z + Math.floor(offset) + 100) % 16 - 8;
+                let dist = Math.sqrt(gridX * gridX + gridZ * gridZ);
+                
+                if (dist < 4) {
+                    y = Math.floor(dist) - 3; // The deep crater bowl
+                } else if (dist < 5.5) {
+                    y = 1; // The raised crater rim
+                } else {
+                    y = Math.random() > 0.8 ? 1 : 0; // Flat lunar surface with occasional debris
+                }
             }
 
             y += 2;
