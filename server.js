@@ -161,7 +161,7 @@ const BIOMES = [
     { name: 'Forest', top: 0x556B2F, trunk: 0x5C4033, leaf: 0x228B22, wall: 0x2E8B57, skyDay: 0x87CEEB, skySunset: 0xFF7E47, skyNight: 0x020211 },
     { name: 'Winter', top: 0xFFFAFA, trunk: 0x8B4513, leaf: 0xFFFFFF, wall: 0x4682B4, skyDay: 0xCAE1FF, skySunset: 0xDDA0DD, skyNight: 0x000033 },
     { name: 'Neon Arcade', top: 0x818589, trunk: 0x00FFFF, leaf: 0x32CD32, wall: 0x4B0082, skyDay: 0x1A0B2E, skySunset: 0x4B0082, skyNight: 0x050011 },
-    { name: 'Desert', top: 0xD4A373, trunk: 0x2E8B57, leaf: 0x228B22, wall: 0xD2B48C, skyDay: 0x87CEEB, skySunset: 0xFF4500, skyNight: 0x000022 } 
+    { name: 'Desert', top: 0x9C661F, trunk: 0x8B4513, leaf: 0x2E8B57, wall: 0x5C4033, skyDay: 0x87CEEB, skySunset: 0xFF4500, skyNight: 0x000022 } 
 ];
 
 function generateMap() {
@@ -197,9 +197,11 @@ function generateMap() {
 
             y += 2;
 
+            // STRICTLY one single layer to maximize performance
             mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
 
             if (x > -19 && x < 19 && z > -19 && z < 19) {
+                // 12% prop spawn rate
                 if (Math.random() < 0.12) { 
                     let type = Math.random();
 
@@ -271,7 +273,6 @@ function startLobby() {
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
-        // removed players[id].score = 0; to persist scores across rounds!
         players[id].decoys = 3; 
         players[id].hairballs = 10; 
         players[id].stunned = false;
@@ -611,7 +612,7 @@ io.on('connection', (socket) => {
                         io.emit('playerUnstunned', socket.id);
                         io.emit('playerUpsideDown', { id: socket.id, state: false });
                     }
-                }, 10000); 
+                }, 10000); // 10 SECOND STUN PENALTY
             } else if (players[socket.id] && players[socket.id].role === 'seeker') {
                 io.emit('playerLavaDeath', socket.id);
             }
