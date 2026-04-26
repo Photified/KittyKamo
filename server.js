@@ -162,14 +162,19 @@ setInterval(() => {
 }, 33);
 
 const BIOMES = [
-    { name: 'Forest', top: 0x556B2F, trunk: 0x5C4033, leaf: 0x228B22, wall: 0x2E8B57, skyDay: 0x87CEEB, skySunset: 0xFF7E47, skyNight: 0x020211 },
-    { name: 'Winter', top: 0xFFFAFA, trunk: 0x8B4513, leaf: 0xFFFFFF, wall: 0x4682B4, skyDay: 0xCAE1FF, skySunset: 0xDDA0DD, skyNight: 0x000033 },
-    { name: 'Neon Arcade', top: 0x818589, trunk: 0x00FFFF, leaf: 0x32CD32, wall: 0x4B0082, skyDay: 0x1A0B2E, skySunset: 0x4B0082, skyNight: 0x050011 },
-    { name: 'Desert', top: 0x9C661F, trunk: 0x8B4513, leaf: 0x2E8B57, wall: 0x5C4033, skyDay: 0x87CEEB, skySunset: 0xFF4500, skyNight: 0x000022 },
-    { name: 'Autumn Grove', top: 0xCD853F, trunk: 0x3E2723, leaf: 0xFF4500, wall: 0x8B4513, skyDay: 0x87CEEB, skySunset: 0xFF8C00, skyNight: 0x191970 },
-    { name: 'Cherry Blossom', top: 0x9ACD32, trunk: 0x5C4033, leaf: 0xFFB7C5, wall: 0x8FBC8F, skyDay: 0xE0FFFF, skySunset: 0xFF69B4, skyNight: 0x2C1030 },
-    { name: 'Moon Base', top: 0x999999, trunk: 0x555555, leaf: 0xCCCCCC, wall: 0x333333, skyDay: 0x000000, skySunset: 0x1A1A24, skyNight: 0x050511 }, 
-    { name: 'Glacier', top: 0xAEEEEE, trunk: 0x4682B4, leaf: 0xF0FFFF, wall: 0x5F9EA0, skyDay: 0x87CEFA, skySunset: 0xB0C4DE, skyNight: 0x000080 }
+    // --- REVISED ORIGINAL BIOMES ---
+    { name: 'Forest', top: 0x4A5E29, trunk: 0x4A3329, leaf: 0x1B6B1B, wall: 0x236B43, skyDay: 0x87CEEB, skySunset: 0xFF7E47, skyNight: 0x020211 },
+    // Winter: Darkened the snow more to prevent any blowout, keeping it a cool grey/white.
+    { name: 'Winter', top: 0x8899AA, trunk: 0x4A2E1B, leaf: 0xAABBCC, wall: 0x36648B, skyDay: 0xCAE1FF, skySunset: 0xDDA0DD, skyNight: 0x000033 },
+    { name: 'Neon Arcade', top: 0x444444, trunk: 0x00CCCC, leaf: 0x228B22, wall: 0x330055, skyDay: 0x1A0B2E, skySunset: 0x4B0082, skyNight: 0x050011 },
+    { name: 'Desert', top: 0x805216, trunk: 0x5C2E00, leaf: 0x236B43, wall: 0x4A3329, skyDay: 0x87CEEB, skySunset: 0xFF4500, skyNight: 0x000022 },
+    
+    // --- REVISED NEW BIOMES ---
+    { name: 'Autumn Grove', top: 0x9E662F, trunk: 0x2A1A17, leaf: 0xCC3700, wall: 0x6B340F, skyDay: 0x87CEEB, skySunset: 0xFF8C00, skyNight: 0x191970 },
+    { name: 'Cherry Blossom', top: 0x76A026, trunk: 0x4A3329, leaf: 0xCC8FA0, wall: 0x688F68, skyDay: 0xE0FFFF, skySunset: 0xFF69B4, skyNight: 0x2C1030 },
+    { name: 'Moon Base', top: 0x666666, trunk: 0x333333, leaf: 0x888888, wall: 0x222222, skyDay: 0x000000, skySunset: 0x1A1A24, skyNight: 0x050511 }, 
+    // Glacier: Explicitly ice blue to distinguish it from winter and stop blowout
+    { name: 'Glacier', top: 0x3B82F6, trunk: 0x1E3A8A, leaf: 0x93C5FD, wall: 0x1D4ED8, skyDay: 0x87CEFA, skySunset: 0xB0C4DE, skyNight: 0x000080 }
 ];
 
 function generateMap() {
