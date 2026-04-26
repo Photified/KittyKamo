@@ -197,7 +197,6 @@ function generateMap() {
 
             y += 2;
 
-            // STRICTLY one single layer to maximize performance
             mapBlocks.push({ x: x, y: y + 0.5, z: z, color: currentBiome.top }); 
 
             if (x > -19 && x < 19 && z > -19 && z < 19) {
@@ -272,6 +271,7 @@ function startLobby() {
     ids.forEach(id => {
         players[id].role = 'hider';
         players[id].color = players[id].baseColor;
+        // removed players[id].score = 0; to persist scores across rounds!
         players[id].decoys = 3; 
         players[id].hairballs = 10; 
         players[id].stunned = false;
@@ -357,11 +357,15 @@ function startLobby() {
                         players[id].z = -17.5;
                         players[id].rY = Math.PI * 0.75; 
                     } else {
-                        // Ensure losers spawn in the middle to avoid overlapping the MVP stand
-                        players[id].x = (Math.random() * 12) - 6; 
+                        // Safe spawn zone in front of the MVP platform
+                        players[id].x = 11 + (Math.random() * 3); 
                         players[id].y = -4; 
-                        players[id].z = (Math.random() * 12) - 6;
-                        players[id].rY = Math.random() * Math.PI * 2; 
+                        players[id].z = -11 - (Math.random() * 3);
+                        
+                        // Calculate rotation to face the MVP (17.5, -17.5)
+                        let dx = 17.5 - players[id].x;
+                        let dz = -17.5 - players[id].z;
+                        players[id].rY = Math.atan2(-dx, -dz); 
                     }
                     io.to(id).emit('forceTeleport', {x: players[id].x, y: players[id].y, z: players[id].z, rY: players[id].rY});
                 });
@@ -607,7 +611,7 @@ io.on('connection', (socket) => {
                         io.emit('playerUnstunned', socket.id);
                         io.emit('playerUpsideDown', { id: socket.id, state: false });
                     }
-                }, 10000); // 10 SECOND STUN PENALTY
+                }, 10000); 
             } else if (players[socket.id] && players[socket.id].role === 'seeker') {
                 io.emit('playerLavaDeath', socket.id);
             }
