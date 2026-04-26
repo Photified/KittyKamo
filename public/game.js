@@ -2407,7 +2407,16 @@ function animate() {
                 spawnX = randomBlock.position.x;
                 spawnZ = randomBlock.position.z;
             }
-            myPlayerObject.position.set(spawnX, 20, spawnZ);
+            myPlayerObject.position.set(spawnX, 25, spawnZ);
+            velocityY = 0;
+            isGrounded = false;
+            
+            // Trigger the same penalty as falling in the void!
+            if (serverGameState === 'SEEKING' || serverGameState === 'HIDING') {
+                socket.emit('lavaFall');
+                playSound('pop'); 
+            }
+
             qPressTime = 0;
             isQPressed = false;
             unstuckUI.style.display = 'none';
